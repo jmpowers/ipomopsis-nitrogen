@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+<meta name="author" content="Janelle Bohey, John Powers" />
+
+<meta name="date" content="2022-10-11" />
+
+<title>Ipomopsis nitrogen experiments</title>
+
+<script src="libs/header-attrs-2.14/header-attrs.js"></script>
+<script src="libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="libs/bootstrap-3.3.5/css/bootstrap.min.css" rel="stylesheet" />
+<script src="libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style>
+<script src="libs/jqueryui-1.11.4/jquery-ui.min.js"></script>
+<link href="libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="libs/navigation-1.1/tabsets.js"></script>
+<script src="libs/navigation-1.1/codefolding.js"></script>
+<link href="libs/highlightjs-9.12.0/default.css" rel="stylesheet" />
+<script src="libs/highlightjs-9.12.0/highlight.js"></script>
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+
+
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
+}
+pre code {
+  padding: 0;
+}
+</style>
+
+
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "&#xe258;";
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+<style type="text/css">
+.code-folding-btn { margin-bottom: 4px; }
+</style>
+
+
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+
+</style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div id="header">
+
+<div class="btn-group pull-right float-right">
+<button type="button" class="btn btn-default btn-xs btn-secondary btn-sm dropdown-toggle" data-toggle="dropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span>Code</span> <span class="caret"></span></button>
+<ul class="dropdown-menu dropdown-menu-right" style="min-width: 50px;">
+<li><a id="rmd-show-all-code" href="#">Show All Code</a></li>
+<li><a id="rmd-hide-all-code" href="#">Hide All Code</a></li>
+</ul>
+</div>
+
+
+
+<h1 class="title toc-ignore">Ipomopsis nitrogen experiments</h1>
+<h4 class="author">Janelle Bohey, John Powers</h4>
+<h4 class="date">2022-10-11</h4>
+
+</div>
+
+
+<style type="text/css">
+.main-container { max-width: 1000px; margin-left: 0; margin-right: auto; }
+img{ max-width:200%; height: auto; }
+td, th { padding : 6px }
+</style>
+<pre class="r"><code>load(&quot;data/exp1_data.rda&quot;)
+
+exp1.all &lt;- dcast(exp1.data, Filename~Name, sum, value.var=&quot;Area&quot;)
+rownames(exp1.all) &lt;- exp1.all[,1]
+exp1.all[,1] &lt;- NULL</code></pre>
+<div id="read-metadata" class="section level1">
+<h1>Read metadata</h1>
+<pre class="r"><code>meta &lt;- read.csv(&quot;data/EXP 1 (N) Volatile sampling  - metadata.csv&quot;) %&gt;% 
+  filter(filename %in% rownames(exp1.all)) %&gt;% #TODO find the other files
+  mutate(plantid = paste(species, plant))
+
+#TODO order exp1.all the same as metadata (accounting for skips)
+
+meta %&gt;% count(species, time)</code></pre>
+<pre><code>  species time  n
+1     agg    D 43
+2     agg    N 60
+3     AMB    D  5
+4     AMB    N 10
+5     ten    D 44
+6     ten    N 63</code></pre>
+<pre class="r"><code>meta %&gt;% count(date, species, time)</code></pre>
+<pre><code>         date species time  n
+1  2022-07-20     agg    D  8
+2  2022-07-20     agg    N 11
+3  2022-07-20     AMB    D  2
+4  2022-07-20     AMB    N  1
+5  2022-07-20     ten    D 13
+6  2022-07-20     ten    N 12
+7  2022-07-25     agg    D 27
+8  2022-07-25     agg    N 27
+9  2022-07-25     AMB    D  2
+10 2022-07-25     AMB    N  4
+11 2022-07-25     ten    D 22
+12 2022-07-25     ten    N 28
+13 2022-08-04     agg    N 17
+14 2022-08-04     AMB    N  5
+15 2022-08-04     ten    N 19
+16 2022-08-05     agg    D  8
+17 2022-08-05     AMB    D  1
+18 2022-08-05     ten    D  9
+19 2022-08-11     agg    N  4
+20 2022-08-11     ten    N  3
+21 2022-08-17     agg    N  1
+22 2022-08-17     ten    N  1</code></pre>
+<pre class="r"><code>meta %&gt;% count(date, species, time)</code></pre>
+<pre><code>         date species time  n
+1  2022-07-20     agg    D  8
+2  2022-07-20     agg    N 11
+3  2022-07-20     AMB    D  2
+4  2022-07-20     AMB    N  1
+5  2022-07-20     ten    D 13
+6  2022-07-20     ten    N 12
+7  2022-07-25     agg    D 27
+8  2022-07-25     agg    N 27
+9  2022-07-25     AMB    D  2
+10 2022-07-25     AMB    N  4
+11 2022-07-25     ten    D 22
+12 2022-07-25     ten    N 28
+13 2022-08-04     agg    N 17
+14 2022-08-04     AMB    N  5
+15 2022-08-04     ten    N 19
+16 2022-08-05     agg    D  8
+17 2022-08-05     AMB    D  1
+18 2022-08-05     ten    D  9
+19 2022-08-11     agg    N  4
+20 2022-08-11     ten    N  3
+21 2022-08-17     agg    N  1
+22 2022-08-17     ten    N  1</code></pre>
+<pre class="r"><code>meta %&gt;% count(plantid, time)</code></pre>
+<pre><code>   plantid time n
+1    agg 1    D 3
+2    agg 1    N 3
+3   agg 10    D 2
+4   agg 10    N 4
+5   agg 11    D 2
+6   agg 11    N 3
+7   agg 12    D 3
+8   agg 12    N 3
+9   agg 13    D 3
+10  agg 13    N 3
+11  agg 14    D 3
+12  agg 14    N 3
+13  agg 15    D 1
+14  agg 15    N 4
+15  agg 16    D 2
+16  agg 16    N 3
+17  agg 17    D 2
+18  agg 17    N 3
+19  agg 18    D 2
+20  agg 18    N 2
+21  agg 19    N 3
+22   agg 2    D 3
+23   agg 2    N 3
+24  agg 20    D 2
+25  agg 20    N 3
+26   agg 3    D 2
+27   agg 3    N 3
+28   agg 4    D 2
+29   agg 4    N 3
+30   agg 5    D 2
+31   agg 5    N 3
+32   agg 6    D 3
+33   agg 6    N 4
+34   agg 7    D 2
+35   agg 7    N 1
+36   agg 8    D 3
+37   agg 8    N 4
+38   agg 9    D 1
+39   agg 9    N 2
+40    AMB     D 2
+41  AMB AA    D 1
+42  AMB AA    N 2
+43  AMB DH    D 2
+44  AMB DH    N 2
+45  AMB JB    N 3
+46  AMB JK    N 1
+47  AMB JP    N 1
+48  AMB KW    N 1
+49   ten 1    D 1
+50   ten 1    N 2
+51  ten 10    D 4
+52  ten 10    N 4
+53  ten 11    N 3
+54  ten 12    D 2
+55  ten 12    N 3
+56  ten 13    D 2
+57  ten 13    N 3
+58  ten 14    D 3
+59  ten 14    N 3
+60  ten 15    D 2
+61  ten 15    N 3
+62  ten 16    D 5
+63  ten 16    N 5
+64  ten 17    D 1
+65  ten 17    N 3
+66  ten 18    D 2
+67  ten 18    N 3
+68  ten 19    D 2
+69  ten 19    N 4
+70   ten 2    N 3
+71  ten 20    D 2
+72  ten 20    N 3
+73   ten 3    D 3
+74   ten 3    N 2
+75   ten 4    D 2
+76   ten 4    N 3
+77   ten 5    D 3
+78   ten 5    N 4
+79   ten 6    D 3
+80   ten 6    N 3
+81   ten 7    D 2
+82   ten 7    N 1
+83   ten 8    D 1
+84   ten 8    N 3
+85   ten 9    D 4
+86   ten 9    N 5</code></pre>
+</div>
+
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open');
+  });
+});
+</script>
+
+<!-- code folding -->
+<script>
+$(document).ready(function () {
+  window.initializeCodeFolding("hide" === "show");
+});
+</script>
+
+<script>
+$(document).ready(function ()  {
+
+    // temporarily add toc-ignore selector to headers for the consistency with Pandoc
+    $('.unlisted.unnumbered').addClass('toc-ignore')
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = true;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
