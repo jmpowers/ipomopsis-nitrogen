@@ -23,19 +23,16 @@ library(reshape2)
 library(tidyverse)
 library(lubridate)
 library(vegan)
-library(viridis)
-library(RColorBrewer)
-library(pheatmap)
-library(dendsort)
 library(knitr)
 knitr::opts_chunk$set(comment="", cache=T, warning=F, message=F, 
                       fig.path = "plots/", dev="svglite", dev.args=list(fix_text_size=FALSE), fig.height=8, fig.width=8)
-
-source("read_shimadzu.R")
 ```
 
 ```{r read_scents}
-load("data/exp1_data.rda")
+exp1.verdicts <- read_csv("data/exp1_verdicts.csv")
+load("data/exp1_data.rda") #loads exp1.data (Shimadzu output)
+exp1.data <- exp1.data %>% left_join(select(exp1.verdicts, Filename = FileName, sample2)) %>% 
+  select(-Filename) %>% rename(Filename = sample2) #replace FileName with the sample2 it holds (accounts for skips)
 
 exp1.all <- dcast(exp1.data, Filename~Name, sum, value.var="Area")
 rownames(exp1.all) <- exp1.all[,1]
@@ -45,13 +42,16 @@ exp1.all[,1] <- NULL
 # Read metadata
 
 ```{r metadata}
-meta <- read.csv("data/EXP 1 (N) Volatile sampling  - metadata.csv") %>% 
-  filter(filename %in% rownames(exp1.all)) %>% #TODO find the other files
-  mutate(plantid = paste(species, plant))
+meta <- read_csv("data/EXP 1 (N) Volatile sampling  - metadata.csv") %>% 
+  filter(filename != "#N/A") %>% 
+  mutate(plantid = paste(species, plant)) %>% 
+  left_join(read_csv("data/exp1_treatments.csv") %>% mutate(plant = as.character(plant)))
+rownames(meta) <- meta$filename
+meta <- meta[rownames(exp1.all),] #order meta to match order of data
 
-#TODO order exp1.all the same as metadata (accounting for skips)
 
 meta %>% count(species, time)
+meta %>% count(species, time, treatment)
 meta %>% count(date, species, time)
 meta %>% count(date, species, time)
 meta %>% count(plantid, time)
