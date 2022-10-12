@@ -1,0 +1,59 @@
+---
+title: "Ipomopsis nitrogen experiments"
+author: "Janelle Bohey, John Powers"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    self_contained: no
+    lib_dir: libs
+    code_folding: hide
+    toc: yes
+    toc_float: TRUE 
+editor_options: 
+  chunk_output_type: console
+---
+<style type="text/css">
+.main-container { max-width: 1000px; margin-left: 0; margin-right: auto; }
+img{ max-width:200%; height: auto; }
+td, th { padding : 6px }
+</style>
+
+```{r setup, include=FALSE}
+library(reshape2)
+library(tidyverse)
+library(lubridate)
+library(vegan)
+library(viridis)
+library(RColorBrewer)
+library(pheatmap)
+library(dendsort)
+library(knitr)
+knitr::opts_chunk$set(comment="", cache=T, warning=F, message=F, 
+                      fig.path = "plots/", dev="svglite", dev.args=list(fix_text_size=FALSE), fig.height=8, fig.width=8)
+
+source("read_shimadzu.R")
+```
+
+```{r read_scents}
+load("data/exp1_data.rda")
+
+exp1.all <- dcast(exp1.data, Filename~Name, sum, value.var="Area")
+rownames(exp1.all) <- exp1.all[,1]
+exp1.all[,1] <- NULL
+```
+
+# Read metadata
+
+```{r metadata}
+meta <- read.csv("data/EXP 1 (N) Volatile sampling  - metadata.csv") %>% 
+  filter(filename %in% rownames(exp1.all)) %>% #TODO find the other files
+  mutate(plantid = paste(species, plant))
+
+#TODO order exp1.all the same as metadata (accounting for skips)
+
+meta %>% count(species, time)
+meta %>% count(date, species, time)
+meta %>% count(date, species, time)
+meta %>% count(plantid, time)
+```
+
