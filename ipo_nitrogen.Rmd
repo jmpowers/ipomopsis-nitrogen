@@ -32,7 +32,8 @@ knitr::opts_chunk$set(comment="", cache=T, warning=F, message=F,
 exp1.verdicts <- read_csv("data/exp1_verdicts.csv")
 load("data/exp1_data.rda") #loads exp1.data (Shimadzu output)
 exp1.data <- exp1.data %>% left_join(select(exp1.verdicts, Filename = FileName, sample2)) %>% 
-  select(-Filename) %>% rename(Filename = sample2) #replace FileName with the sample2 it holds (accounts for skips)
+  select(-Filename) %>% rename(Filename = sample2) %>%  #replace FileName with the sample2 it holds (accounts for skips)
+  droplevels()
 
 exp1.all <- dcast(exp1.data, Filename~Name, sum, value.var="Area")
 rownames(exp1.all) <- exp1.all[,1]
@@ -55,5 +56,56 @@ meta %>% count(species, time, treatment)
 meta %>% count(date, species, time)
 meta %>% count(date, species, time)
 meta %>% count(plantid, time)
+```
+
+# bouquet vingnette #
+
+```{r}
+# install packages 
+#install.packages("remotes")
+#remotes::install_github("jmpowers/bouquet", build_vignettes = TRUE)
+library(bouquet)
+#library(magrittr)
+```
+
+# Metadata
+
+```{r}
+GCMS_metadata <- meta %>% mutate(type= ifelse(species=="AMB", "ambient","floral")) %>% rename(trap=sample)
+
+metadata <- load_metadata(GCMS_metadata, date = "date", 
+                          sample = "filename", group = "treatment", 
+                          type = "type")
+```
+
+# Long Data
+```{r}
+longdata <- load_longdata(exp1.data, sample = "Filename", RT = "Ret.Time", 
+                          name = "Name", area = "Area", 
+                          match = "SI", maxmatch=100)
+
+```
+
+#Sample Table
+```{r}
+sampletable <- make_sampletable(longdata, metadata)
+```
+
+#Chem Table
+```{r}
+chemtable <- make_chemtable(longdata, metadata)
+save(chemtable, file="chemtable.rda")
+```
+
+```{r}
+chemtable <- chemtable %>% 
+  filter_RT(2, 19) %>% 
+  filter_match(0.8) %>% 
+  filter_freq(0.2, group = FALSE) %>% 
+  filter_contaminant(cont.list = "Caprolactam") %>% 
+  filter_area(min_maximum = 5e5) %>%
+  filter_ambient_ratio(sampletable, metadata, ratio = 4) %>% 
+  filter_ambient_ttest(sampletable, metadata, 
+                       alpha = 0.05, adjust = "fdr")
 ```
 
