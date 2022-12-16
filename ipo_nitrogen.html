@@ -11,7 +11,7 @@
 
 <meta name="author" content="Janelle Bohey, John Powers" />
 
-<meta name="date" content="2022-10-11" />
+<meta name="date" content="2022-12-16" />
 
 <title>Ipomopsis nitrogen experiments</title>
 
@@ -259,7 +259,7 @@ div.tocify {
 
 <h1 class="title toc-ignore">Ipomopsis nitrogen experiments</h1>
 <h4 class="author">Janelle Bohey, John Powers</h4>
-<h4 class="date">2022-10-11</h4>
+<h4 class="date">2022-12-16</h4>
 
 </div>
 
@@ -269,163 +269,321 @@ div.tocify {
 img{ max-width:200%; height: auto; }
 td, th { padding : 6px }
 </style>
-<pre class="r"><code>load(&quot;data/exp1_data.rda&quot;)
+<pre class="r"><code># library(googlesheets4)
+# exp1_meta &lt;- read_sheet(&quot;1k2XJUsRyTsQEeEoZE24yTvsl7kSyf2Gg6gehs8pUvOo&quot;, sheet=&quot;metadata&quot;, guess_max=200) %&gt;% 
+#   mutate(plant = as.character(plant))
+# exp2_meta &lt;- read_sheet(&quot;1EwPMsBAxqrRtuqH4uUBtthUOZlQluQICSvNr9u87h0E&quot;, sheet=&quot;metadata&quot;, guess_max=200) %&gt;% 
+#   mutate(plant = as.character(plant))
+# gc_verdicts &lt;- read_sheet(&quot;1X8oo7qZlo1p6MVl_CBeBe6CUTHEAcd-FWQzfHud3Qws&quot;, sheet = &quot;2022gc220929&quot;) %&gt;% 
+#   mutate(sample2 = ifelse(is.na(sample), FileName, sample))
+# exp1_verdicts &lt;- gc_verdicts %&gt;% filter(sample2 %in% exp1_meta$filename)
+# exp2leaf_verdicts &lt;- gc_verdicts %&gt;% filter(sample2 %in% exp2_meta$filename)
+# write_csv(exp1_verdicts, file = &quot;data/exp1_verdicts.csv&quot;)
+# write_csv(exp2leaf_verdicts, file = &quot;data/exp2leaf_verdicts.csv&quot;)
+# load(&quot;~/MyDocs/MEGA/UCI/Schiedea/Analysis/scent/rmbl/Inventory/shimadzu_data_22.rda&quot;)
+# exp1.data &lt;- shimadzu.data.22 %&gt;% filter(Filename %in% exp1_verdicts$FileName)
+# exp2leaf.data &lt;- shimadzu.data.22 %&gt;% filter(Filename %in% exp2_verdicts$FileName)
+# save(exp1.data, file = &quot;data/exp1_data.rda&quot;)
+# save(exp2leaf.data, file = &quot;data/exp2leaf_data.rda&quot;)
+
+exp1.verdicts &lt;- read_csv(&quot;data/exp1_verdicts.csv&quot;)
+load(&quot;data/exp1_data.rda&quot;) #loads exp1.data (Shimadzu output)
+exp1.data &lt;- exp1.data %&gt;% left_join(select(exp1.verdicts, Filename = FileName, sample2)) %&gt;% 
+  select(-Filename) %&gt;% rename(Filename = sample2) %&gt;%  #replace FileName with the sample2 it holds (accounts for skips)
+  droplevels()
 
 exp1.all &lt;- dcast(exp1.data, Filename~Name, sum, value.var=&quot;Area&quot;)
 rownames(exp1.all) &lt;- exp1.all[,1]
 exp1.all[,1] &lt;- NULL</code></pre>
 <div id="read-metadata" class="section level1">
 <h1>Read metadata</h1>
-<pre class="r"><code>meta &lt;- read.csv(&quot;data/EXP 1 (N) Volatile sampling  - metadata.csv&quot;) %&gt;% 
-  filter(filename %in% rownames(exp1.all)) %&gt;% #TODO find the other files
-  mutate(plantid = paste(species, plant))
+<pre class="r"><code>metadata &lt;- read_csv(&quot;data/EXP 1 (N) Volatile sampling  - metadata.csv&quot;) %&gt;% 
+  filter(filename != &quot;#N/A&quot;) %&gt;% 
+  mutate(plantid = paste(species, plant)) %&gt;% 
+  left_join(read_csv(&quot;data/exp1_treatments.csv&quot;) %&gt;% mutate(plant = as.character(plant)))
+rownames(metadata) &lt;- metadata$filename
+metadata &lt;- metadata[rownames(exp1.all),] #order metaddata to match order of data
 
-#TODO order exp1.all the same as metadata (accounting for skips)
+metadata %&gt;% count(species, time, treatment) %&gt;% kable()</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="left">species</th>
+<th align="left">time</th>
+<th align="left">treatment</th>
+<th align="right">n</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">agg</td>
+<td align="left">D</td>
+<td align="left">high</td>
+<td align="right">24</td>
+</tr>
+<tr class="even">
+<td align="left">agg</td>
+<td align="left">D</td>
+<td align="left">low</td>
+<td align="right">24</td>
+</tr>
+<tr class="odd">
+<td align="left">agg</td>
+<td align="left">N</td>
+<td align="left">high</td>
+<td align="right">32</td>
+</tr>
+<tr class="even">
+<td align="left">agg</td>
+<td align="left">N</td>
+<td align="left">low</td>
+<td align="right">28</td>
+</tr>
+<tr class="odd">
+<td align="left">AMB</td>
+<td align="left">D</td>
+<td align="left">NA</td>
+<td align="right">5</td>
+</tr>
+<tr class="even">
+<td align="left">AMB</td>
+<td align="left">N</td>
+<td align="left">NA</td>
+<td align="right">10</td>
+</tr>
+<tr class="odd">
+<td align="left">ten</td>
+<td align="left">D</td>
+<td align="left">high</td>
+<td align="right">27</td>
+</tr>
+<tr class="even">
+<td align="left">ten</td>
+<td align="left">D</td>
+<td align="left">low</td>
+<td align="right">20</td>
+</tr>
+<tr class="odd">
+<td align="left">ten</td>
+<td align="left">N</td>
+<td align="left">high</td>
+<td align="right">31</td>
+</tr>
+<tr class="even">
+<td align="left">ten</td>
+<td align="left">N</td>
+<td align="left">low</td>
+<td align="right">32</td>
+</tr>
+</tbody>
+</table>
+<pre class="r"><code>metadata %&gt;% count(plantid, time) %&gt;% 
+  ggplot(aes(x=n, fill=time))+ geom_histogram(binwidth=1) + facet_wrap(vars(time), ncol=1)+
+  labs(x=&quot;Samples per plant&quot;) </code></pre>
+<p><img src="plots-nitrogen/metadata-1.svg" width="960" /></p>
+</div>
+<div id="filtering" class="section level1">
+<h1>Filtering</h1>
+<pre class="r"><code>metadata &lt;- metadata %&gt;% mutate(type= ifelse(species==&quot;AMB&quot;, &quot;ambient&quot;,&quot;floral&quot;)) %&gt;% rename(trap=sample) %&gt;% 
+  load_metadata(GCMS_metadata, date = &quot;date&quot;, sample = &quot;filename&quot;, group = c(&quot;species&quot;,&quot;time&quot;), type = &quot;type&quot;)
 
-meta %&gt;% count(species, time)</code></pre>
-<pre><code>  species time  n
-1     agg    D 43
-2     agg    N 60
-3     AMB    D  5
-4     AMB    N 10
-5     ten    D 44
-6     ten    N 63</code></pre>
-<pre class="r"><code>meta %&gt;% count(date, species, time)</code></pre>
-<pre><code>         date species time  n
-1  2022-07-20     agg    D  8
-2  2022-07-20     agg    N 11
-3  2022-07-20     AMB    D  2
-4  2022-07-20     AMB    N  1
-5  2022-07-20     ten    D 13
-6  2022-07-20     ten    N 12
-7  2022-07-25     agg    D 27
-8  2022-07-25     agg    N 27
-9  2022-07-25     AMB    D  2
-10 2022-07-25     AMB    N  4
-11 2022-07-25     ten    D 22
-12 2022-07-25     ten    N 28
-13 2022-08-04     agg    N 17
-14 2022-08-04     AMB    N  5
-15 2022-08-04     ten    N 19
-16 2022-08-05     agg    D  8
-17 2022-08-05     AMB    D  1
-18 2022-08-05     ten    D  9
-19 2022-08-11     agg    N  4
-20 2022-08-11     ten    N  3
-21 2022-08-17     agg    N  1
-22 2022-08-17     ten    N  1</code></pre>
-<pre class="r"><code>meta %&gt;% count(date, species, time)</code></pre>
-<pre><code>         date species time  n
-1  2022-07-20     agg    D  8
-2  2022-07-20     agg    N 11
-3  2022-07-20     AMB    D  2
-4  2022-07-20     AMB    N  1
-5  2022-07-20     ten    D 13
-6  2022-07-20     ten    N 12
-7  2022-07-25     agg    D 27
-8  2022-07-25     agg    N 27
-9  2022-07-25     AMB    D  2
-10 2022-07-25     AMB    N  4
-11 2022-07-25     ten    D 22
-12 2022-07-25     ten    N 28
-13 2022-08-04     agg    N 17
-14 2022-08-04     AMB    N  5
-15 2022-08-04     ten    N 19
-16 2022-08-05     agg    D  8
-17 2022-08-05     AMB    D  1
-18 2022-08-05     ten    D  9
-19 2022-08-11     agg    N  4
-20 2022-08-11     ten    N  3
-21 2022-08-17     agg    N  1
-22 2022-08-17     ten    N  1</code></pre>
-<pre class="r"><code>meta %&gt;% count(plantid, time)</code></pre>
-<pre><code>   plantid time n
-1    agg 1    D 3
-2    agg 1    N 3
-3   agg 10    D 2
-4   agg 10    N 4
-5   agg 11    D 2
-6   agg 11    N 3
-7   agg 12    D 3
-8   agg 12    N 3
-9   agg 13    D 3
-10  agg 13    N 3
-11  agg 14    D 3
-12  agg 14    N 3
-13  agg 15    D 1
-14  agg 15    N 4
-15  agg 16    D 2
-16  agg 16    N 3
-17  agg 17    D 2
-18  agg 17    N 3
-19  agg 18    D 2
-20  agg 18    N 2
-21  agg 19    N 3
-22   agg 2    D 3
-23   agg 2    N 3
-24  agg 20    D 2
-25  agg 20    N 3
-26   agg 3    D 2
-27   agg 3    N 3
-28   agg 4    D 2
-29   agg 4    N 3
-30   agg 5    D 2
-31   agg 5    N 3
-32   agg 6    D 3
-33   agg 6    N 4
-34   agg 7    D 2
-35   agg 7    N 1
-36   agg 8    D 3
-37   agg 8    N 4
-38   agg 9    D 1
-39   agg 9    N 2
-40    AMB     D 2
-41  AMB AA    D 1
-42  AMB AA    N 2
-43  AMB DH    D 2
-44  AMB DH    N 2
-45  AMB JB    N 3
-46  AMB JK    N 1
-47  AMB JP    N 1
-48  AMB KW    N 1
-49   ten 1    D 1
-50   ten 1    N 2
-51  ten 10    D 4
-52  ten 10    N 4
-53  ten 11    N 3
-54  ten 12    D 2
-55  ten 12    N 3
-56  ten 13    D 2
-57  ten 13    N 3
-58  ten 14    D 3
-59  ten 14    N 3
-60  ten 15    D 2
-61  ten 15    N 3
-62  ten 16    D 5
-63  ten 16    N 5
-64  ten 17    D 1
-65  ten 17    N 3
-66  ten 18    D 2
-67  ten 18    N 3
-68  ten 19    D 2
-69  ten 19    N 4
-70   ten 2    N 3
-71  ten 20    D 2
-72  ten 20    N 3
-73   ten 3    D 3
-74   ten 3    N 2
-75   ten 4    D 2
-76   ten 4    N 3
-77   ten 5    D 3
-78   ten 5    N 4
-79   ten 6    D 3
-80   ten 6    N 3
-81   ten 7    D 2
-82   ten 7    N 1
-83   ten 8    D 1
-84   ten 8    N 3
-85   ten 9    D 4
-86   ten 9    N 5</code></pre>
+longdata &lt;- load_longdata(exp1.data, sample = &quot;Filename&quot;, RT = &quot;Ret.Time&quot;, 
+                          name = &quot;Name&quot;, area = &quot;Area&quot;, match = &quot;SI&quot;, maxmatch=100)
+
+sampletable &lt;- make_sampletable(longdata, metadata)
+
+chemtable &lt;- make_chemtable(longdata, metadata) %&gt;% 
+  filter_RT(2, 17) %&gt;% 
+  filter_match(0.8) %&gt;% 
+  filter_freq(0.2, group = TRUE) %&gt;% 
+  filter_contaminant(cont.list = &quot;Caprolactam&quot;) %&gt;% 
+  filter_area(min_maximum = 1e5) %&gt;%
+  filter_ambient_ratio(sampletable, metadata, ratio = 3) %&gt;% 
+  filter_ambient_ttest(sampletable, metadata, 
+                       alpha = 0.05, adjust = &quot;fdr&quot;) 
+
+chemtable$filter_final &lt;- with(chemtable, filter_RT == &quot;OK&quot; &amp; filter_match ==&quot;OK&quot; &amp; 
+                                 filter_freq.floral == &quot;OK&quot; &amp; filter_area == &quot;OK&quot; &amp; 
+                              (filter_ambient_ratio == &quot;OK&quot; | (filter_ambient_ttest == &quot;OK&quot; &amp; ambient_ratio &gt;3)) &amp;
+                                filter_contaminant == &quot;OK&quot;)
+
+plot_filters(chemtable, option=&quot;rarity&quot;)</code></pre>
+<p><img src="plots-nitrogen/filtering-1.svg" width="960" /></p>
+<pre class="r"><code>plot_filters(chemtable, option=&quot;ambient&quot;)</code></pre>
+<p><img src="plots-nitrogen/filtering-2.svg" width="960" /></p>
+<pre class="r"><code>plot_filters(chemtable, option=&quot;prop&quot;)</code></pre>
+<p><img src="plots-nitrogen/filtering-3.svg" width="960" /></p>
+<pre class="r"><code>vol &lt;- prune_sampletable(sampletable, chemtable, metadata)
+files_exclude &lt;- c(rownames(vol)[rowSums(vol)==0], #two files with no filtered peaks
+                   &quot;NEXP1_agg6n3_N_220725_8152022_10.qgd&quot;) # flower fell off
+vol &lt;- vol[!(rownames(vol) %in% files_exclude) ,]
+meta &lt;- metadata[metadata$type == &quot;floral&quot; &amp; !(metadata$sample %in% files_exclude),] %&gt;% droplevels()
+vol &lt;- vol / as.numeric(meta$equil + meta$pumping)/3600 / meta$flrs #0.5 hr of equilibration plus 0.25 hr pumping, one flower</code></pre>
+<pre class="r"><code>library(pheatmap)
+library(dendsort)
+library(viridis)
+ph  &lt;- pheatmap(as.matrix(t(vol))^(1/3), 
+         cluster_cols=T, show_colnames=F,
+         clustering_method=&quot;mcquitty&quot;, clustering_distance_rows=&quot;correlation&quot;,
+         clustering_distance_cols=vegdist(vol, method = &quot;bray&quot;),
+         clustering_callback = function(hc, ...){dendsort(hc, type=&quot;average&quot;)},
+         scale=&quot;none&quot;, color=inferno(512),
+         annotation_col = data.frame(meta %&gt;% select(&quot;species&quot;,&quot;treatment&quot;,&quot;time&quot;), row.names=rownames(vol)), 
+   fontsize = 10, border_color = NA, legend=F, annotation_legend=T, cutree_rows=6
+)</code></pre>
+<p><img src="plots-nitrogen/heatmap-1.png" width="960" /></p>
+<pre class="r"><code>(cap_treat &lt;- vegan::capscale(sqrt(vol) ~ species + time + treatment, data=meta))</code></pre>
+<pre><code>Call: vegan::capscale(formula = sqrt(vol) ~ species + time + treatment,
+data = meta)
+
+               Inertia Proportion Rank
+Total         124.3608     1.0000     
+Constrained    27.5418     0.2215    3
+Unconstrained  96.8189     0.7785   15
+Inertia is squared Euclidean distance 
+Species scores projected from &#39;sqrt&#39; &#39;vol&#39; 
+
+Eigenvalues for constrained axes:
+  CAP1   CAP2   CAP3 
+26.102  1.169  0.271 
+
+Eigenvalues for unconstrained axes:
+ MDS1  MDS2  MDS3  MDS4  MDS5  MDS6  MDS7  MDS8  MDS9 MDS10 MDS11 MDS12 MDS13 
+57.96 14.27 12.71  4.45  2.15  1.28  0.83  0.76  0.58  0.48  0.42  0.35  0.29 
+MDS14 MDS15 
+ 0.18  0.10 </code></pre>
+<pre class="r"><code>anova.cca(cap_treat, by=&quot;margin&quot;) # samples should be averaged by plant first</code></pre>
+<pre><code>Permutation test for capscale under reduced model
+Marginal effects of terms
+Permutation: free
+Number of permutations: 999
+
+Model: vegan::capscale(formula = sqrt(vol) ~ species + time + treatment, data = meta)
+           Df SumOfSqs       F Pr(&gt;F)    
+species     1    1.196  2.6076  0.057 .  
+time        1   25.720 56.0522  0.001 ***
+treatment   1    0.698  1.5204  0.176    
+Residual  211   96.819                   
+---
+Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
+<pre class="r"><code>plot(cap_treat, type=&quot;n&quot;)
+points(cap_treat, display=&quot;sites&quot;, 
+       pch=c(1,19)[as.integer(meta$time)],
+       col=c(&quot;red&quot;,&quot;magenta&quot;)[as.integer(meta$species)])
+legend(&quot;topleft&quot;, levels(meta$species), title=&quot;Species&quot;, fill=c(&quot;red&quot;,&quot;magenta&quot;))
+legend(&quot;topright&quot;, levels(meta$time), title=&quot;Time&quot;, pch=c(1,19))
+text(cap_treat, display=&quot;species&quot;, cex=0.5, col=3)
+text(cap_treat, display=&quot;cn&quot;, cex=0.5)</code></pre>
+<p><img src="plots-nitrogen/cap-1.svg" width="960" /></p>
+<pre class="r"><code>kable(arrange(as.data.frame(cap_treat$CCA$v), CAP1)) </code></pre>
+<table>
+<colgroup>
+<col width="60%" />
+<col width="13%" />
+<col width="13%" />
+<col width="13%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left"></th>
+<th align="right">CAP1</th>
+<th align="right">CAP2</th>
+<th align="right">CAP3</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Methyl Isobutyl Ketone</td>
+<td align="right">-0.0847428</td>
+<td align="right">0.1115038</td>
+<td align="right">-0.1059853</td>
+</tr>
+<tr class="even">
+<td align="left">D-Limonene</td>
+<td align="right">-0.0194748</td>
+<td align="right">0.1078817</td>
+<td align="right">0.1091974</td>
+</tr>
+<tr class="odd">
+<td align="left">Propanoic acid, 2,2-dimethyl-, 2-ethylhexyl ester</td>
+<td align="right">-0.0159031</td>
+<td align="right">-0.0043922</td>
+<td align="right">-0.0395201</td>
+</tr>
+<tr class="even">
+<td align="left">Caryophyllene</td>
+<td align="right">-0.0103067</td>
+<td align="right">-0.1681366</td>
+<td align="right">0.3212337</td>
+</tr>
+<tr class="odd">
+<td align="left">2-Hexenal, (E)-</td>
+<td align="right">-0.0062926</td>
+<td align="right">0.0972908</td>
+<td align="right">0.2257433</td>
+</tr>
+<tr class="even">
+<td align="left">(1R)-2,6,6-Trimethylbicyclo[3.1.1]hept-2-ene</td>
+<td align="right">0.0017238</td>
+<td align="right">0.2739745</td>
+<td align="right">0.7335833</td>
+</tr>
+<tr class="odd">
+<td align="left">1-Decanol, 2-hexyl-</td>
+<td align="right">0.0204887</td>
+<td align="right">-0.0040975</td>
+<td align="right">-0.2416956</td>
+</tr>
+<tr class="even">
+<td align="left">Acetic acid, (benzoylamino)hydroxy-</td>
+<td align="right">0.0238067</td>
+<td align="right">0.0350397</td>
+<td align="right">-0.1019449</td>
+</tr>
+<tr class="odd">
+<td align="left">Linalool</td>
+<td align="right">0.0271133</td>
+<td align="right">0.0114885</td>
+<td align="right">0.1117989</td>
+</tr>
+<tr class="even">
+<td align="left">2,6-Dimethyl-1,3,5,7-octatetraene, E,E-</td>
+<td align="right">0.0482690</td>
+<td align="right">0.0573428</td>
+<td align="right">-0.0971670</td>
+</tr>
+<tr class="odd">
+<td align="left">.beta.-Myrcene</td>
+<td align="right">0.0910357</td>
+<td align="right">0.2739053</td>
+<td align="right">0.2669130</td>
+</tr>
+<tr class="even">
+<td align="left">2,4,6-Octatriene, 2,6-dimethyl-, (E,Z)-</td>
+<td align="right">0.0955766</td>
+<td align="right">0.0950149</td>
+<td align="right">0.0324493</td>
+</tr>
+<tr class="odd">
+<td align="left">trans-.beta.-Ocimene</td>
+<td align="right">0.1974399</td>
+<td align="right">0.2247147</td>
+<td align="right">0.1257605</td>
+</tr>
+<tr class="even">
+<td align="left">.alpha.-Farnesene</td>
+<td align="right">0.6180854</td>
+<td align="right">-0.6989281</td>
+<td align="right">0.2136536</td>
+</tr>
+<tr class="odd">
+<td align="left">.beta.-Ocimene</td>
+<td align="right">0.7413175</td>
+<td align="right">0.4851781</td>
+<td align="right">-0.2418195</td>
+</tr>
+</tbody>
+</table>
 </div>
 
 
