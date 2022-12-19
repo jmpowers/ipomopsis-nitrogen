@@ -63,15 +63,21 @@ exp2leaf.all[,1] <- NULL
 # Read metadata
 
 ```{r metadata}
+transplants <- read_csv("data/EXP 2 Root washing trait measurements - transplants.csv") %>% 
+  mutate(plant = as.character(plant))
+
 metadata <- read_csv("data/EXP 2 (microbes) Leaf Volatile Sampling - metadata.csv") %>% 
   filter(filename != "#N/A") %>% 
-  mutate(plantid = paste(site, plant, sep="-"))# %>% 
-  #left_join(read_csv("data/exp2leaf_treatments.csv") %>% mutate(plant = as.character(plant)))
+  mutate(plantid = paste(site, plant, sep="-"),
+         rundate = replace_na(rundate, "918a")) %>% 
+  left_join(transplants)
 rownames(metadata) <- metadata$filename
-metadata <- metadata[rownames(exp2leaf.all),] #order metaddata to match order of data
+metadata <- metadata[rownames(exp2leaf.all),] #order metadata to match order of data
 
-#metadata %>% count(species, time, treatment) %>% kable()
-metadata %>% filter(site!="AMB") %>% count(plantid, time) %>% count(n)
+metadata %>% count(trt_col) %>% kable(caption = "samples")
+metadata %>% count(plantid, trt_col) %>% count(trt_col) %>% kable(caption="plants")
+metadata %>% filter(site!="AMB") %>% drop_na(trt_col) %>% count(plantid) %>% count(n) %>% kable(caption="samples per plant")
+metadata %>% count(rundate, date) %>% pivot_wider(names_from=rundate, values_from=n) %>% kable(caption="sampling date and GC run date")
 ```
 
 # Filtering
@@ -88,7 +94,7 @@ sampletable <- make_sampletable(longdata, metadata)
 chemtable <- make_chemtable(longdata, metadata) %>% 
   filter_RT(2, 17) %>% 
   filter_match(0.8) %>% 
-  filter_freq(0.2, group = TRUE) %>% 
+  filter_freq(0.1, group = TRUE) %>% 
   filter_contaminant(cont.list = "Caprolactam") %>% 
   filter_area(min_maximum = 1e5) %>%
   filter_ambient_ratio(sampletable, metadata, ratio = 3) %>% 
@@ -122,22 +128,27 @@ ph  <- pheatmap(as.matrix(t(vol))^(1/3),
          clustering_distance_cols=vegdist(vol, method = "bray"),
          clustering_callback = function(hc, ...){dendsort(hc, type="average")},
          scale="none", color=inferno(512),
-         #annotation_col = data.frame(meta %>% select("species","treatment","time"), row.names=rownames(vol)), 
-   fontsize = 10, border_color = NA, legend=F, annotation_legend=T, cutree_rows=6
+         annotation_col = data.frame(meta %>% select("trt_col","date","rundate") %>% mutate(date=factor(date)), row.names=rownames(vol)),
+         fontsize = 10, border_color = NA, legend=F, annotation_legend=T, cutree_rows=6
 )
 ```
 
-```{r cap, eval=F}
-(cap_treat <- vegan::capscale(sqrt(vol) ~ species + time + treatment, data=meta))
+```{r ordination}
+(cap_treat <- vegan::capscale(sqrt(vol) ~ trt_col, data=meta))
 anova.cca(cap_treat, by="margin") # samples should be averaged by plant first
 
-plot(cap_treat, type="n")
-points(cap_treat, display="sites", 
-       pch=c(1,19)[as.integer(meta$time)],
-       col=c("red","magenta")[as.integer(meta$species)])
-legend("topleft", levels(meta$species), title="Species", fill=c("red","magenta"))
-legend("topright", levels(meta$time), title="Time", pch=c(1,19))
-text(cap_treat, display="species", cex=0.5, col=3)
-text(cap_treat, display="cn", cex=0.5)
-kable(arrange(as.data.frame(cap_treat$CCA$v), CAP1)) 
+nmds <- metaMDS(sqrt(vol), autotransform = F, trace=F)
+par(bg="grey40")
+plot(nmds, type="n")
+ordihull(nmds, meta$plantid, col="grey70")
+points(nmds, display="sites", col=meta$trt_col)
+text(nmds, display="species", cex=0.5, col="black")
+
+cap_dates <- vegan::capscale(sqrt(vol) ~ rundate + date, data=meta)
+anova.cca(cap_dates, by="margin")
+plot(cap_dates, type="n")
+legend("topleft", legend=unique(meta$date), pch=1:3)
+legend("topright", legend=unique(meta$rundate), fill=1:6)
+points(cap_dates, display="sites", pch=as.integer(factor(meta$date)), col=as.integer(factor(meta$rundate)))
+text(cap_dates, display="species", cex=0.5, col="white")
 ```

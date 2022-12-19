@@ -11,7 +11,7 @@
 
 <meta name="author" content="Janelle Bohey, John Powers" />
 
-<meta name="date" content="2022-12-16" />
+<meta name="date" content="2022-12-19" />
 
 <title>Ipomopsis microbe leaf volatile experiment</title>
 
@@ -260,7 +260,7 @@ div.tocify {
 <h1 class="title toc-ignore">Ipomopsis microbe leaf volatile
 experiment</h1>
 <h4 class="author">Janelle Bohey, John Powers</h4>
-<h4 class="date">2022-12-16</h4>
+<h4 class="date">2022-12-19</h4>
 
 </div>
 
@@ -298,20 +298,161 @@ rownames(exp2leaf.all) &lt;- exp2leaf.all[,1]
 exp2leaf.all[,1] &lt;- NULL</code></pre>
 <div id="read-metadata" class="section level1">
 <h1>Read metadata</h1>
-<pre class="r"><code>metadata &lt;- read_csv(&quot;data/EXP 2 (microbes) Leaf Volatile Sampling - metadata.csv&quot;) %&gt;% 
-  filter(filename != &quot;#N/A&quot;) %&gt;% 
-  mutate(plantid = paste(site, plant, sep=&quot;-&quot;))# %&gt;% 
-  #left_join(read_csv(&quot;data/exp2leaf_treatments.csv&quot;) %&gt;% mutate(plant = as.character(plant)))
-rownames(metadata) &lt;- metadata$filename
-metadata &lt;- metadata[rownames(exp2leaf.all),] #order metaddata to match order of data
+<pre class="r"><code>transplants &lt;- read_csv(&quot;data/EXP 2 Root washing trait measurements - transplants.csv&quot;) %&gt;% 
+  mutate(plant = as.character(plant))
 
-#metadata %&gt;% count(species, time, treatment) %&gt;% kable()
-metadata %&gt;% filter(site!=&quot;AMB&quot;) %&gt;% count(plantid, time) %&gt;% count(n)</code></pre>
-<pre><code># A tibble: 2 × 2
-      n    nn
-  &lt;int&gt; &lt;int&gt;
-1     1    75
-2     2    23</code></pre>
+metadata &lt;- read_csv(&quot;data/EXP 2 (microbes) Leaf Volatile Sampling - metadata.csv&quot;) %&gt;% 
+  filter(filename != &quot;#N/A&quot;) %&gt;% 
+  mutate(plantid = paste(site, plant, sep=&quot;-&quot;),
+         rundate = replace_na(rundate, &quot;918a&quot;)) %&gt;% 
+  left_join(transplants)
+rownames(metadata) &lt;- metadata$filename
+metadata &lt;- metadata[rownames(exp2leaf.all),] #order metadata to match order of data
+
+metadata %&gt;% count(trt_col) %&gt;% kable(caption = &quot;samples&quot;)</code></pre>
+<table>
+<caption>samples</caption>
+<thead>
+<tr class="header">
+<th align="left">trt_col</th>
+<th align="right">n</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">blue</td>
+<td align="right">21</td>
+</tr>
+<tr class="even">
+<td align="left">green</td>
+<td align="right">20</td>
+</tr>
+<tr class="odd">
+<td align="left">pink</td>
+<td align="right">20</td>
+</tr>
+<tr class="even">
+<td align="left">red</td>
+<td align="right">20</td>
+</tr>
+<tr class="odd">
+<td align="left">white</td>
+<td align="right">20</td>
+</tr>
+<tr class="even">
+<td align="left">yellow</td>
+<td align="right">20</td>
+</tr>
+<tr class="odd">
+<td align="left">NA</td>
+<td align="right">15</td>
+</tr>
+</tbody>
+</table>
+<pre class="r"><code>metadata %&gt;% count(plantid, trt_col) %&gt;% count(trt_col) %&gt;% kable(caption=&quot;plants&quot;)</code></pre>
+<table>
+<caption>plants</caption>
+<thead>
+<tr class="header">
+<th align="left">trt_col</th>
+<th align="right">n</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">blue</td>
+<td align="right">16</td>
+</tr>
+<tr class="even">
+<td align="left">green</td>
+<td align="right">16</td>
+</tr>
+<tr class="odd">
+<td align="left">pink</td>
+<td align="right">16</td>
+</tr>
+<tr class="even">
+<td align="left">red</td>
+<td align="right">16</td>
+</tr>
+<tr class="odd">
+<td align="left">white</td>
+<td align="right">16</td>
+</tr>
+<tr class="even">
+<td align="left">yellow</td>
+<td align="right">16</td>
+</tr>
+<tr class="odd">
+<td align="left">NA</td>
+<td align="right">2</td>
+</tr>
+</tbody>
+</table>
+<pre class="r"><code>metadata %&gt;% filter(site!=&quot;AMB&quot;) %&gt;% drop_na(trt_col) %&gt;% count(plantid) %&gt;% count(n) %&gt;% kable(caption=&quot;samples per plant&quot;)</code></pre>
+<table>
+<caption>samples per plant</caption>
+<thead>
+<tr class="header">
+<th align="right">n</th>
+<th align="right">nn</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">1</td>
+<td align="right">71</td>
+</tr>
+<tr class="even">
+<td align="right">2</td>
+<td align="right">25</td>
+</tr>
+</tbody>
+</table>
+<pre class="r"><code>metadata %&gt;% count(rundate, date) %&gt;% pivot_wider(names_from=rundate, values_from=n) %&gt;% kable(caption=&quot;sampling date and GC run date&quot;)</code></pre>
+<table>
+<caption>sampling date and GC run date</caption>
+<thead>
+<tr class="header">
+<th align="left">date</th>
+<th align="right">918a</th>
+<th align="right">919a</th>
+<th align="right">919b</th>
+<th align="right">920a</th>
+<th align="right">920b</th>
+<th align="right">921a</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">2022-08-24</td>
+<td align="right">23</td>
+<td align="right">11</td>
+<td align="right">NA</td>
+<td align="right">NA</td>
+<td align="right">NA</td>
+<td align="right">NA</td>
+</tr>
+<tr class="even">
+<td align="left">2022-08-22</td>
+<td align="right">NA</td>
+<td align="right">14</td>
+<td align="right">12</td>
+<td align="right">NA</td>
+<td align="right">NA</td>
+<td align="right">1</td>
+</tr>
+<tr class="odd">
+<td align="left">2022-08-23</td>
+<td align="right">NA</td>
+<td align="right">NA</td>
+<td align="right">8</td>
+<td align="right">20</td>
+<td align="right">29</td>
+<td align="right">18</td>
+</tr>
+</tbody>
+</table>
 </div>
 <div id="filtering" class="section level1">
 <h1>Filtering</h1>
@@ -326,7 +467,7 @@ sampletable &lt;- make_sampletable(longdata, metadata)
 chemtable &lt;- make_chemtable(longdata, metadata) %&gt;% 
   filter_RT(2, 17) %&gt;% 
   filter_match(0.8) %&gt;% 
-  filter_freq(0.2, group = TRUE) %&gt;% 
+  filter_freq(0.1, group = TRUE) %&gt;% 
   filter_contaminant(cont.list = &quot;Caprolactam&quot;) %&gt;% 
   filter_area(min_maximum = 1e5) %&gt;%
   filter_ambient_ratio(sampletable, metadata, ratio = 3) %&gt;% 
@@ -358,22 +499,65 @@ ph  &lt;- pheatmap(as.matrix(t(vol))^(1/3),
          clustering_distance_cols=vegdist(vol, method = &quot;bray&quot;),
          clustering_callback = function(hc, ...){dendsort(hc, type=&quot;average&quot;)},
          scale=&quot;none&quot;, color=inferno(512),
-         #annotation_col = data.frame(meta %&gt;% select(&quot;species&quot;,&quot;treatment&quot;,&quot;time&quot;), row.names=rownames(vol)), 
-   fontsize = 10, border_color = NA, legend=F, annotation_legend=T, cutree_rows=6
+         annotation_col = data.frame(meta %&gt;% select(&quot;trt_col&quot;,&quot;date&quot;,&quot;rundate&quot;) %&gt;% mutate(date=factor(date)), row.names=rownames(vol)),
+         fontsize = 10, border_color = NA, legend=F, annotation_legend=T, cutree_rows=6
 )</code></pre>
 <p><img src="plots-microbe-leaf/heatmap-1.png" width="960" /></p>
-<pre class="r"><code>(cap_treat &lt;- vegan::capscale(sqrt(vol) ~ species + time + treatment, data=meta))
-anova.cca(cap_treat, by=&quot;margin&quot;) # samples should be averaged by plant first
+<pre class="r"><code>(cap_treat &lt;- vegan::capscale(sqrt(vol) ~ trt_col, data=meta))</code></pre>
+<pre><code>Call: vegan::capscale(formula = sqrt(vol) ~ trt_col, data = meta)
 
-plot(cap_treat, type=&quot;n&quot;)
-points(cap_treat, display=&quot;sites&quot;, 
-       pch=c(1,19)[as.integer(meta$time)],
-       col=c(&quot;red&quot;,&quot;magenta&quot;)[as.integer(meta$species)])
-legend(&quot;topleft&quot;, levels(meta$species), title=&quot;Species&quot;, fill=c(&quot;red&quot;,&quot;magenta&quot;))
-legend(&quot;topright&quot;, levels(meta$time), title=&quot;Time&quot;, pch=c(1,19))
-text(cap_treat, display=&quot;species&quot;, cex=0.5, col=3)
-text(cap_treat, display=&quot;cn&quot;, cex=0.5)
-kable(arrange(as.data.frame(cap_treat$CCA$v), CAP1)) </code></pre>
+                Inertia Proportion Rank
+Total         1.006e+06  1.000e+00     
+Constrained   3.143e+04  3.123e-02    5
+Unconstrained 9.750e+05  9.688e-01   34
+Inertia is mean squared Euclidean distance 
+Species scores projected from &#39;sqrt&#39; &#39;vol&#39; 
+
+Eigenvalues for constrained axes:
+ CAP1  CAP2  CAP3  CAP4  CAP5 
+10109  8360  5606  4206  3151 
+
+Eigenvalues for unconstrained axes:
+  MDS1   MDS2   MDS3   MDS4   MDS5   MDS6   MDS7   MDS8 
+390472 164236  65626  53355  34422  28734  26261  24706 
+(Showing 8 of 34 unconstrained eigenvalues)</code></pre>
+<pre class="r"><code>anova.cca(cap_treat, by=&quot;margin&quot;) # samples should be averaged by plant first</code></pre>
+<pre><code>Permutation test for capscale under NA model
+Marginal effects of terms
+Permutation: free
+Number of permutations: 999
+
+Model: vegan::capscale(formula = sqrt(vol) ~ trt_col, data = meta)
+          Df Variance      F Pr(&gt;F)
+trt_col    5    31433 0.7222  0.878
+Residual 112   974956              </code></pre>
+<pre class="r"><code>nmds &lt;- metaMDS(sqrt(vol), autotransform = F, trace=F)
+par(bg=&quot;grey40&quot;)
+plot(nmds, type=&quot;n&quot;)
+ordihull(nmds, meta$plantid, col=&quot;grey70&quot;)
+points(nmds, display=&quot;sites&quot;, col=meta$trt_col)
+text(nmds, display=&quot;species&quot;, cex=0.5, col=&quot;black&quot;)</code></pre>
+<p><img src="plots-microbe-leaf/ordination-1.svg" width="960" /></p>
+<pre class="r"><code>cap_dates &lt;- vegan::capscale(sqrt(vol) ~ rundate + date, data=meta)
+anova.cca(cap_dates, by=&quot;margin&quot;)</code></pre>
+<pre><code>Permutation test for capscale under reduced model
+Marginal effects of terms
+Permutation: free
+Number of permutations: 999
+
+Model: vegan::capscale(formula = sqrt(vol) ~ rundate + date, data = meta)
+          Df Variance      F Pr(&gt;F)  
+rundate    5    68903 1.6837  0.022 *
+date       1     9969 1.2179  0.259  
+Residual 111   908514                
+---
+Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
+<pre class="r"><code>plot(cap_dates, type=&quot;n&quot;)
+legend(&quot;topleft&quot;, legend=unique(meta$date), pch=1:3)
+legend(&quot;topright&quot;, legend=unique(meta$rundate), fill=1:6)
+points(cap_dates, display=&quot;sites&quot;, pch=as.integer(factor(meta$date)), col=as.integer(factor(meta$rundate)))
+text(cap_dates, display=&quot;species&quot;, cex=0.5, col=&quot;white&quot;)</code></pre>
+<p><img src="plots-microbe-leaf/ordination-2.svg" width="960" /></p>
 </div>
 
 
