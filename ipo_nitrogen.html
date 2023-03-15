@@ -11,11 +11,11 @@
 
 <meta name="author" content="Janelle Bohey, John Powers" />
 
-<meta name="date" content="2022-12-16" />
+<meta name="date" content="2023-03-14" />
 
 <title>Ipomopsis nitrogen experiments</title>
 
-<script src="libs/header-attrs-2.14/header-attrs.js"></script>
+<script src="libs/header-attrs-2.20/header-attrs.js"></script>
 <script src="libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link href="libs/bootstrap-3.3.5/css/bootstrap.min.css" rel="stylesheet" />
@@ -110,8 +110,8 @@ pre code {
   border-radius: 4px;
 }
 
-.tabset-dropdown > .nav-tabs > li.active:before {
-  content: "";
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
   font-family: 'Glyphicons Halflings';
   display: inline-block;
   padding: 10px;
@@ -119,16 +119,9 @@ pre code {
 }
 
 .tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
-  content: "&#xe258;";
-  border: none;
-}
-
-.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
-  content: "";
+  content: "\e258";
   font-family: 'Glyphicons Halflings';
-  display: inline-block;
-  padding: 10px;
-  border-right: 1px solid #ddd;
+  border: none;
 }
 
 .tabset-dropdown > .nav-tabs > li.active {
@@ -259,7 +252,7 @@ div.tocify {
 
 <h1 class="title toc-ignore">Ipomopsis nitrogen experiments</h1>
 <h4 class="author">Janelle Bohey, John Powers</h4>
-<h4 class="date">2022-12-16</h4>
+<h4 class="date">2023-03-14</h4>
 
 </div>
 
@@ -291,6 +284,15 @@ load(&quot;data/exp1_data.rda&quot;) #loads exp1.data (Shimadzu output)
 exp1.data &lt;- exp1.data %&gt;% left_join(select(exp1.verdicts, Filename = FileName, sample2)) %&gt;% 
   select(-Filename) %&gt;% rename(Filename = sample2) %&gt;%  #replace FileName with the sample2 it holds (accounts for skips)
   droplevels()
+
+# load short names
+ipochems &lt;- read_csv(&quot;data/Ipo volatile compounds - chemsf_ipo.csv&quot;) %&gt;% 
+  select(name, shortname, standard, verdict) %&gt;%  filter(verdict != &quot;&quot;)
+            
+#shorten chemical names and merge compounds with multiple names
+shortnames &lt;- ipochems %&gt;% select(name, shortname) %&gt;% filter(shortname!=&quot;&quot;) %&gt;% deframe()
+
+exp1.data$Name &lt;- recode(exp1.data$Name, !!!shortnames)
 
 exp1.all &lt;- dcast(exp1.data, Filename~Name, sum, value.var=&quot;Area&quot;)
 rownames(exp1.all) &lt;- exp1.all[,1]
@@ -411,47 +413,81 @@ plot_filters(chemtable, option=&quot;rarity&quot;)</code></pre>
 <p><img src="plots-nitrogen/filtering-1.svg" width="960" /></p>
 <pre class="r"><code>plot_filters(chemtable, option=&quot;ambient&quot;)</code></pre>
 <p><img src="plots-nitrogen/filtering-2.svg" width="960" /></p>
-<pre class="r"><code>plot_filters(chemtable, option=&quot;prop&quot;)</code></pre>
+<pre class="r"><code>plot_filters(chemtable, option=&quot;volcano&quot;)</code></pre>
 <p><img src="plots-nitrogen/filtering-3.svg" width="960" /></p>
-<pre class="r"><code>vol &lt;- prune_sampletable(sampletable, chemtable, metadata)
-files_exclude &lt;- c(rownames(vol)[rowSums(vol)==0], #two files with no filtered peaks
-                   &quot;NEXP1_agg6n3_N_220725_8152022_10.qgd&quot;) # flower fell off
-vol &lt;- vol[!(rownames(vol) %in% files_exclude) ,]
+<pre class="r"><code>plot_filters(chemtable, option=&quot;prop&quot;)</code></pre>
+<p><img src="plots-nitrogen/filtering-4.svg" width="960" /></p>
+<pre class="r"><code>vol.qual &lt;- prune_sampletable(sampletable, chemtable, metadata)
+files_exclude &lt;- c(&quot;NEXP1_agg6n3_N_220725_8152022_10.qgd&quot;) # flower fell off
+vol.qual &lt;- vol.qual[!(rownames(vol.qual) %in% files_exclude) ,]
 meta &lt;- metadata[metadata$type == &quot;floral&quot; &amp; !(metadata$sample %in% files_exclude),] %&gt;% droplevels()
-vol &lt;- vol / as.numeric(meta$equil + meta$pumping)/3600 / meta$flrs #0.5 hr of equilibration plus 0.25 hr pumping, one flower</code></pre>
+vol.qual &lt;- vol.qual / as.numeric(meta$equil + meta$pumping)/3600 / meta$flrs #0.5 hr of equilibration plus 0.25 hr pumping, one flower</code></pre>
+</div>
+<div id="quantitative-integrations" class="section level1">
+<h1>Quantitative integrations</h1>
+<pre class="r"><code># read_tsv(&quot;../ipomopsis-temp/data/volatiles/quant.tsv&quot;) %&gt;%
+#   filter(str_detect(Filename, &quot;^NEXP&quot;)) %&gt;% select(-Dirname, -batch) %&gt;%
+#   pivot_wider(names_from=&quot;Name&quot;, values_from=&quot;Area&quot;) %&gt;%
+#   write_tsv(&quot;data/quant_2022.tsv&quot;)
+
+vol &lt;- read_tsv(&quot;data/quant_2022.tsv&quot;) %&gt;%  
+  left_join(select(exp1.verdicts, Filename = FileName, sample2)) %&gt;% drop_na(sample2) %&gt;% 
+  select(-Filename) %&gt;% rename(Filename = sample2) %&gt;%  #replace FileName with the sample2 it holds (accounts for skips)
+  column_to_rownames(&quot;Filename&quot;)
+contams &lt;- c(&quot;D-limonene&quot;, &quot;methyl salicylate&quot;, &quot;benzaldehyde&quot;, #standards
+             &quot;3-methylbutanal oxime&quot;)#passed bouquet in OTC experiment but rare here
+vol &lt;- vol[rownames(vol.qual), !colnames(vol) %in% contams]
+vol &lt;- vol / as.numeric(meta$equil + meta$pumping)/3600 / meta$flrs #0.5 hr of equilibration plus 0.25 hr pumping, one flower
+
+
+setdiff(colnames(vol.qual), colnames(vol)) # filtered volatiles that need quant integration. </code></pre>
+<pre><code>[1] &quot;(4E,6Z)-alloocimene&quot;                              
+[2] &quot;cosmene&quot;                                          
+[3] &quot;Acetic acid, (benzoylamino)hydroxy-&quot;              
+[4] &quot;D-limonene&quot;                                       
+[5] &quot;Methyl Isobutyl Ketone&quot;                           
+[6] &quot;Propanoic acid, 2,2-dimethyl-, 2-ethylhexyl ester&quot;
+[7] &quot;2-hexyldecan-1-ol&quot;                                </code></pre>
+<pre class="r"><code>keep_qual &lt;- c(&quot;(4E,6Z)-alloocimene&quot;, &quot;cosmene&quot;) #these look real
+vol &lt;- bind_cols(vol, vol.qual[,keep_qual]) #temporary, add a couple volatiles that don&#39;t have quant integrations yet (currently not on same scale!)</code></pre>
+</div>
+<div id="heatmap" class="section level1">
+<h1>Heatmap</h1>
 <pre class="r"><code>library(pheatmap)
 library(dendsort)
 library(viridis)
-ph  &lt;- pheatmap(as.matrix(t(vol))^(1/3), 
+ph  &lt;- pheatmap(as.matrix(t(vol))^(1/4), 
          cluster_cols=T, show_colnames=F,
          clustering_method=&quot;mcquitty&quot;, clustering_distance_rows=&quot;correlation&quot;,
          clustering_distance_cols=vegdist(vol, method = &quot;bray&quot;),
          clustering_callback = function(hc, ...){dendsort(hc, type=&quot;average&quot;)},
-         scale=&quot;none&quot;, color=inferno(512),
+         scale=&quot;none&quot;, color=magma(512),
          annotation_col = data.frame(meta %&gt;% select(&quot;species&quot;,&quot;treatment&quot;,&quot;time&quot;), row.names=rownames(vol)), 
    fontsize = 10, border_color = NA, legend=F, annotation_legend=T, cutree_rows=6
 )</code></pre>
 <p><img src="plots-nitrogen/heatmap-1.png" width="960" /></p>
+</div>
+<div id="ordination" class="section level1">
+<h1>Ordination</h1>
 <pre class="r"><code>(cap_treat &lt;- vegan::capscale(sqrt(vol) ~ species + time + treatment, data=meta))</code></pre>
 <pre><code>Call: vegan::capscale(formula = sqrt(vol) ~ species + time + treatment,
 data = meta)
 
-               Inertia Proportion Rank
-Total         124.3608     1.0000     
-Constrained    27.5418     0.2215    3
-Unconstrained  96.8189     0.7785   15
+              Inertia Proportion Rank
+Total         18.9914     1.0000     
+Constrained    4.7165     0.2483    3
+Unconstrained 14.2749     0.7517   29
 Inertia is squared Euclidean distance 
 Species scores projected from &#39;sqrt&#39; &#39;vol&#39; 
 
 Eigenvalues for constrained axes:
-  CAP1   CAP2   CAP3 
-26.102  1.169  0.271 
+ CAP1  CAP2  CAP3 
+4.435 0.222 0.059 
 
 Eigenvalues for unconstrained axes:
- MDS1  MDS2  MDS3  MDS4  MDS5  MDS6  MDS7  MDS8  MDS9 MDS10 MDS11 MDS12 MDS13 
-57.96 14.27 12.71  4.45  2.15  1.28  0.83  0.76  0.58  0.48  0.42  0.35  0.29 
-MDS14 MDS15 
- 0.18  0.10 </code></pre>
+ MDS1  MDS2  MDS3  MDS4  MDS5  MDS6  MDS7  MDS8 
+9.218 2.449 1.138 0.429 0.323 0.136 0.116 0.098 
+(Showing 8 of 29 unconstrained eigenvalues)</code></pre>
 <pre class="r"><code>anova.cca(cap_treat, by=&quot;margin&quot;) # samples should be averaged by plant first</code></pre>
 <pre><code>Permutation test for capscale under reduced model
 Marginal effects of terms
@@ -460,17 +496,17 @@ Number of permutations: 999
 
 Model: vegan::capscale(formula = sqrt(vol) ~ species + time + treatment, data = meta)
            Df SumOfSqs       F Pr(&gt;F)    
-species     1    1.196  2.6076  0.057 .  
-time        1   25.720 56.0522  0.001 ***
-treatment   1    0.698  1.5204  0.176    
-Residual  211   96.819                   
+species     1   0.2229  3.3266  0.052 .  
+time        1   4.3282 64.5823  0.001 ***
+treatment   1   0.1992  2.9720  0.051 .  
+Residual  213  14.2749                   
 ---
 Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
 <pre class="r"><code>plot(cap_treat, type=&quot;n&quot;)
 points(cap_treat, display=&quot;sites&quot;, 
        pch=c(1,19)[as.integer(meta$time)],
-       col=c(&quot;red&quot;,&quot;magenta&quot;)[as.integer(meta$species)])
-legend(&quot;topleft&quot;, levels(meta$species), title=&quot;Species&quot;, fill=c(&quot;red&quot;,&quot;magenta&quot;))
+       col=c(&quot;darkred&quot;,&quot;magenta&quot;)[as.integer(meta$species)])
+legend(&quot;topleft&quot;, levels(meta$species), title=&quot;Species&quot;, fill=c(&quot;darkred&quot;,&quot;magenta&quot;))
 legend(&quot;topright&quot;, levels(meta$time), title=&quot;Time&quot;, pch=c(1,19))
 text(cap_treat, display=&quot;species&quot;, cex=0.5, col=3)
 text(cap_treat, display=&quot;cn&quot;, cex=0.5)</code></pre>
@@ -478,10 +514,10 @@ text(cap_treat, display=&quot;cn&quot;, cex=0.5)</code></pre>
 <pre class="r"><code>kable(arrange(as.data.frame(cap_treat$CCA$v), CAP1)) </code></pre>
 <table>
 <colgroup>
-<col width="60%" />
-<col width="13%" />
-<col width="13%" />
-<col width="13%" />
+<col width="62%" />
+<col width="12%" />
+<col width="12%" />
+<col width="12%" />
 </colgroup>
 <thead>
 <tr class="header">
@@ -493,94 +529,179 @@ text(cap_treat, display=&quot;cn&quot;, cex=0.5)</code></pre>
 </thead>
 <tbody>
 <tr class="odd">
-<td align="left">Methyl Isobutyl Ketone</td>
-<td align="right">-0.0847428</td>
-<td align="right">0.1115038</td>
-<td align="right">-0.1059853</td>
+<td align="left">pseudoionone</td>
+<td align="right">-0.0454576</td>
+<td align="right">-0.0312923</td>
+<td align="right">-0.0472856</td>
 </tr>
 <tr class="even">
-<td align="left">D-Limonene</td>
-<td align="right">-0.0194748</td>
-<td align="right">0.1078817</td>
-<td align="right">0.1091974</td>
+<td align="left">(E)-hex-3-en-1-ol</td>
+<td align="right">-0.0141418</td>
+<td align="right">-0.0569367</td>
+<td align="right">-0.2793157</td>
 </tr>
 <tr class="odd">
-<td align="left">Propanoic acid, 2,2-dimethyl-, 2-ethylhexyl ester</td>
-<td align="right">-0.0159031</td>
-<td align="right">-0.0043922</td>
-<td align="right">-0.0395201</td>
+<td align="left">[(E)-hex-3-enyl] acetate</td>
+<td align="right">-0.0105282</td>
+<td align="right">-0.0212928</td>
+<td align="right">-0.1111263</td>
 </tr>
 <tr class="even">
-<td align="left">Caryophyllene</td>
-<td align="right">-0.0103067</td>
-<td align="right">-0.1681366</td>
-<td align="right">0.3212337</td>
+<td
+align="left">(1Z,4Z,7Z)-1,5,9,9-tetramethylcycloundeca-1,4,7-triene</td>
+<td align="right">-0.0079171</td>
+<td align="right">0.0198963</td>
+<td align="right">-0.1019402</td>
 </tr>
 <tr class="odd">
-<td align="left">2-Hexenal, (E)-</td>
-<td align="right">-0.0062926</td>
-<td align="right">0.0972908</td>
-<td align="right">0.2257433</td>
+<td align="left">a-copaene</td>
+<td align="right">-0.0030364</td>
+<td align="right">0.0062844</td>
+<td align="right">-0.0651376</td>
 </tr>
 <tr class="even">
-<td align="left">(1R)-2,6,6-Trimethylbicyclo[3.1.1]hept-2-ene</td>
-<td align="right">0.0017238</td>
-<td align="right">0.2739745</td>
-<td align="right">0.7335833</td>
+<td align="left">(E)-hex-2-enal</td>
+<td align="right">-0.0021504</td>
+<td align="right">-0.1086757</td>
+<td align="right">-0.1099045</td>
 </tr>
 <tr class="odd">
-<td align="left">1-Decanol, 2-hexyl-</td>
-<td align="right">0.0204887</td>
-<td align="right">-0.0040975</td>
-<td align="right">-0.2416956</td>
+<td align="left">petasitene</td>
+<td align="right">-0.0019761</td>
+<td align="right">0.0038904</td>
+<td align="right">-0.0031443</td>
 </tr>
 <tr class="even">
-<td align="left">Acetic acid, (benzoylamino)hydroxy-</td>
-<td align="right">0.0238067</td>
-<td align="right">0.0350397</td>
-<td align="right">-0.1019449</td>
+<td align="left">a-campholenal</td>
+<td align="right">-0.0004587</td>
+<td align="right">-0.0099476</td>
+<td align="right">0.0030452</td>
 </tr>
 <tr class="odd">
-<td align="left">Linalool</td>
-<td align="right">0.0271133</td>
-<td align="right">0.0114885</td>
-<td align="right">0.1117989</td>
+<td align="left">a-terpineol</td>
+<td align="right">-0.0004005</td>
+<td align="right">-0.0114134</td>
+<td align="right">-0.0291856</td>
 </tr>
 <tr class="even">
-<td align="left">2,6-Dimethyl-1,3,5,7-octatetraene, E,E-</td>
-<td align="right">0.0482690</td>
-<td align="right">0.0573428</td>
-<td align="right">-0.0971670</td>
+<td align="left">b-caryophyllene</td>
+<td align="right">0.0019205</td>
+<td align="right">0.0396802</td>
+<td align="right">-0.0981906</td>
 </tr>
 <tr class="odd">
-<td align="left">.beta.-Myrcene</td>
-<td align="right">0.0910357</td>
-<td align="right">0.2739053</td>
-<td align="right">0.2669130</td>
+<td align="left">[(Z)-hex-3-enyl] butanoate</td>
+<td align="right">0.0023178</td>
+<td align="right">0.0196958</td>
+<td align="right">-0.0675532</td>
 </tr>
 <tr class="even">
-<td align="left">2,4,6-Octatriene, 2,6-dimethyl-, (E,Z)-</td>
-<td align="right">0.0955766</td>
-<td align="right">0.0950149</td>
-<td align="right">0.0324493</td>
+<td align="left">cis-a-bergamotene</td>
+<td align="right">0.0029697</td>
+<td align="right">-0.0714149</td>
+<td align="right">-0.1768833</td>
 </tr>
 <tr class="odd">
-<td align="left">trans-.beta.-Ocimene</td>
-<td align="right">0.1974399</td>
-<td align="right">0.2247147</td>
-<td align="right">0.1257605</td>
+<td align="left">(3E)-4,8-dimethylnona-1,3,7-triene</td>
+<td align="right">0.0046397</td>
+<td align="right">-0.0206562</td>
+<td align="right">-0.1334550</td>
 </tr>
 <tr class="even">
-<td align="left">.alpha.-Farnesene</td>
-<td align="right">0.6180854</td>
-<td align="right">-0.6989281</td>
-<td align="right">0.2136536</td>
+<td align="left">2-methylbenzonitrile</td>
+<td align="right">0.0054521</td>
+<td align="right">0.0008244</td>
+<td align="right">0.0174766</td>
 </tr>
 <tr class="odd">
-<td align="left">.beta.-Ocimene</td>
-<td align="right">0.7413175</td>
-<td align="right">0.4851781</td>
-<td align="right">-0.2418195</td>
+<td align="left">[(E)-hex-3-enyl] butanoate</td>
+<td align="right">0.0130803</td>
+<td align="right">0.0415137</td>
+<td align="right">-0.1562567</td>
+</tr>
+<tr class="even">
+<td align="left">a-pinene</td>
+<td align="right">0.0135953</td>
+<td align="right">-0.3622216</td>
+<td align="right">-0.7170184</td>
+</tr>
+<tr class="odd">
+<td align="left">indole</td>
+<td align="right">0.0149704</td>
+<td align="right">0.0071172</td>
+<td align="right">-0.0145056</td>
+</tr>
+<tr class="even">
+<td align="left">methyl benzoate</td>
+<td align="right">0.0173514</td>
+<td align="right">0.0724802</td>
+<td align="right">-0.0919403</td>
+</tr>
+<tr class="odd">
+<td align="left">linalool</td>
+<td align="right">0.0226444</td>
+<td align="right">0.0052448</td>
+<td align="right">-0.0965381</td>
+</tr>
+<tr class="even">
+<td align="left">g-terpinene</td>
+<td align="right">0.0250593</td>
+<td align="right">-0.0925588</td>
+<td align="right">-0.0382846</td>
+</tr>
+<tr class="odd">
+<td align="left">trans-a-bergamotene</td>
+<td align="right">0.0427153</td>
+<td align="right">0.1505830</td>
+<td align="right">-0.1107152</td>
+</tr>
+<tr class="even">
+<td align="left">trans-b-bergamotene</td>
+<td align="right">0.0838835</td>
+<td align="right">0.1366369</td>
+<td align="right">-0.0594299</td>
+</tr>
+<tr class="odd">
+<td align="left">(2E)-2,7-dimethylocta-2,6-dien-1-ol</td>
+<td align="right">0.0894922</td>
+<td align="right">-0.1661921</td>
+<td align="right">-0.1666133</td>
+</tr>
+<tr class="even">
+<td align="left">b-myrcene</td>
+<td align="right">0.0938344</td>
+<td align="right">-0.2055251</td>
+<td align="right">-0.1349831</td>
+</tr>
+<tr class="odd">
+<td align="left">cosmene</td>
+<td align="right">0.1191399</td>
+<td align="right">-0.0801507</td>
+<td align="right">0.2627100</td>
+</tr>
+<tr class="even">
+<td align="left">(Z)-b-ocimene</td>
+<td align="right">0.1935046</td>
+<td align="right">-0.1046919</td>
+<td align="right">0.0402629</td>
+</tr>
+<tr class="odd">
+<td align="left">(4E,6Z)-alloocimene</td>
+<td align="right">0.2366489</td>
+<td align="right">-0.1338813</td>
+<td align="right">0.0347514</td>
+</tr>
+<tr class="even">
+<td align="left">a-farnesene</td>
+<td align="right">0.5005242</td>
+<td align="right">0.7385361</td>
+<td align="right">-0.2975560</td>
+</tr>
+<tr class="odd">
+<td align="left">(E)-b-ocimene</td>
+<td align="right">0.7820554</td>
+<td align="right">-0.3695533</td>
+<td align="right">0.1899199</td>
 </tr>
 </tbody>
 </table>

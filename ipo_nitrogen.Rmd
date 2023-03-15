@@ -55,6 +55,15 @@ exp1.data <- exp1.data %>% left_join(select(exp1.verdicts, Filename = FileName, 
   select(-Filename) %>% rename(Filename = sample2) %>%  #replace FileName with the sample2 it holds (accounts for skips)
   droplevels()
 
+# load short names
+ipochems <- read_csv("data/Ipo volatile compounds - chemsf_ipo.csv") %>% 
+  select(name, shortname, standard, verdict) %>%  filter(verdict != "")
+            
+#shorten chemical names and merge compounds with multiple names
+shortnames <- ipochems %>% select(name, shortname) %>% filter(shortname!="") %>% deframe()
+
+exp1.data$Name <- recode(exp1.data$Name, !!!shortnames)
+
 exp1.all <- dcast(exp1.data, Filename~Name, sum, value.var="Area")
 rownames(exp1.all) <- exp1.all[,1]
 exp1.all[,1] <- NULL
@@ -104,22 +113,46 @@ chemtable$filter_final <- with(chemtable, filter_RT == "OK" & filter_match =="OK
 
 plot_filters(chemtable, option="rarity")
 plot_filters(chemtable, option="ambient")
+plot_filters(chemtable, option="volcano")
 plot_filters(chemtable, option="prop")
 
-
-vol <- prune_sampletable(sampletable, chemtable, metadata)
-files_exclude <- c(rownames(vol)[rowSums(vol)==0], #two files with no filtered peaks
-                   "NEXP1_agg6n3_N_220725_8152022_10.qgd") # flower fell off
-vol <- vol[!(rownames(vol) %in% files_exclude) ,]
+vol.qual <- prune_sampletable(sampletable, chemtable, metadata)
+files_exclude <- c("NEXP1_agg6n3_N_220725_8152022_10.qgd") # flower fell off
+vol.qual <- vol.qual[!(rownames(vol.qual) %in% files_exclude) ,]
 meta <- metadata[metadata$type == "floral" & !(metadata$sample %in% files_exclude),] %>% droplevels()
-vol <- vol / as.numeric(meta$equil + meta$pumping)/3600 / meta$flrs #0.5 hr of equilibration plus 0.25 hr pumping, one flower
+vol.qual <- vol.qual / as.numeric(meta$equil + meta$pumping)/3600 / meta$flrs #0.5 hr of equilibration plus 0.25 hr pumping, one flower
 ```
+
+# Quantitative integrations
+
+```{r quant}
+# read_tsv("../ipomopsis-temp/data/volatiles/quant.tsv") %>%
+#   filter(str_detect(Filename, "^NEXP")) %>% select(-Dirname, -batch) %>%
+#   pivot_wider(names_from="Name", values_from="Area") %>%
+#   write_tsv("data/quant_2022.tsv")
+
+vol <- read_tsv("data/quant_2022.tsv") %>%  
+  left_join(select(exp1.verdicts, Filename = FileName, sample2)) %>% drop_na(sample2) %>% 
+  select(-Filename) %>% rename(Filename = sample2) %>%  #replace FileName with the sample2 it holds (accounts for skips)
+  column_to_rownames("Filename")
+contams <- c("D-limonene", "methyl salicylate", "benzaldehyde", #standards
+             "3-methylbutanal oxime")#passed bouquet in OTC experiment but rare here
+vol <- vol[rownames(vol.qual), !colnames(vol) %in% contams]
+vol <- vol / as.numeric(meta$equil + meta$pumping)/3600 / meta$flrs #0.5 hr of equilibration plus 0.25 hr pumping, one flower
+
+
+setdiff(colnames(vol.qual), colnames(vol)) # filtered volatiles that need quant integration. 
+keep_qual <- c("(4E,6Z)-alloocimene", "cosmene") #these look real
+vol <- bind_cols(vol, vol.qual[,keep_qual]) #temporary, add a couple volatiles that don't have quant integrations yet (currently not on same scale!)
+```
+
+# Heatmap
 
 ```{r heatmap, dev='png', dev.args=list()}
 library(pheatmap)
 library(dendsort)
 library(viridis)
-ph  <- pheatmap(as.matrix(t(vol))^(1/3), 
+ph  <- pheatmap(as.matrix(t(vol))^(1/4), 
          cluster_cols=T, show_colnames=F,
          clustering_method="mcquitty", clustering_distance_rows="correlation",
          clustering_distance_cols=vegdist(vol, method = "bray"),
@@ -130,6 +163,8 @@ ph  <- pheatmap(as.matrix(t(vol))^(1/3),
 )
 ```
 
+# Ordination
+
 ```{r cap}
 (cap_treat <- vegan::capscale(sqrt(vol) ~ species + time + treatment, data=meta))
 anova.cca(cap_treat, by="margin") # samples should be averaged by plant first
@@ -137,8 +172,8 @@ anova.cca(cap_treat, by="margin") # samples should be averaged by plant first
 plot(cap_treat, type="n")
 points(cap_treat, display="sites", 
        pch=c(1,19)[as.integer(meta$time)],
-       col=c("red","magenta")[as.integer(meta$species)])
-legend("topleft", levels(meta$species), title="Species", fill=c("red","magenta"))
+       col=c("darkred","magenta")[as.integer(meta$species)])
+legend("topleft", levels(meta$species), title="Species", fill=c("darkred","magenta"))
 legend("topright", levels(meta$time), title="Time", pch=c(1,19))
 text(cap_treat, display="species", cex=0.5, col=3)
 text(cap_treat, display="cn", cex=0.5)
