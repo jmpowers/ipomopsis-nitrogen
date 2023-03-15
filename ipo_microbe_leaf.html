@@ -11,11 +11,11 @@
 
 <meta name="author" content="Janelle Bohey, John Powers" />
 
-<meta name="date" content="2022-12-19" />
+<meta name="date" content="2023-02-01" />
 
 <title>Ipomopsis microbe leaf volatile experiment</title>
 
-<script src="libs/header-attrs-2.14/header-attrs.js"></script>
+<script src="libs/header-attrs-2.20/header-attrs.js"></script>
 <script src="libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link href="libs/bootstrap-3.3.5/css/bootstrap.min.css" rel="stylesheet" />
@@ -110,8 +110,8 @@ pre code {
   border-radius: 4px;
 }
 
-.tabset-dropdown > .nav-tabs > li.active:before {
-  content: "";
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
   font-family: 'Glyphicons Halflings';
   display: inline-block;
   padding: 10px;
@@ -119,16 +119,9 @@ pre code {
 }
 
 .tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
-  content: "&#xe258;";
-  border: none;
-}
-
-.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
-  content: "";
+  content: "\e258";
   font-family: 'Glyphicons Halflings';
-  display: inline-block;
-  padding: 10px;
-  border-right: 1px solid #ddd;
+  border: none;
 }
 
 .tabset-dropdown > .nav-tabs > li.active {
@@ -260,7 +253,7 @@ div.tocify {
 <h1 class="title toc-ignore">Ipomopsis microbe leaf volatile
 experiment</h1>
 <h4 class="author">Janelle Bohey, John Powers</h4>
-<h4 class="date">2022-12-19</h4>
+<h4 class="date">2023-02-01</h4>
 
 </div>
 
@@ -298,6 +291,7 @@ rownames(exp2leaf.all) &lt;- exp2leaf.all[,1]
 exp2leaf.all[,1] &lt;- NULL</code></pre>
 <div id="read-metadata" class="section level1">
 <h1>Read metadata</h1>
+<p>These are the counts of the samples.</p>
 <pre class="r"><code>transplants &lt;- read_csv(&quot;data/EXP 2 Root washing trait measurements - transplants.csv&quot;) %&gt;% 
   mutate(plant = as.character(plant))
 
@@ -483,13 +477,15 @@ plot_filters(chemtable, option=&quot;rarity&quot;)</code></pre>
 <p><img src="plots-microbe-leaf/filtering-1.svg" width="960" /></p>
 <pre class="r"><code>plot_filters(chemtable, option=&quot;ambient&quot;)</code></pre>
 <p><img src="plots-microbe-leaf/filtering-2.svg" width="960" /></p>
-<pre class="r"><code>plot_filters(chemtable, option=&quot;prop&quot;)</code></pre>
+<pre class="r"><code>plot_filters(chemtable, option=&quot;volcano&quot;)</code></pre>
 <p><img src="plots-microbe-leaf/filtering-3.svg" width="960" /></p>
+<pre class="r"><code>plot_filters(chemtable, option=&quot;prop&quot;)</code></pre>
+<p><img src="plots-microbe-leaf/filtering-4.svg" width="960" /></p>
 <pre class="r"><code>vol &lt;- prune_sampletable(sampletable, chemtable, metadata)
 files_exclude &lt;- rownames(vol)[rowSums(vol)==0] #files with no filtered peaks
 vol &lt;- vol[!(rownames(vol) %in% files_exclude) ,]
 meta &lt;- metadata[metadata$type == &quot;floral&quot; &amp; !(metadata$sample %in% files_exclude),] %&gt;% droplevels()
-#vol &lt;- vol / as.numeric(meta$equil + meta$pumping)/3600 / meta$flrs #0.5 hr of equilibration plus 0.25 hr pumping, one flower</code></pre>
+vol &lt;- vol / as.numeric(meta$equil + meta$pumping)/3600 / meta$leaves #0.5 hr of equilibration plus 0.25 hr pumping, one flower</code></pre>
 <pre class="r"><code>library(pheatmap)
 library(dendsort)
 library(viridis)
@@ -503,34 +499,38 @@ ph  &lt;- pheatmap(as.matrix(t(vol))^(1/3),
          fontsize = 10, border_color = NA, legend=F, annotation_legend=T, cutree_rows=6
 )</code></pre>
 <p><img src="plots-microbe-leaf/heatmap-1.png" width="960" /></p>
-<pre class="r"><code>(cap_treat &lt;- vegan::capscale(sqrt(vol) ~ trt_col, data=meta))</code></pre>
-<pre><code>Call: vegan::capscale(formula = sqrt(vol) ~ trt_col, data = meta)
+<pre class="r"><code>(cap_treat &lt;- vegan::capscale(sqrt(vol) ~ trt_col + rundate, data=meta))</code></pre>
+<pre><code>Call: vegan::capscale(formula = sqrt(vol) ~ trt_col + rundate, data =
+meta)
 
-                Inertia Proportion Rank
-Total         1.006e+06  1.000e+00     
-Constrained   3.143e+04  3.123e-02    5
-Unconstrained 9.750e+05  9.688e-01   34
-Inertia is mean squared Euclidean distance 
+              Inertia Proportion Rank
+Total         11.7885     1.0000     
+Constrained    1.4402     0.1222   10
+Unconstrained 10.3483     0.8778   34
+Inertia is squared Euclidean distance 
 Species scores projected from &#39;sqrt&#39; &#39;vol&#39; 
 
 Eigenvalues for constrained axes:
- CAP1  CAP2  CAP3  CAP4  CAP5 
-10109  8360  5606  4206  3151 
+  CAP1   CAP2   CAP3   CAP4   CAP5   CAP6   CAP7   CAP8   CAP9  CAP10 
+0.7385 0.3134 0.1189 0.0866 0.0512 0.0385 0.0325 0.0294 0.0174 0.0136 
 
 Eigenvalues for unconstrained axes:
-  MDS1   MDS2   MDS3   MDS4   MDS5   MDS6   MDS7   MDS8 
-390472 164236  65626  53355  34422  28734  26261  24706 
+ MDS1  MDS2  MDS3  MDS4  MDS5  MDS6  MDS7  MDS8 
+4.011 1.796 0.706 0.590 0.368 0.315 0.293 0.254 
 (Showing 8 of 34 unconstrained eigenvalues)</code></pre>
 <pre class="r"><code>anova.cca(cap_treat, by=&quot;margin&quot;) # samples should be averaged by plant first</code></pre>
-<pre><code>Permutation test for capscale under NA model
+<pre><code>Permutation test for capscale under reduced model
 Marginal effects of terms
 Permutation: free
 Number of permutations: 999
 
-Model: vegan::capscale(formula = sqrt(vol) ~ trt_col, data = meta)
-          Df Variance      F Pr(&gt;F)
-trt_col    5    31433 0.7222  0.878
-Residual 112   974956              </code></pre>
+Model: vegan::capscale(formula = sqrt(vol) ~ trt_col + rundate, data = meta)
+          Df SumOfSqs      F Pr(&gt;F)   
+trt_col    5   0.3879 0.8021  0.758   
+rundate    5   1.0737 2.2203  0.003 **
+Residual 107  10.3483                 
+---
+Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
 <pre class="r"><code>nmds &lt;- metaMDS(sqrt(vol), autotransform = F, trace=F)
 par(bg=&quot;grey40&quot;)
 plot(nmds, type=&quot;n&quot;)
@@ -538,18 +538,17 @@ ordihull(nmds, meta$plantid, col=&quot;grey70&quot;)
 points(nmds, display=&quot;sites&quot;, col=meta$trt_col)
 text(nmds, display=&quot;species&quot;, cex=0.5, col=&quot;black&quot;)</code></pre>
 <p><img src="plots-microbe-leaf/ordination-1.svg" width="960" /></p>
-<pre class="r"><code>cap_dates &lt;- vegan::capscale(sqrt(vol) ~ rundate + date, data=meta)
+<pre class="r"><code>cap_dates &lt;- vegan::capscale(sqrt(vol) ~ rundate, data=meta)
 anova.cca(cap_dates, by=&quot;margin&quot;)</code></pre>
-<pre><code>Permutation test for capscale under reduced model
+<pre><code>Permutation test for capscale under NA model
 Marginal effects of terms
 Permutation: free
 Number of permutations: 999
 
-Model: vegan::capscale(formula = sqrt(vol) ~ rundate + date, data = meta)
-          Df Variance      F Pr(&gt;F)  
-rundate    5    68903 1.6837  0.022 *
-date       1     9969 1.2179  0.259  
-Residual 111   908514                
+Model: vegan::capscale(formula = sqrt(vol) ~ rundate, data = meta)
+          Df SumOfSqs      F Pr(&gt;F)    
+rundate    5   1.0523 2.1955  0.001 ***
+Residual 112  10.7362                  
 ---
 Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
 <pre class="r"><code>plot(cap_dates, type=&quot;n&quot;)
@@ -558,6 +557,8 @@ legend(&quot;topright&quot;, legend=unique(meta$rundate), fill=1:6)
 points(cap_dates, display=&quot;sites&quot;, pch=as.integer(factor(meta$date)), col=as.integer(factor(meta$rundate)))
 text(cap_dates, display=&quot;species&quot;, cex=0.5, col=&quot;white&quot;)</code></pre>
 <p><img src="plots-microbe-leaf/ordination-2.svg" width="960" /></p>
+<pre class="r"><code>plot(x=factor(meta$rundate), y=vol$`2-Pentanol, 3-chloro-4-methyl-, (R*,S*)-(.+/-.)-`)</code></pre>
+<p><img src="plots-microbe-leaf/ordination-3.svg" width="960" /></p>
 </div>
 
 

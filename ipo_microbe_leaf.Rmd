@@ -55,12 +55,23 @@ exp2leaf.data <- exp2leaf.data %>% left_join(select(exp2leaf.verdicts, Filename 
   select(-Filename) %>% rename(Filename = sample2) %>%  #replace FileName with the sample2 it holds (accounts for skips)
   droplevels()
 
+# load short names a
+ipochems <- read_csv("data/Ipo volatile compounds - chemsf_ipo.csv") %>% 
+  select(name, shortname, standard, verdict) %>%  filter(verdict != "")
+            
+#shorten chemical names and merge compounds with multiple names
+shortnames <- ipochems %>% select(name, shortname) %>% filter(shortname!="") %>% deframe()
+
+exp2leaf.data$Name <- recode(exp2leaf.data$Name, !!!shortnames)
+
 exp2leaf.all <- dcast(exp2leaf.data, Filename~Name, sum, value.var="Area")
 rownames(exp2leaf.all) <- exp2leaf.all[,1]
 exp2leaf.all[,1] <- NULL
 ```
 
 # Read metadata
+
+These are the counts of the samples.
 
 ```{r metadata}
 transplants <- read_csv("data/EXP 2 Root washing trait measurements - transplants.csv") %>% 
@@ -108,6 +119,7 @@ chemtable$filter_final <- with(chemtable, filter_RT == "OK" & filter_match =="OK
 
 plot_filters(chemtable, option="rarity")
 plot_filters(chemtable, option="ambient")
+plot_filters(chemtable, option="volcano")
 plot_filters(chemtable, option="prop")
 
 
@@ -115,7 +127,7 @@ vol <- prune_sampletable(sampletable, chemtable, metadata)
 files_exclude <- rownames(vol)[rowSums(vol)==0] #files with no filtered peaks
 vol <- vol[!(rownames(vol) %in% files_exclude) ,]
 meta <- metadata[metadata$type == "floral" & !(metadata$sample %in% files_exclude),] %>% droplevels()
-#vol <- vol / as.numeric(meta$equil + meta$pumping)/3600 / meta$flrs #0.5 hr of equilibration plus 0.25 hr pumping, one flower
+vol <- vol / as.numeric(meta$equil + meta$pumping)/3600 / meta$leaves #0.5 hr of equilibration plus 0.25 hr pumping, one flower
 ```
 
 ```{r heatmap, dev='png', dev.args=list()}
@@ -134,7 +146,7 @@ ph  <- pheatmap(as.matrix(t(vol))^(1/3),
 ```
 
 ```{r ordination}
-(cap_treat <- vegan::capscale(sqrt(vol) ~ trt_col, data=meta))
+(cap_treat <- vegan::capscale(sqrt(vol) ~ trt_col + rundate, data=meta))
 anova.cca(cap_treat, by="margin") # samples should be averaged by plant first
 
 nmds <- metaMDS(sqrt(vol), autotransform = F, trace=F)
@@ -144,11 +156,13 @@ ordihull(nmds, meta$plantid, col="grey70")
 points(nmds, display="sites", col=meta$trt_col)
 text(nmds, display="species", cex=0.5, col="black")
 
-cap_dates <- vegan::capscale(sqrt(vol) ~ rundate + date, data=meta)
+cap_dates <- vegan::capscale(sqrt(vol) ~ rundate, data=meta)
 anova.cca(cap_dates, by="margin")
 plot(cap_dates, type="n")
 legend("topleft", legend=unique(meta$date), pch=1:3)
 legend("topright", legend=unique(meta$rundate), fill=1:6)
 points(cap_dates, display="sites", pch=as.integer(factor(meta$date)), col=as.integer(factor(meta$rundate)))
 text(cap_dates, display="species", cex=0.5, col="white")
+
+plot(x=factor(meta$rundate), y=vol$`2-Pentanol, 3-chloro-4-methyl-, (R*,S*)-(.+/-.)-`)
 ```
