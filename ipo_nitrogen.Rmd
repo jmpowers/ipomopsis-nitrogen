@@ -1,5 +1,5 @@
 ---
-title: "Ipomopsis nitrogen experiments"
+title: "Ipomopsis nitrogen experiment 1 volatiles"
 author: "Janelle Bohey, John Powers"
 date: "`r Sys.Date()`"
 output: 
@@ -71,7 +71,7 @@ exp1.all[,1] <- NULL
 
 # Read metadata
 
-```{r metadata}
+```{r metadata, fig.height=5, fig.width=5}
 metadata <- read_csv("data/EXP 1 (N) Volatile sampling  - metadata.csv") %>% 
   filter(filename != "#N/A") %>% 
   mutate(plantid = paste(species, plant)) %>% 
@@ -80,9 +80,25 @@ rownames(metadata) <- metadata$filename
 metadata <- metadata[rownames(exp1.all),] #order metaddata to match order of data
 
 metadata %>% count(species, time, treatment) %>% kable()
-metadata %>% count(plantid, time) %>% 
+metadata %>% filter(species !="AMB") %>% count(species, plantid, time) %>% 
   ggplot(aes(x=n, fill=time))+ geom_histogram(binwidth=1) + facet_wrap(vars(time), ncol=1)+
   labs(x="Samples per plant") 
+
+metadata %>% filter(species !="AMB") %>% group_by(time) %>% 
+  mutate(pump.dt = ymd_hms(paste(date, pump)), pump.hr = hour(pump.dt)+minute(pump.dt)/60,
+         bag.dt = ymd_hms(paste(date, bag)), bag.hr = hour(bag.dt)+minute(bag.dt)/60,
+         end.dt = ymd_hms(paste(date, bag)), end.hr = hour(end.dt)+minute(end.dt)/60) %>% 
+  summarize(min=min(bag.hr), max=max(end.hr))  %>% kable(caption="first bag time, last ending time, in hr", digits=2)
+
+ggplot(metadata, aes(y=equil, x=species)) + geom_boxplot() + labs(y="Equilibration duration")
+ggplot(metadata, aes(y=pumping, x=species)) + geom_boxplot() + labs(y="Pumping duration")
+
+metadata %>% count(species) %>% kable(caption="total volatile samples by species")
+
+digging_date <- ymd("2022-06-24")
+treatment_date <- digging_date + days(6)
+ggplot(metadata, aes(x=date-treatment_date, fill=species))+geom_histogram(binwidth=1)
+metadata %>% count(date-treatment_date) %>% kable(caption=paste("days since treatments began on", treatment_date))
 ```
 
 # Filtering
@@ -138,7 +154,7 @@ vol <- read_tsv("data/quant_2022.tsv") %>%
 contams <- c("D-limonene", "methyl salicylate", "benzaldehyde", #standards
              "3-methylbutanal oxime")#passed bouquet in OTC experiment but rare here
 vol <- vol[rownames(vol.qual), !colnames(vol) %in% contams]
-vol <- vol / as.numeric(meta$equil + meta$pumping)/3600 / meta$flrs #0.5 hr of equilibration plus 0.25 hr pumping, one flower
+vol <- vol / (as.numeric(meta$equil + meta$pumping)/3600 / meta$flrs) #0.5 hr of equilibration plus 0.25 hr pumping, one flower
 
 
 setdiff(colnames(vol.qual), colnames(vol)) # filtered volatiles that need quant integration. 

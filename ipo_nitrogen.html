@@ -11,9 +11,9 @@
 
 <meta name="author" content="Janelle Bohey, John Powers" />
 
-<meta name="date" content="2023-03-14" />
+<meta name="date" content="2023-04-21" />
 
-<title>Ipomopsis nitrogen experiments</title>
+<title>Ipomopsis nitrogen experiment 1 volatiles</title>
 
 <script src="libs/header-attrs-2.20/header-attrs.js"></script>
 <script src="libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
@@ -250,9 +250,10 @@ div.tocify {
 
 
 
-<h1 class="title toc-ignore">Ipomopsis nitrogen experiments</h1>
+<h1 class="title toc-ignore">Ipomopsis nitrogen experiment 1
+volatiles</h1>
 <h4 class="author">Janelle Bohey, John Powers</h4>
-<h4 class="date">2023-03-14</h4>
+<h4 class="date">2023-04-21</h4>
 
 </div>
 
@@ -318,6 +319,18 @@ metadata %&gt;% count(species, time, treatment) %&gt;% kable()</code></pre>
 </thead>
 <tbody>
 <tr class="odd">
+<td align="left">AMB</td>
+<td align="left">D</td>
+<td align="left">NA</td>
+<td align="right">5</td>
+</tr>
+<tr class="even">
+<td align="left">AMB</td>
+<td align="left">N</td>
+<td align="left">NA</td>
+<td align="right">10</td>
+</tr>
+<tr class="odd">
 <td align="left">agg</td>
 <td align="left">D</td>
 <td align="left">high</td>
@@ -340,18 +353,6 @@ metadata %&gt;% count(species, time, treatment) %&gt;% kable()</code></pre>
 <td align="left">N</td>
 <td align="left">low</td>
 <td align="right">28</td>
-</tr>
-<tr class="odd">
-<td align="left">AMB</td>
-<td align="left">D</td>
-<td align="left">NA</td>
-<td align="right">5</td>
-</tr>
-<tr class="even">
-<td align="left">AMB</td>
-<td align="left">N</td>
-<td align="left">NA</td>
-<td align="right">10</td>
 </tr>
 <tr class="odd">
 <td align="left">ten</td>
@@ -379,10 +380,105 @@ metadata %&gt;% count(species, time, treatment) %&gt;% kable()</code></pre>
 </tr>
 </tbody>
 </table>
-<pre class="r"><code>metadata %&gt;% count(plantid, time) %&gt;% 
+<pre class="r"><code>metadata %&gt;% filter(species !=&quot;AMB&quot;) %&gt;% count(species, plantid, time) %&gt;% 
   ggplot(aes(x=n, fill=time))+ geom_histogram(binwidth=1) + facet_wrap(vars(time), ncol=1)+
   labs(x=&quot;Samples per plant&quot;) </code></pre>
-<p><img src="plots-nitrogen/metadata-1.svg" width="960" /></p>
+<p><img src="plots-nitrogen/metadata-1.svg" width="480" /></p>
+<pre class="r"><code>metadata %&gt;% filter(species !=&quot;AMB&quot;) %&gt;% group_by(time) %&gt;% 
+  mutate(pump.dt = ymd_hms(paste(date, pump)), pump.hr = hour(pump.dt)+minute(pump.dt)/60,
+         bag.dt = ymd_hms(paste(date, bag)), bag.hr = hour(bag.dt)+minute(bag.dt)/60,
+         end.dt = ymd_hms(paste(date, bag)), end.hr = hour(end.dt)+minute(end.dt)/60) %&gt;% 
+  summarize(min=min(bag.hr), max=max(end.hr))  %&gt;% kable(caption=&quot;first bag time, last ending time, in hr&quot;, digits=2)</code></pre>
+<table>
+<caption>first bag time, last ending time, in hr</caption>
+<thead>
+<tr class="header">
+<th align="left">time</th>
+<th align="right">min</th>
+<th align="right">max</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">D</td>
+<td align="right">9.08</td>
+<td align="right">14.72</td>
+</tr>
+<tr class="even">
+<td align="left">N</td>
+<td align="right">19.93</td>
+<td align="right">21.80</td>
+</tr>
+</tbody>
+</table>
+<pre class="r"><code>ggplot(metadata, aes(y=equil, x=species)) + geom_boxplot() + labs(y=&quot;Equilibration duration&quot;)</code></pre>
+<p><img src="plots-nitrogen/metadata-2.svg" width="480" /></p>
+<pre class="r"><code>ggplot(metadata, aes(y=pumping, x=species)) + geom_boxplot() + labs(y=&quot;Pumping duration&quot;)</code></pre>
+<p><img src="plots-nitrogen/metadata-3.svg" width="480" /></p>
+<pre class="r"><code>metadata %&gt;% count(species) %&gt;% kable(caption=&quot;total volatile samples by species&quot;)</code></pre>
+<table>
+<caption>total volatile samples by species</caption>
+<thead>
+<tr class="header">
+<th align="left">species</th>
+<th align="right">n</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">AMB</td>
+<td align="right">15</td>
+</tr>
+<tr class="even">
+<td align="left">agg</td>
+<td align="right">108</td>
+</tr>
+<tr class="odd">
+<td align="left">ten</td>
+<td align="right">110</td>
+</tr>
+</tbody>
+</table>
+<pre class="r"><code>digging_date &lt;- ymd(&quot;2022-06-24&quot;)
+treatment_date &lt;- digging_date + days(6)
+ggplot(metadata, aes(x=date-treatment_date, fill=species))+geom_histogram(binwidth=1)</code></pre>
+<p><img src="plots-nitrogen/metadata-4.svg" width="480" /></p>
+<pre class="r"><code>metadata %&gt;% count(date-treatment_date) %&gt;% kable(caption=paste(&quot;days since treatments began on&quot;, treatment_date))</code></pre>
+<table>
+<caption>days since treatments began on 2022-06-30</caption>
+<thead>
+<tr class="header">
+<th align="left">date - treatment_date</th>
+<th align="right">n</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">20 days</td>
+<td align="right">50</td>
+</tr>
+<tr class="even">
+<td align="left">25 days</td>
+<td align="right">111</td>
+</tr>
+<tr class="odd">
+<td align="left">35 days</td>
+<td align="right">41</td>
+</tr>
+<tr class="even">
+<td align="left">36 days</td>
+<td align="right">22</td>
+</tr>
+<tr class="odd">
+<td align="left">42 days</td>
+<td align="right">7</td>
+</tr>
+<tr class="even">
+<td align="left">48 days</td>
+<td align="right">2</td>
+</tr>
+</tbody>
+</table>
 </div>
 <div id="filtering" class="section level1">
 <h1>Filtering</h1>
@@ -437,7 +533,7 @@ vol &lt;- read_tsv(&quot;data/quant_2022.tsv&quot;) %&gt;%
 contams &lt;- c(&quot;D-limonene&quot;, &quot;methyl salicylate&quot;, &quot;benzaldehyde&quot;, #standards
              &quot;3-methylbutanal oxime&quot;)#passed bouquet in OTC experiment but rare here
 vol &lt;- vol[rownames(vol.qual), !colnames(vol) %in% contams]
-vol &lt;- vol / as.numeric(meta$equil + meta$pumping)/3600 / meta$flrs #0.5 hr of equilibration plus 0.25 hr pumping, one flower
+vol &lt;- vol / (as.numeric(meta$equil + meta$pumping)/3600 / meta$flrs) #0.5 hr of equilibration plus 0.25 hr pumping, one flower
 
 
 setdiff(colnames(vol.qual), colnames(vol)) # filtered volatiles that need quant integration. </code></pre>
