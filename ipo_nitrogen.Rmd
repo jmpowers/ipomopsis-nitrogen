@@ -104,8 +104,8 @@ metadata %>% count(date-treatment_date) %>% kable(caption=paste("days since trea
 # Filtering
 
 ```{r filtering}
-metadata <- metadata %>% mutate(type= ifelse(species=="AMB", "ambient","floral")) %>% rename(trap=sample) %>% 
-  load_metadata(GCMS_metadata, date = "date", sample = "filename", group = c("species","time"), type = "type")
+metadata <- metadata %>% mutate(type= ifelse(species=="AMB", "ambient","floral")) %>% rename(trap=sample) %>% as.data.frame() %>% 
+  load_metadata(date = "date", sample = "filename", group = c("species","time"), type = "type")
 
 longdata <- load_longdata(exp1.data, sample = "Filename", RT = "Ret.Time", 
                           name = "Name", area = "Area", match = "SI", maxmatch=100)
@@ -116,16 +116,18 @@ chemtable <- make_chemtable(longdata, metadata) %>%
   filter_RT(2, 17) %>% 
   filter_match(0.8) %>% 
   filter_freq(0.2, group = TRUE) %>% 
-  filter_contaminant(cont.list = "Caprolactam") %>% 
+  filter_contaminant(cont.list = c("Acetic acid, (benzoylamino)hydroxy-" , "Methyl Isobutyl Ketone", 
+                                   "Propanoic acid, 2,2-dimethyl-, 2-ethylhexyl ester", "2-hexyldecan-1-ol",
+                                   "Hexadecane, 1,1-bis(dodecyloxy)-","Decanoic acid, silver(1+) salt",
+                                   "tetradeca-11,13-dien-1-ol")) %>% 
   filter_area(min_maximum = 1e5) %>%
   filter_ambient_ratio(sampletable, metadata, ratio = 3) %>% 
   filter_ambient_ttest(sampletable, metadata, 
                        alpha = 0.05, adjust = "fdr") 
 
 chemtable$filter_final <- with(chemtable, filter_RT == "OK" & filter_match =="OK" & 
-                                 filter_freq.floral == "OK" & filter_area == "OK" & 
-                              (filter_ambient_ratio == "OK" | (filter_ambient_ttest == "OK" & ambient_ratio >3)) &
-                                filter_contaminant == "OK")
+                                 (filter_freq.agg == "OK" | filter_freq.ten == "OK" | filter_freq.D == "OK" | filter_freq.N == "OK") &
+                                 filter_area == "OK" & filter_ambient_ratio == "OK" & filter_ambient_ttest == "OK" & filter_contaminant == "OK")
 
 plot_filters(chemtable, option="rarity")
 plot_filters(chemtable, option="ambient")
@@ -136,7 +138,7 @@ vol.qual <- prune_sampletable(sampletable, chemtable, metadata)
 files_exclude <- c("NEXP1_agg6n3_N_220725_8152022_10.qgd") # flower fell off
 vol.qual <- vol.qual[!(rownames(vol.qual) %in% files_exclude) ,]
 meta <- metadata[metadata$type == "floral" & !(metadata$sample %in% files_exclude),] %>% droplevels()
-vol.qual <- vol.qual / as.numeric(meta$equil + meta$pumping)/3600 / meta$flrs #0.5 hr of equilibration plus 0.25 hr pumping, one flower
+vol.qual <- vol.qual / (as.numeric(meta$equil + meta$pumping)/3600) / meta$flrs #0.5 hr of equilibration plus 0.25 hr pumping, one flower
 ```
 
 # Quantitative integrations
@@ -151,15 +153,27 @@ vol <- read_tsv("data/quant_2022.tsv") %>%
   left_join(select(exp1.verdicts, Filename = FileName, sample2)) %>% drop_na(sample2) %>% 
   select(-Filename) %>% rename(Filename = sample2) %>%  #replace FileName with the sample2 it holds (accounts for skips)
   column_to_rownames("Filename")
-contams <- c("D-limonene", "methyl salicylate", "benzaldehyde", #standards
+contams <- c("methyl salicylate", "benzaldehyde", #standards, add "D-limonene"?
              "3-methylbutanal oxime")#passed bouquet in OTC experiment but rare here
 vol <- vol[rownames(vol.qual), !colnames(vol) %in% contams]
-vol <- vol / (as.numeric(meta$equil + meta$pumping)/3600 / meta$flrs) #0.5 hr of equilibration plus 0.25 hr pumping, one flower
+vol <- vol / (as.numeric(meta$equil + meta$pumping)/3600) / meta$flrs #0.5 hr of equilibration plus 0.25 hr pumping, one flower
 
+(need_quant <- setdiff(colnames(vol.qual), colnames(vol))) # filtered volatiles that need quant integration. 
+vol <- bind_cols(vol, vol.qual[,need_quant]) #temporary, add a couple volatiles that don't have quant integrations yet (currently not on same scale!)
+```
 
-setdiff(colnames(vol.qual), colnames(vol)) # filtered volatiles that need quant integration. 
-keep_qual <- c("(4E,6Z)-alloocimene", "cosmene") #these look real
-vol <- bind_cols(vol, vol.qual[,keep_qual]) #temporary, add a couple volatiles that don't have quant integrations yet (currently not on same scale!)
+```{r diverse, eval=FALSE}
+best <- list()
+i <- 1
+vol.left <- vol.qual[,need_quant]^(1/4) # halfway between areas and presence-absence
+while(ncol(vol.left)>0) {
+  print(dim(vol.left))
+  best[[i]] <- which.max(rowSums(vol.left))
+  vol.left <- vol.left[ , !decostand(vol.left[best[[i]],], method="pa"), drop=FALSE]
+  i <- i+1
+}
+(best.vol <- as.data.frame(t(vol.qual[unlist(best),need_quant])) %>% rownames_to_column("name"))
+chemtable %>% filter(name %in% need_quant) %>% select(name, RT, RT.var) %>% arrange(RT)
 ```
 
 # Heatmap
