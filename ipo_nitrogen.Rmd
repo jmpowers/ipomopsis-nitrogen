@@ -144,7 +144,17 @@ vol.qual <- vol.qual / (as.numeric(meta$equil + meta$pumping)/3600) / meta$flrs 
 # Quantitative integrations
 
 ```{r quant}
-# read_tsv("../ipomopsis-temp/data/volatiles/quant.tsv") %>%
+#read in the large 2022 quant integration output and cut it down to NEXP chromatograms
+# source("read_shimadzu.R")
+# quantpath <- "~/MyDocs/MEGA/UCI/Schiedea/Analysis/scent/rmbl/RMBL Batches/quant_round3/"
+# bfiles <-  list.files(quantpath)
+# quant.full <- map_dfr(set_names(paste0(quantpath, bfiles), bfiles), read.shimadzu.quant, .id="batch") %>% 
+#   mutate(Name = trimws(Name), Area=replace_na(Area, 0)) %>% 
+#   distinct(Filename, Name, .keep_all=T)
+# quant.full %>% select(batch, Dirname, Filename, Name, Area) %>% 
+#   mutate(Dirname = fct_relabel(Dirname, str_remove, "C:/GCMSsolution/Data/Project1_190815/")) %>% 
+#   filter(Name != "1,6,10-Dodecatrien-3-ol, 3,7,11-trimethyl-") %>% 
+#   mutate(Name = recode(Name, !!!shortnames)) %>% 
 #   filter(str_detect(Filename, "^NEXP")) %>% select(-Dirname, -batch) %>%
 #   pivot_wider(names_from="Name", values_from="Area") %>%
 #   write_tsv("data/quant_2022.tsv")
@@ -153,13 +163,15 @@ vol <- read_tsv("data/quant_2022.tsv") %>%
   left_join(select(exp1.verdicts, Filename = FileName, sample2)) %>% drop_na(sample2) %>% 
   select(-Filename) %>% rename(Filename = sample2) %>%  #replace FileName with the sample2 it holds (accounts for skips)
   column_to_rownames("Filename")
-contams <- c("methyl salicylate", "benzaldehyde", #standards, add "D-limonene"?
+contams <- c("methyl salicylate", "benzaldehyde","trans-Geranylgeraniol","Decanal", "D-limonene", "Nonanoic acid", "caprolactam",
              "3-methylbutanal oxime")#passed bouquet in OTC experiment but rare here
 vol <- vol[rownames(vol.qual), !colnames(vol) %in% contams]
 vol <- vol / (as.numeric(meta$equil + meta$pumping)/3600) / meta$flrs #0.5 hr of equilibration plus 0.25 hr pumping, one flower
 
-(need_quant <- setdiff(colnames(vol.qual), colnames(vol))) # filtered volatiles that need quant integration. 
-vol <- bind_cols(vol, vol.qual[,need_quant]) #temporary, add a couple volatiles that don't have quant integrations yet (currently not on same scale!)
+(added_quant <- setdiff(colnames(vol), colnames(vol.qual)))#in quant (from temp experiment) but do not pass filters in this dataset
+(new_quant <- colnames(vol)[28:34]) #newly integrated, pass filters
+#(need_quant <- setdiff(colnames(vol.qual), colnames(vol))) # filtered volatiles that need quant integration. 
+#vol <- bind_cols(vol, vol.qual[,need_quant]) #temporary, add a couple volatiles that don't have quant integrations yet (currently not on same scale!)
 ```
 
 ```{r diverse, eval=FALSE}
@@ -188,7 +200,10 @@ ph  <- pheatmap(as.matrix(t(vol))^(1/4),
          clustering_distance_cols=vegdist(vol, method = "bray"),
          clustering_callback = function(hc, ...){dendsort(hc, type="average")},
          scale="none", color=magma(512),
-         annotation_col = data.frame(meta %>% select("species","treatment","time"), row.names=rownames(vol)), 
+         annotation_col = data.frame(meta %>% select("species","treatment","time"), row.names=rownames(vol)),
+         annotation_row = data.frame(added = as.integer(colnames(vol) %in% added_quant), 
+                                     new = as.integer(colnames(vol) %in% new_quant),
+                                     row.names=colnames(vol)),
    fontsize = 10, border_color = NA, legend=F, annotation_legend=T, cutree_rows=6
 )
 ```
