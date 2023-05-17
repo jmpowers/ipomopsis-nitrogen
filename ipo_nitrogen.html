@@ -11,7 +11,7 @@
 
 <meta name="author" content="Janelle Bohey, John Powers" />
 
-<meta name="date" content="2023-05-15" />
+<meta name="date" content="2023-05-16" />
 
 <title>Ipomopsis nitrogen experiment 1 volatiles</title>
 
@@ -253,7 +253,7 @@ div.tocify {
 <h1 class="title toc-ignore">Ipomopsis nitrogen experiment 1
 volatiles</h1>
 <h4 class="author">Janelle Bohey, John Powers</h4>
-<h4 class="date">2023-05-15</h4>
+<h4 class="date">2023-05-16</h4>
 
 </div>
 
@@ -302,7 +302,7 @@ exp1.all[,1] &lt;- NULL</code></pre>
 <h1>Read metadata</h1>
 <pre class="r"><code>metadata &lt;- read_csv(&quot;data/EXP 1 (N) Volatile sampling  - metadata.csv&quot;) %&gt;% 
   filter(filename != &quot;#N/A&quot;) %&gt;% 
-  mutate(plantid = paste(species, plant)) %&gt;% 
+  mutate(plantid = paste(species, plant), speciestime = paste(species, time, sep=&quot;.&quot;)) %&gt;% 
   left_join(read_csv(&quot;data/exp1_treatments.csv&quot;) %&gt;% mutate(plant = as.character(plant)))
 rownames(metadata) &lt;- metadata$filename
 metadata &lt;- metadata[rownames(exp1.all),] #order metaddata to match order of data
@@ -483,7 +483,7 @@ ggplot(metadata, aes(x=date-treatment_date, fill=species))+geom_histogram(binwid
 <div id="filtering" class="section level1">
 <h1>Filtering</h1>
 <pre class="r"><code>metadata &lt;- metadata %&gt;% mutate(type= ifelse(species==&quot;AMB&quot;, &quot;ambient&quot;,&quot;floral&quot;)) %&gt;% rename(trap=sample) %&gt;% as.data.frame() %&gt;% 
-  load_metadata(date = &quot;date&quot;, sample = &quot;filename&quot;, group = c(&quot;species&quot;,&quot;time&quot;), type = &quot;type&quot;)
+  load_metadata(date = &quot;date&quot;, sample = &quot;filename&quot;, group = &quot;speciestime&quot;, type = &quot;type&quot;) #combine species and time (previously separate)
 
 longdata &lt;- load_longdata(exp1.data, sample = &quot;Filename&quot;, RT = &quot;Ret.Time&quot;, 
                           name = &quot;Name&quot;, area = &quot;Area&quot;, match = &quot;SI&quot;, maxmatch=100)
@@ -494,17 +494,14 @@ chemtable &lt;- make_chemtable(longdata, metadata) %&gt;%
   filter_RT(2, 17) %&gt;% 
   filter_match(0.8) %&gt;% 
   filter_freq(0.2, group = TRUE) %&gt;% 
-  filter_contaminant(cont.list = c(&quot;Acetic acid, (benzoylamino)hydroxy-&quot; , &quot;Methyl Isobutyl Ketone&quot;, 
-                                   &quot;Propanoic acid, 2,2-dimethyl-, 2-ethylhexyl ester&quot;, &quot;2-hexyldecan-1-ol&quot;,
-                                   &quot;Hexadecane, 1,1-bis(dodecyloxy)-&quot;,&quot;Decanoic acid, silver(1+) salt&quot;,
-                                   &quot;tetradeca-11,13-dien-1-ol&quot;)) %&gt;% 
+  filter_contaminant(cont.list = c(&quot;13-Methyltetradecanal&quot;,&quot;Cyclohexane, 1,1-dimethyl-2-propyl-&quot;,&quot;2-hexyldecan-1-ol&quot;,&quot;Tridecane, 3-methylene-&quot;)) %&gt;% 
   filter_area(min_maximum = 1e5) %&gt;%
   filter_ambient_ratio(sampletable, metadata, ratio = 3) %&gt;% 
   filter_ambient_ttest(sampletable, metadata, 
                        alpha = 0.05, adjust = &quot;fdr&quot;) 
-
 chemtable$filter_final &lt;- with(chemtable, filter_RT == &quot;OK&quot; &amp; filter_match ==&quot;OK&quot; &amp; 
-                                 (filter_freq.agg == &quot;OK&quot; | filter_freq.ten == &quot;OK&quot; | filter_freq.D == &quot;OK&quot; | filter_freq.N == &quot;OK&quot;) &amp;
+                                 #(filter_freq.agg == &quot;OK&quot; | filter_freq.ten == &quot;OK&quot; | filter_freq.D == &quot;OK&quot; | filter_freq.N == &quot;OK&quot;) &amp;
+                                 (filter_freq.agg.N == &quot;OK&quot; | filter_freq.ten.N == &quot;OK&quot; | filter_freq.agg.D == &quot;OK&quot; | filter_freq.ten.D == &quot;OK&quot;) &amp;
                                  filter_area == &quot;OK&quot; &amp; filter_ambient_ratio == &quot;OK&quot; &amp; filter_ambient_ttest == &quot;OK&quot; &amp; filter_contaminant == &quot;OK&quot;)
 
 plot_filters(chemtable, option=&quot;rarity&quot;)</code></pre>
@@ -575,9 +572,14 @@ vol &lt;- vol / (as.numeric(meta$equil + meta$pumping)/3600) / meta$flrs #0.5 hr
 [5] &quot;(4E,6Z)-alloocimene&quot;                                            
 [6] &quot;Tricyclo[3.1.0.0(2,4)]hexane, 3,6-diethyl-3,6-dimethyl-, trans-&quot;
 [7] &quot;3-Furaldehyde&quot;                                                  </code></pre>
-<pre class="r"><code>#(need_quant &lt;- setdiff(colnames(vol.qual), colnames(vol))) # filtered volatiles that need quant integration. 
-#vol &lt;- bind_cols(vol, vol.qual[,need_quant]) #temporary, add a couple volatiles that don&#39;t have quant integrations yet (currently not on same scale!)</code></pre>
-<pre class="r"><code>best &lt;- list()
+<pre class="r"><code>(need_quant &lt;- setdiff(colnames(vol.qual), colnames(vol))) # filtered volatiles that need quant integration. </code></pre>
+<pre><code>[1] &quot;Benzyl isopentyl ether&quot;                    
+[2] &quot;verbenone&quot;                                 
+[3] &quot;carveol&quot;                                   
+[4] &quot;2,6,10-Dodecatrien-1-ol, 3,7,11-trimethyl-&quot;</code></pre>
+<pre class="r"><code>vol &lt;- bind_cols(vol, vol.qual[,need_quant]) #temporary, add a couple volatiles that don&#39;t have quant integrations yet (currently not on same scale!)</code></pre>
+<pre class="r"><code>#optional - look for a set of chromatograms that have all of the volatiles needed to set up Shimadzu quantitative integrations
+best &lt;- list()
 i &lt;- 1
 vol.left &lt;- vol.qual[,need_quant]^(1/4) # halfway between areas and presence-absence
 while(ncol(vol.left)&gt;0) {
@@ -588,6 +590,28 @@ while(ncol(vol.left)&gt;0) {
 }
 (best.vol &lt;- as.data.frame(t(vol.qual[unlist(best),need_quant])) %&gt;% rownames_to_column(&quot;name&quot;))
 chemtable %&gt;% filter(name %in% need_quant) %&gt;% select(name, RT, RT.var) %&gt;% arrange(RT)</code></pre>
+</div>
+<div id="retention-times" class="section level1">
+<h1>Retention times</h1>
+<pre class="r"><code>longdata.RT &lt;- longdata %&gt;% filter(name %in% colnames(vol)) %&gt;% 
+  group_by(name) %&gt;%  mutate(n=n(), RT.sd=sd(RT)) %&gt;% ungroup() %&gt;% 
+  mutate(name=fct_reorder(name, RT))
+
+RT.tol &lt;- 0.17  # 10 seconds before or after in quantitative params
+ggplot(longdata.RT, aes(x=RT, y=name,color=RT.sd)) + geom_jitter(width=0, height=0.4, size=1) + 
+  scale_color_viridis_c(option=&quot;magma&quot;) + geom_text(aes(x=4.5, label=n)) +
+  stat_summary(fun=&quot;median&quot;, fun.max=~median(.x)+RT.tol, fun.min=~median(.x)-RT.tol, geom=&quot;pointrange&quot;, color=&quot;magenta&quot;, size=0.5, shape=15)</code></pre>
+<p><img src="plots-nitrogen/retention-1.svg" width="1152" /></p>
+<pre class="r"><code>#TODO the following compounds have multiple, overlapping RTs, also merge (2E)-2,7-dimethylocta-2,6-dien-1-ol with b-myrcene
+mess &lt;- c(&quot;p-mentha-1,3,8-triene&quot;, &quot;carveol&quot;, &quot;cosmene&quot;, &quot;4,7-Methano-1H-indene, 2,4,5,6,7,7a-hexahydro-&quot;, &quot;[(E)-hex-3-enyl] acetate&quot;)
+longdata.RT.mess &lt;- longdata.RT %&gt;% filter(name %in% mess) %&gt;% 
+  arrange(RT) %&gt;% mutate(cluster = kmeans(RT, 4)$cluster) %&gt;% 
+  group_by(cluster) %&gt;% mutate(RT.cluster = round(mean(RT),2))
+ggplot(longdata.RT.mess, aes(x=factor(RT.cluster), fill=name)) + geom_bar()</code></pre>
+<p><img src="plots-nitrogen/retention-2.svg" width="1152" /></p>
+<pre class="r"><code>ggplot(longdata.RT.mess, aes(x=RT, color=name, fill=name)) + facet_wrap(vars(RT.cluster), scales=&quot;free_x&quot;) + theme_minimal() +
+  geom_density(alpha=0.2, linewidth=2) + geom_jitter(aes(y=-as.integer(factor(name))*10), width=0.0002, height=4) </code></pre>
+<p><img src="plots-nitrogen/retention-3.svg" width="1152" /></p>
 </div>
 <div id="heatmap" class="section level1">
 <h1>Heatmap</h1>
@@ -603,6 +627,7 @@ ph  &lt;- pheatmap(as.matrix(t(vol))^(1/4),
          annotation_col = data.frame(meta %&gt;% select(&quot;species&quot;,&quot;treatment&quot;,&quot;time&quot;), row.names=rownames(vol)),
          annotation_row = data.frame(added = as.integer(colnames(vol) %in% added_quant), 
                                      new = as.integer(colnames(vol) %in% new_quant),
+                                     need = as.integer(colnames(vol) %in% need_quant),
                                      row.names=colnames(vol)),
    fontsize = 10, border_color = NA, legend=F, annotation_legend=T, cutree_rows=6
 )</code></pre>

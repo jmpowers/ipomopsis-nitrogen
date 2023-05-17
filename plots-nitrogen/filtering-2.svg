@@ -241,10 +241,10 @@
 <circle cx='381.01' cy='363.77' r='5.33' style='stroke-width: 0.71; stroke: #FF3030; fill: #FF3030;' />
 <circle cx='377.46' cy='294.83' r='10.51' style='stroke-width: 0.71; stroke: #FF3030; fill: #FF3030;' />
 <circle cx='320.15' cy='369.14' r='9.77' style='stroke-width: 0.71; stroke: #FF3030; fill: #FF3030;' />
-<circle cx='53.16' cy='452.48' r='4.65' style='stroke-width: 0.71; stroke: #FFA500; fill: #FFA500;' />
+<circle cx='53.16' cy='452.48' r='4.65' style='stroke-width: 0.71; stroke: #32CD32; fill: #32CD32;' />
 <circle cx='327.58' cy='368.32' r='8.66' style='stroke-width: 0.71; stroke: #FF3030; fill: #FF3030;' />
 <circle cx='413.64' cy='219.25' r='8.72' style='stroke-width: 0.71; stroke: #FF3030; fill: #FF3030;' />
-<circle cx='53.16' cy='493.36' r='4.65' style='stroke-width: 0.71; stroke: #FFA500; fill: #FFA500;' />
+<circle cx='53.16' cy='493.36' r='4.65' style='stroke-width: 0.71; stroke: #32CD32; fill: #32CD32;' />
 <circle cx='378.17' cy='299.45' r='5.69' style='stroke-width: 0.71; stroke: #FF3030; fill: #FF3030;' />
 <circle cx='251.78' cy='330.60' r='8.69' style='stroke-width: 0.71; stroke: #32CD32; fill: #32CD32;' />
 <circle cx='248.50' cy='510.53' r='2.81' style='stroke-width: 0.71; stroke: #FF3030; fill: #FF3030;' />
@@ -271,7 +271,7 @@
 <circle cx='334.79' cy='346.69' r='4.05' style='stroke-width: 0.71; stroke: #FF3030; fill: #FF3030;' />
 <circle cx='332.13' cy='338.45' r='8.15' style='stroke-width: 0.71; stroke: #FF3030; fill: #FF3030;' />
 <circle cx='312.72' cy='422.12' r='4.71' style='stroke-width: 0.71; stroke: #FF3030; fill: #FF3030;' />
-<circle cx='53.16' cy='495.04' r='4.58' style='stroke-width: 0.71; stroke: #FFA500; fill: #FFA500;' />
+<circle cx='53.16' cy='495.04' r='4.58' style='stroke-width: 0.71; stroke: #32CD32; fill: #32CD32;' />
 <circle cx='53.16' cy='368.99' r='3.13' style='stroke-width: 0.71; stroke: #FFA500; fill: #FFA500;' />
 <circle cx='53.16' cy='409.98' r='3.66' style='stroke-width: 0.71; stroke: #FFA500; fill: #FFA500;' />
 <circle cx='53.16' cy='438.43' r='3.58' style='stroke-width: 0.71; stroke: #FFA500; fill: #FFA500;' />
@@ -556,7 +556,7 @@
 <circle cx='53.16' cy='508.04' r='3.03' style='stroke-width: 0.71; stroke: #FFA500; fill: #FFA500;' />
 <circle cx='53.16' cy='484.41' r='3.22' style='stroke-width: 0.71; stroke: #FFA500; fill: #FFA500;' />
 <circle cx='309.95' cy='500.32' r='2.81' style='stroke-width: 0.71; stroke: #FF3030; fill: #FF3030;' />
-<circle cx='53.16' cy='433.98' r='4.05' style='stroke-width: 0.71; stroke: #FFA500; fill: #FFA500;' />
+<circle cx='53.16' cy='433.98' r='4.05' style='stroke-width: 0.71; stroke: #32CD32; fill: #32CD32;' />
 <circle cx='53.16' cy='359.99' r='3.97' style='stroke-width: 0.71; stroke: #FFA500; fill: #FFA500;' />
 <circle cx='298.15' cy='434.88' r='3.03' style='stroke-width: 0.71; stroke: #FF3030; fill: #FF3030;' />
 <circle cx='173.57' cy='511.23' r='4.65' style='stroke-width: 0.71; stroke: #FF3030; fill: #FF3030;' />
@@ -1036,10 +1036,10 @@
 <text x='381.01' y='367.79' text-anchor='middle' style='font-size: 11.04px;fill: none; font-family: "Arial";'>Benzoic acid, tridecyl ester</text>
 <text x='377.46' y='298.85' text-anchor='middle' style='font-size: 11.04px;fill: none; font-family: "Arial";'>benzophenone</text>
 <text x='320.15' y='373.17' text-anchor='middle' style='font-size: 11.04px;fill: none; font-family: "Arial";'>Benzothiazole</text>
-<text x='53.16' y='456.50' text-anchor='middle' style='font-size: 11.04px;fill: none; font-family: "Arial";'>Benzyl isopentyl ether</text>
+<text x='53.16' y='456.50' text-anchor='middle' style='font-size: 11.04px; font-family: "Arial";'>Benzyl isopentyl ether</text>
 <text x='327.58' y='372.35' text-anchor='middle' style='font-size: 11.04px;fill: none; font-family: "Arial";'>a-thujene</text>
 <text x='413.64' y='223.28' text-anchor='middle' style='font-size: 11.04px;fill: none; font-family: "Arial";'>sabinene</text>
-<text x='53.16' y='497.38' text-anchor='middle' style='font-size: 11.04px;fill: none; font-family: "Arial";'>verbenone</text>
+<text x='53.16' y='497.38' text-anchor='middle' style='font-size: 11.04px; font-family: "Arial";'>verbenone</text>
 <text x='378.17' y='303.47' text-anchor='middle' style='font-size: 11.04px;fill: none; font-family: "Arial";'>b-pinene</text>
 <text x='251.78' y='334.62' text-anchor='middle' style='font-size: 11.04px; font-family: "Arial";'>b-caryophyllene</text>
 <text x='248.50' y='514.55' text-anchor='middle' style='font-size: 11.04px;fill: none; font-family: "Arial";'>Bromoacetic acid, pentadecyl ester</text>
@@ -1066,7 +1066,7 @@
 <text x='334.79' y='350.71' text-anchor='middle' style='font-size: 11.04px;fill: none; font-family: "Arial";'>Carbonic acid, isobutyl 2-ethylhexyl ester</text>
 <text x='332.13' y='342.47' text-anchor='middle' style='font-size: 11.04px;fill: none; font-family: "Arial";'>nonyl prop-1-en-2-yl carbonate</text>
 <text x='312.72' y='426.14' text-anchor='middle' style='font-size: 11.04px;fill: none; font-family: "Arial";'>Carbonic acid, octadecyl prop-1-en-2-yl ester</text>
-<text x='53.16' y='499.07' text-anchor='middle' style='font-size: 11.04px;fill: none; font-family: "Arial";'>carveol</text>
+<text x='53.16' y='499.07' text-anchor='middle' style='font-size: 11.04px; font-family: "Arial";'>carveol</text>
 <text x='53.16' y='373.01' text-anchor='middle' style='font-size: 11.04px;fill: none; font-family: "Arial";'>Cholest-7-en-3.beta.,5.alpha.-diol-6.alpha.-benzoate</text>
 <text x='53.16' y='414.00' text-anchor='middle' style='font-size: 11.04px;fill: none; font-family: "Arial";'>Cholest-8-en-3.beta.-ol, acetate</text>
 <text x='53.16' y='442.45' text-anchor='middle' style='font-size: 11.04px;fill: none; font-family: "Arial";'>cis-1-Chloro-9-octadecene</text>
@@ -1351,7 +1351,7 @@
 <text x='53.16' y='512.06' text-anchor='middle' style='font-size: 11.04px;fill: none; font-family: "Arial";'>2-Phenylpropenal</text>
 <text x='53.16' y='488.43' text-anchor='middle' style='font-size: 11.04px;fill: none; font-family: "Arial";'>2-Tridecyne</text>
 <text x='309.95' y='504.34' text-anchor='middle' style='font-size: 11.04px;fill: none; font-family: "Arial";'>2,2-Difluoroethanol, TMS derivative</text>
-<text x='53.16' y='438.00' text-anchor='middle' style='font-size: 11.04px;fill: none; font-family: "Arial";'>2,6,10-Dodecatrien-1-ol, 3,7,11-trimethyl-</text>
+<text x='53.16' y='438.00' text-anchor='middle' style='font-size: 11.04px; font-family: "Arial";'>2,6,10-Dodecatrien-1-ol, 3,7,11-trimethyl-</text>
 <text x='53.16' y='364.01' text-anchor='middle' style='font-size: 11.04px;fill: none; font-family: "Arial";'>2,6,10-Dodecatrienal, 3,7,11-trimethyl-</text>
 <text x='298.15' y='438.90' text-anchor='middle' style='font-size: 11.04px;fill: none; font-family: "Arial";'>2H-pyran-2-one, 4,6-diphenyl-</text>
 <text x='173.57' y='515.26' text-anchor='middle' style='font-size: 11.04px;fill: none; font-family: "Arial";'>3-Cyclobutene-1,2-dione, 3-phenyl-</text>
@@ -1666,6 +1666,6 @@
 <text x='608.49' y='357.91' style='font-size: 8.80px; font-family: "Arial";'>50%</text>
 <text x='608.49' y='380.30' style='font-size: 8.80px; font-family: "Arial";'>75%</text>
 <text x='608.49' y='406.77' style='font-size: 8.80px; font-family: "Arial";'>100%</text>
-<text x='53.16' y='15.10' style='font-size: 13.20px; font-family: "Arial";'>Filtering diagnostics: 15/4265 compounds included</text>
+<text x='53.16' y='15.10' style='font-size: 13.20px; font-family: "Arial";'>Filtering diagnostics: 19/4265 compounds included</text>
 </g>
 </svg>

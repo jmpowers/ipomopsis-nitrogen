@@ -404,11 +404,11 @@
 <circle cx='80.80' cy='508.89' r='1.21' style='stroke-width: 0.71; stroke: #FF3030; fill: #FF3030;' />
 <circle cx='466.59' cy='339.01' r='1.98' style='stroke-width: 0.71; stroke: #FFA500; fill: #FFA500;' />
 <circle cx='410.91' cy='373.21' r='1.37' style='stroke-width: 0.71; stroke: #FFA500; fill: #FFA500;' />
-<circle cx='142.45' cy='381.18' r='1.59' style='stroke-width: 0.71; stroke: #FF3030; fill: #FF3030;' />
+<circle cx='142.45' cy='381.18' r='1.59' style='stroke-width: 0.71; stroke: #32CD32; fill: #32CD32;' />
 <circle cx='76.83' cy='412.89' r='2.35' style='stroke-width: 0.71; stroke: #FF3030; fill: #FF3030;' />
 <circle cx='335.34' cy='404.05' r='1.52' style='stroke-width: 0.71; stroke: #FFA500; fill: #FFA500;' />
 <circle cx='339.32' cy='266.03' r='3.79' style='stroke-width: 0.71; stroke: #FFA500; fill: #FFA500;' />
-<circle cx='142.45' cy='361.57' r='1.27' style='stroke-width: 0.71; stroke: #FF3030; fill: #FF3030;' />
+<circle cx='142.45' cy='361.57' r='1.27' style='stroke-width: 0.71; stroke: #32CD32; fill: #32CD32;' />
 <circle cx='96.71' cy='445.67' r='1.22' style='stroke-width: 0.71; stroke: #FF3030; fill: #FF3030;' />
 <circle cx='180.23' cy='305.37' r='3.38' style='stroke-width: 0.71; stroke: #FFA500; fill: #FFA500;' />
 <circle cx='98.70' cy='494.06' r='1.14' style='stroke-width: 0.71; stroke: #FF3030; fill: #FF3030;' />
@@ -454,7 +454,7 @@
 <circle cx='88.76' cy='517.30' r='0.96' style='stroke-width: 0.71; stroke: #FF3030; fill: #FF3030;' />
 <circle cx='100.69' cy='510.35' r='1.14' style='stroke-width: 0.71; stroke: #FF3030; fill: #FF3030;' />
 <circle cx='130.52' cy='481.01' r='1.17' style='stroke-width: 0.71; stroke: #FF3030; fill: #FF3030;' />
-<circle cx='140.46' cy='433.82' r='1.28' style='stroke-width: 0.71; stroke: #FF3030; fill: #FF3030;' />
+<circle cx='140.46' cy='433.82' r='1.28' style='stroke-width: 0.71; stroke: #32CD32; fill: #32CD32;' />
 <circle cx='78.81' cy='510.96' r='1.14' style='stroke-width: 0.71; stroke: #FF3030; fill: #FF3030;' />
 <circle cx='102.68' cy='294.46' r='3.90' style='stroke-width: 0.71; stroke: #FF3030; fill: #FF3030;' />
 <circle cx='114.61' cy='338.54' r='2.56' style='stroke-width: 0.71; stroke: #FF3030; fill: #FF3030;' />
@@ -928,7 +928,7 @@
 <circle cx='76.83' cy='453.20' r='1.83' style='stroke-width: 0.71; stroke: #FF3030; fill: #FF3030;' />
 <circle cx='80.80' cy='509.84' r='1.13' style='stroke-width: 0.71; stroke: #FF3030; fill: #FF3030;' />
 <circle cx='82.79' cy='458.45' r='1.58' style='stroke-width: 0.71; stroke: #FF3030; fill: #FF3030;' />
-<circle cx='124.55' cy='338.86' r='2.01' style='stroke-width: 0.71; stroke: #FF3030; fill: #FF3030;' />
+<circle cx='124.55' cy='338.86' r='2.01' style='stroke-width: 0.71; stroke: #32CD32; fill: #32CD32;' />
 <circle cx='122.56' cy='254.48' r='3.25' style='stroke-width: 0.71; stroke: #FF3030; fill: #FF3030;' />
 <circle cx='100.69' cy='373.62' r='2.63' style='stroke-width: 0.71; stroke: #FF3030; fill: #FF3030;' />
 <circle cx='84.78' cy='379.59' r='1.82' style='stroke-width: 0.71; stroke: #FF3030; fill: #FF3030;' />
@@ -3508,16 +3508,16 @@
 <text x='466.59' y='347.25' text-anchor='middle' style='font-size: 8.54px;fill: none; font-family: "Arial";'>1.5×</text>
 <text x='410.91' y='371.20' text-anchor='middle' style='font-size: 8.54px;fill: none; font-family: "Arial";'>Benzothiazole</text>
 <text x='410.91' y='381.44' text-anchor='middle' style='font-size: 8.54px;fill: none; font-family: "Arial";'>2×</text>
-<text x='142.45' y='379.17' text-anchor='middle' style='font-size: 8.54px;fill: none; font-family: "Arial";'>Benzyl isopentyl ether</text>
-<text x='142.45' y='389.41' text-anchor='middle' style='font-size: 8.54px;fill: none; font-family: "Arial";'>Inf×</text>
+<text x='142.45' y='379.17' text-anchor='middle' style='font-size: 8.54px; font-family: "Arial";'>Benzyl isopentyl ether</text>
+<text x='142.45' y='389.41' text-anchor='middle' style='font-size: 8.54px; font-family: "Arial";'>Inf×</text>
 <text x='76.83' y='410.88' text-anchor='middle' style='font-size: 8.54px;fill: none; font-family: "Arial";'>Bergamotol, Z-.alpha.-trans-</text>
 <text x='76.83' y='421.12' text-anchor='middle' style='font-size: 8.54px;fill: none; font-family: "Arial";'>Inf×</text>
 <text x='335.34' y='402.04' text-anchor='middle' style='font-size: 8.54px;fill: none; font-family: "Arial";'>a-thujene</text>
 <text x='335.34' y='412.28' text-anchor='middle' style='font-size: 8.54px;fill: none; font-family: "Arial";'>1.7×</text>
 <text x='339.32' y='264.02' text-anchor='middle' style='font-size: 8.54px;fill: none; font-family: "Arial";'>sabinene</text>
 <text x='339.32' y='274.27' text-anchor='middle' style='font-size: 8.54px;fill: none; font-family: "Arial";'>1.8×</text>
-<text x='142.45' y='359.56' text-anchor='middle' style='font-size: 8.54px;fill: none; font-family: "Arial";'>verbenone</text>
-<text x='142.45' y='369.80' text-anchor='middle' style='font-size: 8.54px;fill: none; font-family: "Arial";'>Inf×</text>
+<text x='142.45' y='359.56' text-anchor='middle' style='font-size: 8.54px; font-family: "Arial";'>verbenone</text>
+<text x='142.45' y='369.80' text-anchor='middle' style='font-size: 8.54px; font-family: "Arial";'>Inf×</text>
 <text x='96.71' y='443.66' text-anchor='middle' style='font-size: 8.54px;fill: none; font-family: "Arial";'>Bicyclo[3.1.1]hept-3-ene, 4,6,6-trimethyl-2-vinyloxy-</text>
 <text x='96.71' y='453.90' text-anchor='middle' style='font-size: 8.54px;fill: none; font-family: "Arial";'>1.8×</text>
 <text x='180.23' y='303.35' text-anchor='middle' style='font-size: 8.54px;fill: none; font-family: "Arial";'>b-pinene</text>
@@ -3608,8 +3608,8 @@
 <text x='100.69' y='518.58' text-anchor='middle' style='font-size: 8.54px;fill: none; font-family: "Arial";'>Inf×</text>
 <text x='130.52' y='479.00' text-anchor='middle' style='font-size: 8.54px;fill: none; font-family: "Arial";'>Carbonic acid, undecyl vinyl ester</text>
 <text x='130.52' y='489.25' text-anchor='middle' style='font-size: 8.54px;fill: none; font-family: "Arial";'>0.7×</text>
-<text x='140.46' y='431.81' text-anchor='middle' style='font-size: 8.54px;fill: none; font-family: "Arial";'>carveol</text>
-<text x='140.46' y='442.05' text-anchor='middle' style='font-size: 8.54px;fill: none; font-family: "Arial";'>Inf×</text>
+<text x='140.46' y='431.81' text-anchor='middle' style='font-size: 8.54px; font-family: "Arial";'>carveol</text>
+<text x='140.46' y='442.05' text-anchor='middle' style='font-size: 8.54px; font-family: "Arial";'>Inf×</text>
 <text x='78.81' y='508.95' text-anchor='middle' style='font-size: 8.54px;fill: none; font-family: "Arial";'>Chloroacetic acid, 4-methylpentyl ester</text>
 <text x='78.81' y='519.19' text-anchor='middle' style='font-size: 8.54px;fill: none; font-family: "Arial";'>Inf×</text>
 <text x='102.68' y='292.45' text-anchor='middle' style='font-size: 8.54px;fill: none; font-family: "Arial";'>Cholest-7-en-3.beta.,5.alpha.-diol-6.alpha.-benzoate</text>
@@ -4556,8 +4556,8 @@
 <text x='80.80' y='518.07' text-anchor='middle' style='font-size: 8.54px;fill: none; font-family: "Arial";'>Inf×</text>
 <text x='82.79' y='456.44' text-anchor='middle' style='font-size: 8.54px;fill: none; font-family: "Arial";'>2,6-Heptadienal, 2,4-dimethyl-</text>
 <text x='82.79' y='466.68' text-anchor='middle' style='font-size: 8.54px;fill: none; font-family: "Arial";'>Inf×</text>
-<text x='124.55' y='336.85' text-anchor='middle' style='font-size: 8.54px;fill: none; font-family: "Arial";'>2,6,10-Dodecatrien-1-ol, 3,7,11-trimethyl-</text>
-<text x='124.55' y='347.09' text-anchor='middle' style='font-size: 8.54px;fill: none; font-family: "Arial";'>Inf×</text>
+<text x='124.55' y='336.85' text-anchor='middle' style='font-size: 8.54px; font-family: "Arial";'>2,6,10-Dodecatrien-1-ol, 3,7,11-trimethyl-</text>
+<text x='124.55' y='347.09' text-anchor='middle' style='font-size: 8.54px; font-family: "Arial";'>Inf×</text>
 <text x='122.56' y='252.47' text-anchor='middle' style='font-size: 8.54px;fill: none; font-family: "Arial";'>2,6,10-Dodecatrienal, 3,7,11-trimethyl-</text>
 <text x='122.56' y='262.72' text-anchor='middle' style='font-size: 8.54px;fill: none; font-family: "Arial";'>Inf×</text>
 <text x='100.69' y='371.60' text-anchor='middle' style='font-size: 8.54px;fill: none; font-family: "Arial";'>2H-pyran-2-one, 4,6-diphenyl-</text>
@@ -8309,6 +8309,6 @@
 <text x='577.06' y='343.65' style='font-size: 8.80px; font-family: "Arial";'>6e+06</text>
 <text x='577.06' y='366.46' style='font-size: 8.80px; font-family: "Arial";'>9e+06</text>
 <text x='53.16' y='31.46' style='font-size: 11.00px; font-family: "Arial";'>Bottom label: relative amount in floral vs. ambient, Inf = not in ambients</text>
-<text x='53.16' y='15.10' style='font-size: 13.20px; font-family: "Arial";'>Filtering diagnostics: 15/4265 compounds included</text>
+<text x='53.16' y='15.10' style='font-size: 13.20px; font-family: "Arial";'>Filtering diagnostics: 19/4265 compounds included</text>
 </g>
 </svg>
