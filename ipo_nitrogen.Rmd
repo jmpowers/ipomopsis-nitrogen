@@ -145,8 +145,8 @@ vol.qual <- vol.qual / (as.numeric(meta$equil + meta$pumping)/3600) / meta$flrs 
 # source("read_shimadzu.R")
 # quantpath <- "~/MyDocs/MEGA/UCI/Schiedea/Analysis/scent/rmbl/RMBL Batches/quant_round3/"
 # bfiles <-  list.files(quantpath)
-# quant.full <- map_dfr(set_names(paste0(quantpath, bfiles), bfiles), read.shimadzu.quant, .id="batch") %>% 
-#   mutate(Name = trimws(Name), Area=replace_na(Area, 0)) %>% 
+# quant.full <- map_dfr(set_names(paste0(quantpath, bfiles), bfiles), read.shimadzu.quant, .id="batch") %>%
+#   mutate(Name = trimws(Name), Area=replace_na(Area, 0)) %>%
 #   distinct(Filename, Name, .keep_all=T)
 # quant.full %>% select(batch, Dirname, Filename, Name, Area) %>% 
 #   mutate(Dirname = fct_relabel(Dirname, str_remove, "C:/GCMSsolution/Data/Project1_190815/")) %>% 
@@ -161,14 +161,15 @@ vol <- read_tsv("data/quant_2022.tsv") %>%
   select(-Filename) %>% rename(Filename = sample2) %>%  #replace FileName with the sample2 it holds (accounts for skips)
   column_to_rownames("Filename")
 contams <- c("methyl salicylate", "benzaldehyde","trans-Geranylgeraniol","Decanal", "D-limonene", "Nonanoic acid", "caprolactam",
+             "(2E)-2,7-dimethylocta-2,6-dien-1-ol", #same peak as b-myrcene
              "3-methylbutanal oxime")#passed bouquet in OTC experiment but rare here
 vol <- vol[rownames(vol.qual), !colnames(vol) %in% contams]
 vol <- vol / (as.numeric(meta$equil + meta$pumping)/3600) / meta$flrs #0.5 hr of equilibration plus 0.25 hr pumping, one flower
 
 (added_quant <- setdiff(colnames(vol), colnames(vol.qual)))#in quant (from temp experiment) but do not pass filters in this dataset
-(new_quant <- colnames(vol)[28:34]) #newly integrated, pass filters
+(new_quant <- colnames(vol)[28:33]) #newly integrated, pass filters
 (need_quant <- setdiff(colnames(vol.qual), colnames(vol))) # filtered volatiles that need quant integration. 
-vol <- bind_cols(vol, vol.qual[,need_quant]) #temporary, add a couple volatiles that don't have quant integrations yet (currently not on same scale!)
+#vol <- bind_cols(vol, vol.qual[,need_quant]) #temporary, add a couple volatiles that don't have quant integrations yet (currently not on same scale!)
 ```
 
 ```{r diverse, eval=FALSE}
@@ -189,7 +190,7 @@ chemtable %>% filter(name %in% need_quant) %>% select(name, RT, RT.var) %>% arra
 # Retention times
 
 ```{r retention, fig.width=12}
-longdata.RT <- longdata %>% filter(name %in% colnames(vol)) %>% 
+longdata.RT <- longdata %>% filter(name %in% c(colnames(vol.qual), colnames(vol))) %>% 
   group_by(name) %>%  mutate(n=n(), RT.sd=sd(RT)) %>% ungroup() %>% 
   mutate(name=fct_reorder(name, RT))
 
@@ -198,16 +199,18 @@ ggplot(longdata.RT, aes(x=RT, y=name,color=RT.sd)) + geom_jitter(width=0, height
   scale_color_viridis_c(option="magma") + geom_text(aes(x=4.5, label=n)) +
   stat_summary(fun="median", fun.max=~median(.x)+RT.tol, fun.min=~median(.x)-RT.tol, geom="pointrange", color="magenta", size=0.5, shape=15)
 
-#TODO the following compounds have multiple, overlapping RTs, also merge (2E)-2,7-dimethylocta-2,6-dien-1-ol with b-myrcene
-mess <- c("p-mentha-1,3,8-triene", "carveol", "cosmene", "4,7-Methano-1H-indene, 2,4,5,6,7,7a-hexahydro-", "[(E)-hex-3-enyl] acetate")
+#TODO delete (2E)-2,7-dimethylocta-2,6-dien-1-ol (same peak as b-myrcene) from quant integrations
+#TODO the following compounds have multiple, overlapping RTs
+mess <- c("p-mentha-1,3,8-triene", "carveol", "cosmene", "4,7-Methano-1H-indene, 2,4,5,6,7,7a-hexahydro-")
 longdata.RT.mess <- longdata.RT %>% filter(name %in% mess) %>% 
-  arrange(RT) %>% mutate(cluster = kmeans(RT, 4)$cluster) %>% 
-  group_by(cluster) %>% mutate(RT.cluster = round(mean(RT),2))
+  arrange(RT) %>% mutate(cluster = kmeans(RT, 4, nstart=4)$cluster) %>% 
+  group_by(cluster) %>% mutate(RT.cluster = round(mean(RT),2)) %>% ungroup()
 ggplot(longdata.RT.mess, aes(x=factor(RT.cluster), fill=name)) + geom_bar()
 ggplot(longdata.RT.mess, aes(x=RT, color=name, fill=name)) + facet_wrap(vars(RT.cluster), scales="free_x") + theme_minimal() +
-  geom_density(alpha=0.2, linewidth=2) + geom_jitter(aes(y=-as.integer(factor(name))*10), width=0.0002, height=4) 
-```
+  geom_density(alpha=0.2, linewidth=2) + geom_jitter(aes(y=-as.integer(factor(name))*10), width=0.0002, height=4)
 
+mess.wide <- longdata.RT.mess %>% select(sample, RT.cluster, area) %>% pivot_wider(names_from = RT.cluster, values_from=area, values_fn=sum, values_fill=0)
+```
 
 # Heatmap
 
@@ -238,10 +241,10 @@ anova.cca(cap_treat, by="margin") # samples should be averaged by plant first
 
 plot(cap_treat, type="n")
 points(cap_treat, display="sites", 
-       pch=c(1,19)[as.integer(meta$time)],
-       col=c("darkred","magenta")[as.integer(meta$species)])
-legend("topleft", levels(meta$species), title="Species", fill=c("darkred","magenta"))
-legend("topright", levels(meta$time), title="Time", pch=c(1,19))
+       pch=c(1,19)[as.integer(factor(meta$time))],
+       col=c("darkred","magenta")[as.integer(factor(meta$species))])
+legend("topleft", levels(factor(meta$species)), title="Species", fill=c("darkred","magenta"))
+legend("topright", levels(factor(meta$time)), title="Time", pch=c(1,19))
 text(cap_treat, display="species", cex=0.5, col=3)
 text(cap_treat, display="cn", cex=0.5)
 kable(arrange(as.data.frame(cap_treat$CCA$v), CAP1)) 
