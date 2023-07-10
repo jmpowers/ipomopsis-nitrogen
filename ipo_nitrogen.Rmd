@@ -47,7 +47,8 @@ exp1_meta <- read_sheet("1k2XJUsRyTsQEeEoZE24yTvsl7kSyf2Gg6gehs8pUvOo", sheet="m
 exp2_meta <- read_sheet("1EwPMsBAxqrRtuqH4uUBtthUOZlQluQICSvNr9u87h0E", sheet="metadata", guess_max=200) %>%
   mutate(plant = as.character(plant))
 
-exp1_field_meta <- read_sheet("", guess_max=200) %>%
+### doesn't work lol
+exp1_field_meta <- read.csv("data/2022 Poverty Gulch Volatiles.csv", guess_max=200) %>%
   mutate(plant = as.character(plant))
 
 gc_verdicts <- read_sheet("1X8oo7qZlo1p6MVl_CBeBe6CUTHEAcd-FWQzfHud3Qws", sheet = "2022gc220929") %>% #verdicts = the truth of the skips, renames all skips in R 
