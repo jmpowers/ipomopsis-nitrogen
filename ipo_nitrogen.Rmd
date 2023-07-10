@@ -22,6 +22,10 @@ td, th { padding : 6px }
 # Speciestime & treatment grouping instead of species, time, treatment
 #34 compounds with quantitative integrations
 
+=======
+#janelle was here
+#arturo was here
+
 ```{r setup, include=FALSE}
 library(reshape2)
 library(tidyverse)
