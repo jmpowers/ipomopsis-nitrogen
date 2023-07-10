@@ -40,26 +40,52 @@ knitr::opts_chunk$set(comment="", cache=T, warning=F, message=F,
 ```
 
 ```{r read_scents}
-# library(googlesheets4)
-# exp1_meta <- read_sheet("1k2XJUsRyTsQEeEoZE24yTvsl7kSyf2Gg6gehs8pUvOo", sheet="metadata", guess_max=200) %>% 
-#   mutate(plant = as.character(plant))
-# exp2_meta <- read_sheet("1EwPMsBAxqrRtuqH4uUBtthUOZlQluQICSvNr9u87h0E", sheet="metadata", guess_max=200) %>% 
-#   mutate(plant = as.character(plant))
-# gc_verdicts <- read_sheet("1X8oo7qZlo1p6MVl_CBeBe6CUTHEAcd-FWQzfHud3Qws", sheet = "2022gc220929") %>% 
-#   mutate(sample2 = ifelse(is.na(sample), FileName, sample))
-# exp1_verdicts <- gc_verdicts %>% filter(sample2 %in% exp1_meta$filename)
-# exp2leaf_verdicts <- gc_verdicts %>% filter(sample2 %in% exp2_meta$filename)
-# write_csv(exp1_verdicts, file = "data/exp1_verdicts.csv")
-# write_csv(exp2leaf_verdicts, file = "data/exp2leaf_verdicts.csv")
-# load("~/MyDocs/MEGA/UCI/Schiedea/Analysis/scent/rmbl/Inventory/shimadzu_data_22.rda")
-# exp1.data <- shimadzu.data.22 %>% filter(Filename %in% exp1_verdicts$FileName)
-# exp2leaf.data <- shimadzu.data.22 %>% filter(Filename %in% exp2_verdicts$FileName)
-# save(exp1.data, file = "data/exp1_data.rda")
-# save(exp2leaf.data, file = "data/exp2leaf_data.rda")
+library(googlesheets4)
+exp1_meta <- read_sheet("1k2XJUsRyTsQEeEoZE24yTvsl7kSyf2Gg6gehs8pUvOo", sheet="metadata", guess_max=200) %>% #sheet selects "metadata" sheet on Google Sheets, guess_max reads 200 lines before program guesses the type of each column (string vs integer vs date)
+  mutate(plant = as.character(plant))
+
+exp2_meta <- read_sheet("1EwPMsBAxqrRtuqH4uUBtthUOZlQluQICSvNr9u87h0E", sheet="metadata", guess_max=200) %>%
+  mutate(plant = as.character(plant))
+
+exp1_field_meta <- read_sheet("", guess_max=200) %>%
+  mutate(plant = as.character(plant))
+
+gc_verdicts <- read_sheet("1X8oo7qZlo1p6MVl_CBeBe6CUTHEAcd-FWQzfHud3Qws", sheet = "2022gc220929") %>% #verdicts = the truth of the skips, renames all skips in R 
+  mutate(sample2 = ifelse(is.na(sample), FileName, sample))
+#verdicts 
+exp1_verdicts <- gc_verdicts %>% filter(sample2 %in% exp1_meta$filename) #sample2= if sample is blank on metadata then its the filename no renaming necessary but if sample has a filename then something before it skipped and your re lining up/ accounting for skip (translating between the filename you want and the filename you have) 
+exp2leaf_verdicts <- gc_verdicts %>% filter(sample2 %in% exp2_meta$filename)
+exp1_field_verdicts <- gc_verdicts %>% filter(sample2 %in% exp1_field_meta$filename)
+
+write_csv(exp1_verdicts, file = "data/exp1_verdicts.csv")
+write_csv(exp2leaf_verdicts, file = "data/exp2leaf_verdicts.csv")
+write_csv(exp1_verdicts, file = "data/exp1_field_verdicts.csv")
+
+#load("~/MyDocs/MEGA/UCI/Schiedea/Analysis/scent/rmbl/Inventory/shimadzu_data_22.rda") #loading old quant integrations from John's computer
+source("read_shimadzu.R") #loads the function that reads the shimadzu output text file
+shimadzu.data.22 <- read.shimadzu.quant("data/NEXP1_field_greenhouse_quant.txt") #reads in shimadzu text file with quant integrations
+
+#exp1.data = greenhouse N experiment data only
+#pg.data= field N experiment at Poverty Gulch data only 
+
+exp1.data <- shimadzu.data.22 %>% filter(Filename %in% exp1_verdicts$FileName) #
+exp2leaf.data <- shimadzu.data.22 %>% filter(Filename %in% exp2_verdicts$FileName)
+exp1.field.data <- shimadzu.data.22 %>% filter(Filename %in% exp1_field_verdicts$FileName)
+save(exp1.data, file = "data/exp1_data.rda")
+save(exp2leaf.data, file = "data/exp2leaf_data.rda")
+save(exp1.field.data, file = "data/exp1_field_data.rda")
 
 exp1.verdicts <- read_csv("data/exp1_verdicts.csv")
 load("data/exp1_data.rda") #loads exp1.data (Shimadzu output)
+
 exp1.data <- exp1.data %>% left_join(select(exp1.verdicts, Filename = FileName, sample2)) %>% 
+  select(-Filename) %>% rename(Filename = sample2) %>%  #replace FileName with the sample2 it holds (accounts for skips)
+  droplevels()
+
+exp1.field.verdicts <- read_csv("data/exp1_field_verdicts.csv")
+load("data/exp1_field_data.rda") #loads exp1.field.data (Shimadzu output)
+
+exp1.field.data <- exp1.field.data %>% left_join(select(exp1.field.verdicts, Filename = FileName, sample2)) %>% 
   select(-Filename) %>% rename(Filename = sample2) %>%  #replace FileName with the sample2 it holds (accounts for skips)
   droplevels()
 
