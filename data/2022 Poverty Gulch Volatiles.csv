@@ -1,0 +1,245 @@
+observer,date,site,d_n,plant,replicate,bag,pump,end,flowers,buds,pump_id,VWC,treatment,notes
+JP,2022-07-11,Ihyb,N,799,A,21:03,21:31,21:47,1,0,DRC5,,nitrogen,Too rocky
+JP,2022-07-11,Ihyb,N,506,A,20:48,20:58,21:13,1,0,DRC5,5.5,ambient,
+JP,2022-07-11,Ihyb,N,503,A,20:30,21:00,21:15,1,1,DRC4,,ambient,Too rocky
+JP,2022-07-11,Ihyb,N,717,A,21:06,21:37,21:52,1,0,DRC4,6.5,water control,
+JP,2022-07-11,Ihyb,N,797,A,21:25,21:55,22:12,1,0,DRC5,5.1,nitrogen,
+JP,2022-07-11,Ihyb,N,798,A,21:27,21:58,22:14,1,0,DRC4,7.6,ambient,
+JP,2022-07-11,Ihyb,N,706,A,21:44,22:20,22:35,1,0,DRC5,4.8,nitrogen,
+JP,2022-07-11,Ihyb,N,AIRJP,,21:46,22:23,22:38,,,DRC4,,NA,
+JP,2022-07-11,Ihyb,N,530,A,22:04,22:43,22:58,1,0,DRC4,6.2,ambient,
+JP,2022-07-11,Ihyb,N,732,A,22:05,22:43,22:58,1,0,DRC5,,water control,Too rocky
+JP,2022-07-11,Ihyb,N,797,B,22:29,23:05,23:20,1,0,DRC5,5.1,nitrogen,
+JP,2022-07-11,Ihyb,N,798,B,22:30,23:06,23:21,1,0,DRC4,7.6,ambient,
+JP,2022-07-12,Ihyb,D,732,,8:35,9:06,9:22,1,0,DRC10,4.4,water control,soil probe not fully inserted
+JP,2022-07-12,Ihyb,D,530,,8:36,9:08,9:23,1,0,DRC9,4.9,ambient,soil probe not fully inserted
+JP,2022-07-12,Ihyb,D,AIRJP1,,8:41,9:11,9:27,,,DRC8,,NA,popped out at 9:23
+JP,2022-07-12,Ihyb,D,797,,8:52,9:37,9:52,1,0,DRC8,5.6,nitrogen,
+JP,2022-07-12,Ihyb,D,798,,8:54,9:29,9:44,1,0,DRC10,8.2,ambient,
+JP,2022-07-12,Ihyb,D,705,,8:57,9:31,9:46,1,0,DRC9,,water control,too rocky; popped out after 1 min
+JP,2022-07-12,Ihyb,D,719,,9:20,9:50,10:05,1,0,DRC9,,nitrogen,too rocky; popped out at 10:05
+JP,2022-07-12,Ihyb,D,706,,9:21,9:51,10:06,1,0,DRC10,5.2,nitrogen,
+JP,2022-07-12,Ihyb,D,707,,9:44,10:16,10:31,1,0,DRC9,7.2,water control,
+JP,2022-07-12,Ihyb,D,AIRJP2,,10:12,10:43,11:00,,,DRC9,,NA,
+JP,2022-07-12,Ihyb,D,AIRJP3,,10:12,10:43,11:00,,,DRC10,,NA,
+JP,2022-07-12,Ihyb,D,AIRJP4,,10:19,10:45,11:00,,,DRC8,,NA,
+JP,2022-07-12,Ihyb,D,AIRJP5,,10:19,10:45,11:00,,,DRC3,,NA,
+JK,2022-07-11,Ihyb,N,712,,20:40,21:10,21:25,1,2,DRC3,4.6,water control,
+JK,2022-07-11,Ihyb,N,314,,21:17,21:34,22:09,1,3,DRC3,,ambient,too rocky
+JK,2022-07-11,Ihyb,N,510,,21:40,22:21,22:36,1,1,DRC3,5.6,ambient,
+JK,2022-07-11,Ihyb,N,712,B,22:30,23:00,23:15,1,2,DRC3,4.6,water control,
+JK,2022-07-12,Ihyb,D,713,,9:00,9:30,9:45,1,5,DRC3,,water control,too rocky
+JK,2022-07-12,Ihyb,D,712,,9:37,10:07,10:22,1,2,DRC3,4.4,water control,
+JK,2022-07-12,Ihyb,D,799,,9:57,10:27,10:42,1,1,DRC3,,nitrogen,too rocky
+DH,2022-07-11,Ihyb,N,718,A,20:29,20:59,21:14,1,3,DRC8,8.6,nitrogen,
+DH,2022-07-11,Ihyb,N,721,A,20:31,21:02,21:17,1,0,DRC9,2.7,water control,
+DH,2022-07-11,Ihyb,N,509,A,20:33,21:04,21:19,1,0,DRC10,10.2,ambient,
+DH,2022-07-11,Ihyb,N,737,A,21:09,21:42,21:57,1,0,DRC8,6.2,water control,
+DH,2022-07-11,Ihyb,N,101,A,21:11,21:45,22:01,1,0,DRC9,5.8,ambient,
+DH,2022-07-11,Ihyb,N,AIRDHA,,21:22,21:54,22:11,,,DRC10,,NA,
+DH,2022-07-11,Ihyb,N,707,A,21:48,22:19,22:34,1,0,DRC9,3.9,water control,
+DH,2022-07-11,Ihyb,N,731,A,21:51,22:22,22:37,1,0,DRC8,11.4,nitrogen,
+DH,2022-07-11,Ihyb,N,729,A,22:01,22:31,22:46,1,0,DRC10,4.9,nitrogen,
+DH,2022-07-11,Ihyb,N,701,A,22:09,22:41,22:56,1,0,DRC9,8.5,nitrogen,
+DH,2022-07-11,Ihyb,N,718,B,22:26,22:56,23:11,1,0,DRC8,8.6,nitrogen,
+DH,2022-07-11,Ihyb,N,721,B,22:28,23:00,23:15,1,0,DRC10,2.7,water control,
+DH,2022-07-12,Ihyb,D,718,,8:37,9:08,9:23,1,0,DRC4,4.9,nitrogen,
+DH,2022-07-12,Ihyb,D,721,,8:39,9:09,9:26,1,0,DRC5,4,water control,
+DH,2022-07-12,Ihyb,D,101,,8:54,9:26,9:41,1,0,DRC4,4.5,ambient,
+DH,2022-07-12,Ihyb,D,731,,8:57,9:30,9:45,1,0,DRC5,5.7,nitrogen,
+DH,2022-07-12,Ihyb,D,729,,9:15,9:54,10:09,1,0,DRC4,4.8,nitrogen,
+DH,2022-07-12,Ihyb,D,701,,9:17,9:50,10:05,1,0,DRC5,7.2,nitrogen,
+DH,2022-07-12,Ihyb,D,509,,9:40,10:14,10:29,1,0,DRC5,8.9,ambient,
+DH,2022-07-12,Ihyb,D,AIRDH,,9:43,10:17,10:36,,,DRC4,,NA,
+DH,2022-07-12,Ihyb,D,AIRDHB,,10:29,10:59,11:14,,,DRC4,,NA,
+DH,2022-07-12,Ihyb,D,AIRDH3,,10:34,11:04,11:19,,,DRC5,,NA,
+AA,2022-07-11,Ihyb,N,715,A,20:32,21:03,21:18,1,0,DRC7,3.4,nitrogen,
+AA,2022-07-11,Ihyb,N,726,A,20:41,21:13,21:28,1,0,DRC1,4.1,nitrogen,
+AA,2022-07-11,Ihyb,N,713,A,21:20,21:50,22:05,1,1,DRC1,,water control,too rocky
+AA,2022-07-11,Ihyb,N,705,A,21:35,22:10,22:25,1,0,DRC7,5.1,water control,
+AA,2022-07-11,Ihyb,N,AIRAA,,21:54,22:27,22:42,,,DRC1,,NA,
+AA,2022-07-11,Ihyb,N,719,A,22:22,22:52,23:07,1,0,DRC7,5.4,nitrogen,
+AA,2022-07-12,Ihyb,D,503,,8:32,9:02,9:17,1,0,DRC1,5.6,ambient,
+AA,2022-07-12,Ihyb,D,506,,8:36,9:07,9:22,1,0,DRC7,,ambient,too rocky
+AA,2022-07-12,Ihyb,D,737,,8:50,9:20,9:35,1,0,DRC1,6.9,water control,
+AA,2022-07-12,Ihyb,D,726,,8:56,9:26,9:41,1,0,DRC7,3.9,nitrogen,
+AA,2022-07-12,Ihyb,D,510,,9:32,10:02,10:17,1,0,DRC1,,ambient,too rocky
+AA,2022-07-12,Ihyb,D,AIRAA1,,9:54,10:24,10:39,,,DRC1,,NA,
+DH,2022-07-21,Lagg,D,588,,9:47,10:17,10:32,1,0,DRC8,5.2,ambient,
+DH,2022-07-21,Lagg,D,590,,9:44,10:14,10:29,1,0,DRC3,7.9,ambient,
+DH,2022-07-21,Lagg,D,589,,10:08,10:38,10:53,1,0,CWu1,6.9,water control,
+DH,2022-07-21,Lagg,D,543,,10:17,10:47,11:02,1,0,DRC3,7.7,nitrogen,
+DH,2022-07-21,Lagg,D,76,,10:19,10:49,11:04,1,0,DRC8,5.2,ambient,
+DH,2022-07-21,Lagg,D,546,,10:27,10:57,11:12,1,1,CWu1,6.5,ambient,
+DH,2022-07-21,Lagg,D,596,,10:39,11:09,11:24,1,0,DRC3,5.4,water control,
+DH,2022-07-21,Lagg,D,550,,10:41,11:11,11:26,1,0,DRC8,4.9,water control,
+DH,2022-07-21,Lagg,D,325,,11:01,11:31,11:46,1,0,CWu1,6.1,ambient,
+DH,2022-07-21,Lagg,D,317,,11:20,11:50,12:05,1,0,DRC3,6.4,ambient,
+DH,2022-07-21,Lagg,D,320,,11:22,11:52,12:07,1,3,DRC8,6.4,ambient,
+DH,2022-07-21,Lagg,D,AIRDH,,11:33,12:03,12:18,NA,NA,CWu1,NA,NA,
+DH,2022-07-21,Lagg,D,584,,12:07,12:39,12:54,1,0,DRC8,6.1,water control,
+DH,2022-07-21,Lagg,D,541,,12:33,13:03,13:18,1,0,CWu1,6.9,water control,
+DH,2022-07-21,Lagg,N,589,,20:44,21:15,21:30,1,0,CWu1,6.1,water control,
+DH,2022-07-21,Lagg,N,588,,20:46,21:17,21:32,1,0,CWu2,7.3,ambient,
+DH,2022-07-21,Lagg,N,590,,21:05,21:35,21:50,1,0,CWu1,6.7,ambient,
+DH,2022-07-21,Lagg,N,546,,21:08,21:38,21:53,1,0,CWu2,5.3,ambient,trap dropped into pumpbox
+DH,2022-07-21,Lagg,N,596,,21:24,21:56,22:11,1,0,CWu1,5,water control,
+DH,2022-07-21,Lagg,N,76,,21:26,21:59,22:14,1,0,CWu2,6.1,ambient,flower pulled off when starting pump
+DH,2022-07-21,Lagg,N,AIRDH,,21:42,22:15,22:30,NA,NA,CWu1,NA,NA,
+DH,2022-07-21,Lagg,N,598,,21:45,22:20,22:35,1,0,CWu2,5.1,ambient,pump sounds quiet
+DH,2022-07-21,Lagg,N,320A,,22:03,22:33,22:48,1,0,CWu1,6.2,ambient,
+DH,2022-07-21,Lagg,N,323,,22:07,22:39,22:54,1,0,CWu2,5.9,ambient,pump died during sampling; switched for DRC4 for last 5 min
+AA,2022-07-21,Lagg,D,614,,9:33,10:03,10:18,1,0,DRC4,6.2,ambient,
+AA,2022-07-21,Lagg,D,613,,9:35,10:05,10:20,1,0,DRC1,6.9,nitrogen,
+AA,2022-07-21,Lagg,D,344,,9:39,10:09,10:24,1,0,DRC7,6.6,ambient,Slipped out a few seconds after pump end
+AA,2022-07-21,Lagg,D,608,,9:54,10:24,10:39,1,1,DRC4,5.3,nitrogen,
+AA,2022-07-21,Lagg,D,616,,10:12,10:42,10:57,1,0,DRC1,3.7,water control,
+AA,2022-07-21,Lagg,D,607,,10:15,10:45,11:00,1,0,DRC4,7.5,ambient,6.3% VWC on second reading
+AA,2022-07-21,Lagg,D,601,,10:29,10:59,11:14,1,0,DRC7,5.2,water control,Trap out for 2 min during pump sampling
+AA,2022-07-21,Lagg,D,548,,10:33,11:03,11:18,1,0,DRC4,6.5,nitrogen,
+AA,2022-07-21,Lagg,D,AIRAA,,10:46,11:16,11:31,NA,NA,DRC7,NA,NA,
+AA,2022-07-21,Lagg,D,598,B,10:49,11:19,11:34,1,0,DRC1,7,ambient,
+AA,2022-07-21,Lagg,D,323,,10:50,11:23,11:38,1,0,DRC4,7.4,ambient,
+AA,2022-07-21,Lagg,D,near85,,11:33,12:05,12:20,1,0,DRC1,4.1,ambient,Located near 85
+AA,2022-07-21,Lagg,D,566,,12:29,12:59,13:14,1,0,DRC1,10.8,nitrogen,Trap out for 1 min during pump sampling
+AA,2022-07-21,Lagg,D,322,,12:38,13:08,13:23,1,0,DRC7,4.4,ambient,
+AA,2022-07-21,Lagg,D,568,,12:50,13:20,13:35,1,0,DRC4,6.4,nitrogen,
+AA,2022-07-21,Lagg,N,614,,20:45,21:15,21:30,1,0,DRC10,4,ambient,
+AA,2022-07-21,Lagg,N,613,,20:47,21:17,21:32,1,0,DRC9,4.6,nitrogen,
+AA,2022-07-21,Lagg,N,344,,20:48,21:18,21:33,1,0,DRC3,6.6,ambient,
+AA,2022-07-21,Lagg,N,601,,21:23,21:53,22:08,1,0,DRC10,5.5,water control,
+AA,2022-07-21,Lagg,N,599,,21:24,21:54,22:09,1,0,DRC9,5.3,ambient,
+AA,2022-07-21,Lagg,N,615,,21:26,21:56,22:11,1,0,DRC3,5.8,nitrogen,
+AA,2022-07-21,Lagg,N,616,,21:41,22:15,22:30,1,0,DRC3,3.9,water control,
+AA,2022-07-21,Lagg,N,607,,21:43,22:17,22:32,1,0,DRC9,7.4,ambient,
+AA,2022-07-21,Lagg,N,608,,21:45,22:19,22:34,1,0,DRC10,4.4,nitrogen,
+AA,2022-07-21,Lagg,N,near85,,22:04,22:35,22:50,1,0,DRC3,2.6,ambient,Located near 85
+AA,2022-07-21,Lagg,N,AIRAA,,22:06,22:38,22:53,NA,NA,DRC10,NA,NA,
+JP,2022-07-21,Lagg,D,283,,9:32,10:04,10:19,1,0,DRC5,5.8,ambient,
+JP,2022-07-21,Lagg,D,281,,9:34,10:06,10:21,1,0,JMP1,5.4,ambient,
+JP,2022-07-21,Lagg,D,574,,9:36,10:07,10:23,1,0,JMP3,7.5,water control,
+JP,2022-07-21,Lagg,D,598,A,9:38,10:10,10:24,1,0,JMP2,6.4,ambient,
+JP,2022-07-21,Lagg,D,332,,10:13,10:48,11:03,1,0,DRC5,5.7,ambient,
+JP,2022-07-21,Lagg,D,334,,10:16,10:51,11:06,1,0,JMP1,4.7,ambient,
+JP,2022-07-21,Lagg,D,337,,10:19,10:51,11:06,1,0,JMP2,4.1,ambient,
+JP,2022-07-21,Lagg,D,341,,10:21,10:53,11:08,1,0,JMP3,6.2,ambient,
+JP,2022-07-21,Lagg,D,563,,10:38,11:12,11:28,1,0,DRC5,6.5,ambient,trap fell out; flower fell off @ 11:25
+JP,2022-07-21,Lagg,D,293,,10:41,11:15,11:30,1,0,JMP2,7.3,ambient,trap fell out twice; stopped @11:50
+JP,2022-07-21,Lagg,D,562,,10:45,11:18,11:33,1,1,JMP3,6.2,water control,
+JP,2022-07-21,Lagg,D,AIRAA,,10:52,11:22,11:37,NA,NA,JMP1,NA,NA,
+JP,2022-07-21,Lagg,D,2100,,11:20,11:51,12:08,1,1,JMP2,6.9,ambient,
+JP,2022-07-21,Lagg,D,297,,11:41,12:11,12:26,1,0,DRC5,5.8,ambient,
+JP,2022-07-21,Lagg,N,281,,20:44,21:26,21:41,1,0,JMP1,5.7,ambient,
+JP,2022-07-21,Lagg,N,283,,20:46,21:27,21:42,1,0,JMP2,4.9,ambient,
+JP,2022-07-21,Lagg,N,341,,20:48,21:29,21:44,1,0,JMP3,7.5,ambient,
+JP,2022-07-21,Lagg,N,566,,21:15,21:48,22:08,1,0,JMP1,6,nitrogen,
+JP,2022-07-21,Lagg,N,554,,21:19,21:51,22:10,1,0,JMP2,5.1,ambient,
+JP,2022-07-21,Lagg,N,550,,21:21,21:56,22:11,1,0,JMP3,4.7,water control,
+JP,2022-07-21,Lagg,N,543,,22:00,22:30,22:45,1,0,JMP1,8.4,nitrogen,
+JP,2022-07-21,Lagg,N,AIRJP,,22:03,22:33,22:48,NA,NA,JMP2,NA,NA,"pump died, recalibrated and ran 15 min"
+JP,2022-07-21,Lagg,N,540,,22:17,22:53,23:08,1,0,JMP3,4.1,nitrogen,
+JP,2022-07-21,Lagg,N,415,,22:19,22:55,23:10,1,0,JMP2,5.3,ambient,
+JB,2022-07-21,Lagg,D,540,,9:38,10:08,10:23,1,0,DRC10,6.4,nitrogen,
+JB,2022-07-21,Lagg,D,280,,9:44,10:16,10:29,1,0,DRC9,6.1,ambient,
+JB,2022-07-21,Lagg,D,599,,10:12,10:42,10:57,1,1,CWu2,7,ambient,
+JB,2022-07-21,Lagg,D,615,,10:34,11:04,11:19,1,2,DRC9,6.5,nitrogen,trap touched glove
+JB,2022-07-21,Lagg,D,551,,10:38,11:08,11:25,1,1,CWu2,6.4,ambient,
+JB,2022-07-21,Lagg,D,554,,11:11,11:42,11:56,1,0,DRC10,5.4,ambient,
+JB,2022-07-21,Lagg,D,593,,11:15,11:45,12:00,1,1,DRC9,7.9,ambient,trap fell out of bag
+JB,2022-07-21,Lagg,D,539,,10:51,11:21,11:36,1,1,DRC10,7.4,nitrogen,resampled
+JB,2022-07-21,Lagg,D,585,,11:45,12:16,12:30,1,1,DRC9,7.2,nitrogen,resampled
+JB,2022-07-21,Lagg,N,337,,20:00,20:30,20:45,1,3,DRC8,2.9,ambient,
+JB,2022-07-21,Lagg,N,334,,20:02,20:32,20:47,1,1,DRC7,4.1,ambient,
+JB,2022-07-21,Lagg,N,574,,20:03,20:33,20:49,1,0,DRC5,5,water control,
+JB,2022-07-21,Lagg,N,568,,20:21,20:52,21:09,1,0,DRC8,4.5,nitrogen,
+JB,2022-07-21,Lagg,N,332,,20:24,20:56,21:11,1,2,DRC7,5.4,ambient,popped out
+JB,2022-07-21,Lagg,N,551,,20:36,21:06,21:21,1,0,DRC5,7.1,ambient,
+JB,2022-07-21,Lagg,N,585,,21:04,21:35,21:55,1,0,DRC8,4.1,nitrogen,
+JB,2022-07-21,Lagg,N,584,,21:14,21:44,21:59,1,0,DRC7,5.4,water control,
+JB,2022-07-21,Lagg,N,593,,21:16,21:46,22:02,1,0,DRC5,5.1,ambient,trap touched glove
+JB,2022-07-21,Lagg,N,548,,21:39,22:09,22:24,1,3,DRC5,6,nitrogen,
+JB,2022-07-21,Lagg,N,317,,21:50,22:20,22:35,1,2,DRC7,3.4,ambient,
+JB,2022-07-21,Lagg,N,AIRJB,,22:13,22:43,22:58,NA,NA,DRC8,NA,NA,
+JK,2022-07-21,Lagg,N,562,,20:00,20:30,20:45,1,1,DRC4,6.4,water control,
+JK,2022-07-21,Lagg,N,297,,20:03,20:33,20:48,1,0,DRC1,4.7,ambient,
+JK,2022-07-21,Lagg,N,2100,,20:27,20:57,21:12,1,0,DRC4,6.9,ambient,
+JK,2022-07-21,Lagg,N,293,,20:35,21:05,21:20,1,0,DRC1,5.4,ambient,
+JK,2022-07-21,Lagg,N,322,,21:08,21:38,21:53,1,2,DRC1,4.3,ambient,
+JK,2022-07-21,Lagg,N,320,B,21:10,21:40,21:55,1,1,DRC4,6.2,ambient,
+JK,2022-07-21,Lagg,N,541,,21:43,22:13,22:28,1,1,DRC4,6.8,water control,
+JK,2022-07-21,Lagg,N,AIRJK,,21:45,22:15,22:30,NA,NA,DRC1,NA,NA,
+JK,2022-07-21,Lagg,N,539,,22:19,22:49,23:04,1,1,DRC1,7.6,nitrogen,
+JK,2022-07-27,Ihyb,N,721,,20:04,20:34,20:49,1,0,DRC1,,water control,
+JK,2022-07-27,Ihyb,N,314,,20:06,20:36,20:51,1,2,DRC10,,ambient,too rocky
+JK,2022-07-27,Ihyb,N,718,,20:23,20:56,21:11,1,0,DRC7,,nitrogen,
+JK,2022-07-27,Ihyb,N,715,,20:32,21:07,21:22,1,0,DRC1,,nitrogen,
+JK,2022-07-27,Ihyb,N,726,,20:39,21:09,21:24,1,0,DRC1,,nitrogen,
+JK,2022-07-27,Ihyb,N,712,,20:58,21:28,21:43,1,0,DRC7,3.5,water control,
+JK,2022-07-27,Ihyb,N,713,,20:59,21:29,21:43,1,0,DRC10,,water control,
+JK,2022-07-27,Ihyb,N,AIRJK,,21:13,21:43,21:58,,,DRC1,,,
+JK,2022-07-27,Ihyb,N,715,B,21:39,22:09,22:24,1,0,DRC10,5.7,water control,
+JK,2022-07-27,Ihyb,N,712,B,21:47,22:17,22:32,1,0,DRC7,3.5,water control,
+JP,2022-07-27,Ihyb,N,732,A,20:03,20:38,20:56,1,0,DRC8,,water control,too rocky
+JP,2022-07-27,Ihyb,N,530,A,20:04,20:40,20:56,1,2,DRC9,,ambient,too rocky
+JP,2022-07-27,Ihyb,N,797,A,20:09,20:46,21:06,1,2,DRC5,,nitrogen,too rocky
+JP,2022-07-27,Ihyb,N,798,A,20:32,21:04,21:20,1,0,DRC3,4.4,ambient,
+JP,2022-07-27,Ihyb,N,719,A,20:33,21:09,21:24,1,0,DRC9,4.3,nitrogen,
+JP,2022-07-27,Ihyb,N,706,A,20:34,21:12,21:27,1,0,DRC5,5.5,nitrogen,
+JP,2022-07-27,Ihyb,N,701,A,20:53,21:26,21:42,1,0,DRC8,3.5,nitrogen,
+JP,2022-07-27,Ihyb,N,701,B,20:55,21:27,21:42,1,0,DRC3,3.5,nitrogen,
+JP,2022-07-27,Ihyb,N,732,B,20:58,21:35,21:51,1,1,DRC9,,water control,too rocky
+JP,2022-07-27,Ihyb,N,530,B,21:00,21:37,21:52,1,1,DRC5,,ambient,too rocky
+JP,2022-07-27,Ihyb,N,797,B,21:17,21:48,22:03,1,0,DRC8,,nitrogen,too rocky
+JP,2022-07-27,Ihyb,N,798,B,21:19,21:49,22:04,1,0,DRC3,4.4,ambient,
+JP,2022-07-27,Ihyb,N,706,B,22:07,22:38,22:53,1,0,DRC5,5.5,nitrogen,
+JP,2022-07-27,Ihyb,N,719,B,22:09,22:39,22:54,1,0,DRC9,4.3,nitrogen,
+JP,2022-07-28,Ihyb,D,797,,10:08,10:53,11:12,1,1,CWu2,4.7,nitrogen,rain
+JP,2022-07-28,Ihyb,D,719,,10:17,10:55,11:14,1,0,JMP3,5.3,nitrogen,rain
+JP,2022-07-28,Ihyb,D,706,,10:19,10:58,11:14,1,0,JMP2,4.3,nitrogen,rain
+JP,2022-07-28,Ihyb,D,798,,10:21,10:59,11:14,1,0,JMP1,4.7,ambient,rain
+AA,2022-07-27,Ihyb,N,503,A,20:05,20:35,20:50,1,0,JMP1,4,ambient,
+AA,2022-07-27,Ihyb,N,506,A,20:07,20:38,20:53,1,0,JMP2,,ambient,too rocky
+AA,2022-07-27,Ihyb,N,799,A,20:09,20:40,20:56,1,1,JMP3,2.5,nitrogen,
+AA,2022-07-27,Ihyb,N,525,A,20:23,20:54,21:09,1,0,JMP1,3.8,ambient,
+AA,2022-07-27,Ihyb,N,502,A,20:25,20:57,21:12,1,0,JMP2,2.4,ambient,
+AA,2022-07-27,Ihyb,N,703,A,20:28,21:00,21:15,1,0,JMP3,2.4,water control,
+AA,2022-07-27,Ihyb,N,709,A,20:45,21:15,21:30,1,0,JMP1,5.5,water control,
+AA,2022-07-27,Ihyb,N,AIRAA,,20:50,21:20,21:35,,,JMP2,,,
+AA,2022-07-27,Ihyb,N,799,B,20:53,21:23,21:38,1,0,JMP3,2.5,nitrogen,
+AA,2022-07-27,Ihyb,N,718,B,21:26,21:57,22:12,1,0,JMP1,5.2,nitrogen,
+AA,2022-07-27,Ihyb,N,721,B,21:27,21:59,22:14,1,0,JMP2,2.3,water control,
+AA,2022-07-27,Ihyb,N,726,B,21:33,22:03,22:18,1,0,JMP3,10.3,nitrogen,
+AA,2022-07-27,Ihyb,N,703,B,21:43,22:24,22:39,1,0,JMP2,2.4,water control,
+AA,2022-07-27,Ihyb,N,709,B,21:46,22:27,22:42,1,0,JMP3,5.5,water control,
+AA,2022-07-27,Ihyb,N,713,B,21:50,22:20,22:35,1,0,JMP1,4.5,water control,
+AA,2022-07-28,Ihyb,D,712,A,10:20,10:50,11:05,1,0,DRC3,,water control,too rocky;rain
+AA,2022-07-28,Ihyb,D,726,A,10:22,10:53,11:07,1,0,DRC9,,nitrogen,too rocky;rain
+AA,2022-07-28,Ihyb,D,713,,10:34,11:04,11:19,1,0,DRC5,,water control,too rocky;rain
+AA,2022-07-28,Ihyb,D,715,,10:36,11:06,11:21,1,0,DRC3,5,nitrogen,rain
+AA,2022-07-28,Ihyb,D,718,,10:38,11:13,11:28,1,0,DRC9,3.7,nitrogen,rain
+AA,2022-07-28,Ihyb,D,721,,10:40,11:15,11:30,1,0,CWu1,6.1,water control,rain
+DH,2022-07-27,Ihyb,N,101,A,20:06,20:37,20:52,1,0,CWu1,4.1,ambient,
+DH,2022-07-27,Ihyb,N,707,A,20:08,20:38,20:56,1,0,DRC4,5.8,water control,
+DH,2022-07-27,Ihyb,N,512,A,20:10,20:40,20:56,1,0,CWu2,3.7,ambient,
+DH,2022-07-27,Ihyb,N,737,A,20:24,20:54,21:09,1,0,CWu1,6.4,water control,
+DH,2022-07-27,Ihyb,N,509,A,20:25,20:56,21:11,1,0,DRC4,3.2,ambient,
+DH,2022-07-27,Ihyb,N,729,A,20:27,21:01,21:16,1,0,CWu2,2.9,nitrogen,
+DH,2022-07-27,Ihyb,N,AIRDH,,20:49,21:19,21:34,,,DRC4,,,
+DH,2022-07-27,Ihyb,N,731,A,20:51,21:22,21:37,1,2,CWu2,3.8,nitrogen,
+DH,2022-07-27,Ihyb,N,101,B,21:12,21:42,21:57,1,0,DRC4,4.1,ambient,
+DH,2022-07-27,Ihyb,N,509,B,21:16,21:46,22:01,1,0,CWu2,3.2,ambient,
+DH,2022-07-27,Ihyb,N,707,B,21:30,22:00,22:15,1,0,CWu1,5.8,water control,
+DH,2022-07-27,Ihyb,N,512,B,21:32,22:02,22:17,1,0,DRC4,3.7,ambient,
+DH,2022-07-27,Ihyb,N,729,B,21:33,22:03,23:18,1,0,CWu2,2.9,nitrogen,
+DH,2022-07-27,Ihyb,N,731,B,21:48,22:17,22:32,1,0,CWu1,3.8,nitrogen,
+DH,2022-07-27,Ihyb,N,509,C,21:50,22:21,22:36,1,0,CWu2,3.2,ambient,
+DH,2022-07-28,Ihyb,D,707,,10:08,10:38,10:53,1,0,DRC8,5.5,water control,
+DH,2022-07-28,Ihyb,D,101,,10:10,10:40,10:55,1,0,DRC4,4.6,ambient,
+DH,2022-07-28,Ihyb,D,737,,10:12,10:42,10:57,1,0,DRC10,6.8,water control,
+DH,2022-07-28,Ihyb,D,509,,10:13,10:43,10:58,1,0,DRC1,,ambient,too rocky
+DH,2022-07-28,Ihyb,D,512,,10:27,10:58,11:13,1,0,DRC8,5,ambient,
+DH,2022-07-28,Ihyb,D,731,,10:29,11:01,11:16,1,0,DRC4,5.3,nitrogen,
+DH,2022-07-28,Ihyb,D,729,,10:31,11:04,11:19,1,0,DRC10,4.9,nitrogen,
+DH,2022-07-28,Ihyb,D,709,,10:33,11:06,11:21,1,0,DRC1,6.2,water control,
+DH,2022-07-28,Ihyb,D,AIRDH,,10:52,11:23,11:38,,,,,,
+JP,2022-07-27,Ihyb,N,AIRJP,,22:12,22:30,22:45,,,DRC9,,,
