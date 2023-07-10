@@ -18,6 +18,7 @@ img{ max-width:200%; height: auto; }
 td, th { padding : 6px }
 </style>
 #janelle was here
+#arturo was here
 ```{r setup, include=FALSE}
 library(reshape2)
 library(tidyverse)
