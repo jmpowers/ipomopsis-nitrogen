@@ -47,11 +47,15 @@ exp1_meta <- read_sheet("1k2XJUsRyTsQEeEoZE24yTvsl7kSyf2Gg6gehs8pUvOo", sheet="m
 exp2_meta <- read_sheet("1EwPMsBAxqrRtuqH4uUBtthUOZlQluQICSvNr9u87h0E", sheet="metadata", guess_max=200) %>%
   mutate(plant = as.character(plant))
 
-exp1_field_meta <- read.csv("data/2022 Poverty Gulch Volatiles.csv") %>%
+exp1_field_nofilename <- read.csv("data/2022 Poverty Gulch Volatiles.csv") %>%
   mutate(plant = as.character(plant),
          Sample=paste0(plant, ifelse(is.na(replicate),"", replicate)), 
-         type= factor(ifelse(str_detect(Sample, "AIR"), "ambient", "floral"))) 
-  #^ 
+         type= factor(ifelse(str_detect(Sample, "AIR"), "ambient", "floral")), date=ymd(date))
+
+exp1_field_link <-read_csv("data/AA_samples6.csv") %>%   #links filename and metadata
+  mutate(date=ymd(date)) #these FileNames have already been corrected for skips
+
+exp1_field_meta <- left_join(exp1_field_link, exp1_field_nofilename)
 
 gc_verdicts <- read_sheet("1X8oo7qZlo1p6MVl_CBeBe6CUTHEAcd-FWQzfHud3Qws", sheet = "2022gc220929") %>% #verdicts = the truth of the skips, renames all skips in R 
   mutate(sample2 = ifelse(is.na(sample), FileName, sample))
@@ -61,31 +65,24 @@ exp2leaf_verdicts <- gc_verdicts %>% filter(sample2 %in% exp2_meta$filename)
 
 #New meta matching file name in meta with sample file name on GC
 
+exp1_field_verdicts <- gc_verdicts %>% filter(FileName %in% exp1_field_meta$Filename)
 
-exp1_field_verdicts <- gc_verdicts %>% filter(str_detect(batch,"PG_")) %>% separate(sample2, into=c("site", "plant", "d_n", "date", "run_date", "gc_n", "file"), remove=FALSE) %>% 
-  filter(site%in% c("Lagg", "Ihyb")) %>%  #sorts verdicts table by only Lagg or Ihyb samples (gets rid of the rest)
-   mutate(date=ymd(date)) #changes date to match formatting on both
-
-exp1_field_verd_merged <- left_join(exp1_field_verdicts, exp1_field_meta) 
-
-exp1_field_verdicts <- gc_verdicts %>% filter(sample2 %in% exp1_field_meta$filename)
+#exp1_field_verd_merged <- left_join(exp1_field_verdicts, exp1_field_meta)#merge by FileName 
 
 write_csv(exp1_verdicts, file = "data/exp1_verdicts.csv")
 write_csv(exp2leaf_verdicts, file = "data/exp2leaf_verdicts.csv")
-write_csv(exp1_verdicts, file = "data/exp1_field_verdicts.csv")
+write_csv(exp1_field_verdicts, file = "data/exp1_field_verdicts.csv")
 
-#load("~/MyDocs/MEGA/UCI/Schiedea/Analysis/scent/rmbl/Inventory/shimadzu_data_22.rda") #loading old quant integrations from John's computer
-source("read_shimadzu.R") #loads the function that reads the shimadzu output text file
-shimadzu.data.22 <- read.shimadzu.quant("data/NEXP1_field_greenhouse_quant.txt") #reads in shimadzu text file with quant integrations
+load("data/shimadzu_data_22.rda") #loading qualitative integrations all of them from 2022
 
 #exp1.data = greenhouse N experiment data only
 #pg.data= field N experiment at Poverty Gulch data only 
 
 exp1.data <- shimadzu.data.22 %>% filter(Filename %in% exp1_verdicts$FileName) #
-exp2leaf.data <- shimadzu.data.22 %>% filter(Filename %in% exp2_verdicts$FileName)
+#exp2leaf.data <- shimadzu.data.22 %>% filter(Filename %in% exp2_verdicts$FileName)
 exp1.field.data <- shimadzu.data.22 %>% filter(Filename %in% exp1_field_verdicts$FileName)
 save(exp1.data, file = "data/exp1_data.rda")
-save(exp2leaf.data, file = "data/exp2leaf_data.rda")
+#save(exp2leaf.data, file = "data/exp2leaf_data.rda")
 save(exp1.field.data, file = "data/exp1_field_data.rda")
 
 exp1.verdicts <- read_csv("data/exp1_verdicts.csv")
@@ -110,10 +107,15 @@ ipochems <- read_csv("data/Ipo volatile compounds - chemsf_ipo.csv") %>%
 shortnames <- ipochems %>% select(name, shortname) %>% filter(shortname!="") %>% deframe()
 
 exp1.data$Name <- recode(exp1.data$Name, !!!shortnames)
+exp1.field.data$Name <- recode(exp1.field.data$Name, !!!shortnames)
 
-exp1.all <- dcast(exp1.data, Filename~Name, sum, value.var="Area")
+exp1.all <- dcast(exp1.data, Filename~Name, sum, value.var="Area") #all means all VOCs unfiltered
 rownames(exp1.all) <- exp1.all[,1]
 exp1.all[,1] <- NULL
+
+exp1.field.all <- dcast(exp1.field.data, Filename~Name, sum, value.var="Area")
+rownames(exp1.field.all) <- exp1.field.all[,1]
+exp1.field.all[,1] <- NULL
 ```
 
 # Read metadata
@@ -124,7 +126,7 @@ metadata <- read_csv("data/EXP 1 (N) Volatile sampling  - metadata.csv") %>%
   mutate(plantid = paste(species, plant), speciestime = paste(species, time, sep=".")) %>% 
   left_join(read_csv("data/exp1_treatments.csv") %>% mutate(plant = as.character(plant)))
 rownames(metadata) <- metadata$filename
-metadata <- metadata[rownames(exp1.all),] #order metaddata to match order of data
+metadata <- metadata[rownames(exp1.all),] #order metadata to match order of data (which already. corrected for skips above in exp1.all)
 
 metadata %>% count(species, time, treatment) %>% kable()
 metadata %>% filter(species !="AMB") %>% count(species, plantid, time) %>% 
@@ -148,7 +150,7 @@ ggplot(metadata, aes(x=date-treatment_date, fill=species))+geom_histogram(binwid
 metadata %>% count(date-treatment_date) %>% kable(caption=paste("days since treatments began on", treatment_date))
 ```
 
-# Filtering
+# Filtering Exp1
 
 ```{r filtering}
 metadata <- metadata %>% mutate(type= ifelse(species=="AMB", "ambient","floral")) %>% rename(trap=sample) %>% as.data.frame() %>% 
@@ -185,31 +187,113 @@ meta <- metadata[metadata$type == "floral" & !(metadata$sample %in% files_exclud
 vol.qual <- vol.qual / (as.numeric(meta$equil + meta$pumping)/3600) / meta$flrs #0.5 hr of equilibration plus 0.25 hr pumping, one flower
 ```
 
+# Read Arturo's field metadata 
+
+```{r metadata, fig.height=5, fig.width=5}
+metadata.field <- exp1_field_meta %>% #Filename already accounted for skips
+  rename(time=d_n) %>% 
+  rename(species=site) %>% 
+  mutate(plantid = paste(species, plant), speciestime = paste(species, time, sep=".")) %>% 
+   mutate(plant = as.character(plant)) %>% 
+  rename(sample2=Filename) %>% #to do the join
+  left_join(exp1.field.verdicts) %>% rename(filename=sample2) %>% 
+  drop_na(filename) %>% #TODO need to rescue some of these rows that might be good?
+  mutate(type=replace_na(type,"floral"))
+rownames(metadata.field) <- metadata.field$filename
+metadata.field <- metadata.field[rownames(exp1.field.all),] #order metadata to match order of data
+
+metadata.field %>% count(species, time, treatment) %>% kable()
+metadata.field %>% drop_na(species) %>% count(species, plantid, time) %>% 
+  ggplot(aes(x=n, fill=time))+ geom_histogram(binwidth=1) + facet_wrap(vars(time), ncol=1)+
+  labs(x="Samples per plant") 
+#figure out type==NA
+
+# metadata.field %>% filter(type=="floral") %>% group_by(time) %>% 
+#   mutate(pump.dt = ymd_hms(paste(date, pump)), pump.hr = hour(pump.dt)+minute(pump.dt)/60,
+#          bag.dt = ymd_hms(paste(date, bag)), bag.hr = hour(bag.dt)+minute(bag.dt)/60,
+#          end.dt = ymd_hms(paste(date, bag)), end.hr = hour(end.dt)+minute(end.dt)/60) %>% 
+#   summarize(min=min(bag.hr), max=max(end.hr))  %>% kable(caption="first bag time, last ending time, in hr", digits=2)
+
+#ggplot(metadata.field, aes(y=equil, x=species)) + geom_boxplot() + labs(y="Equilibration duration")
+#ggplot(metadata.field, aes(y=pumping, x=species)) + geom_boxplot() + labs(y="Pumping duration")
+
+metadata.field %>% count(species) %>% kable(caption="total volatile samples by species")
+
+treatment_date <-  ymd("2022-06-24")#this is not the right date
+ggplot(metadata.field, aes(x=date-treatment_date, fill=species))+geom_histogram(binwidth=1)
+metadata.field %>% count(date-treatment_date) %>% kable(caption=paste("days since treatments began on", treatment_date))
+```
+
+# Filtering Exp1 Field
+
+change this to arturos stuff
+```{r filtering}
+metadata.field <- metadata.field %>% as.data.frame() %>% 
+  load_metadata(date = "date", sample = "filename", group = "speciestime", type = "type") #combine species and time (previously separate)
+
+longdata <- load_longdata(exp1.data, sample = "Filename", RT = "Ret.Time", 
+                          name = "Name", area = "Area", match = "SI", maxmatch=100)
+
+sampletable <- make_sampletable(longdata, metadata)
+
+chemtable <- make_chemtable(longdata, metadata) %>% 
+  filter_RT(2, 17) %>% 
+  filter_match(0.8) %>% 
+  filter_freq(0.2, group = TRUE) %>% 
+  filter_contaminant(cont.list = c("13-Methyltetradecanal","Cyclohexane, 1,1-dimethyl-2-propyl-","2-hexyldecan-1-ol","Tridecane, 3-methylene-")) %>% 
+  filter_area(min_maximum = 1e5) %>%
+  filter_ambient_ratio(sampletable, metadata, ratio = 3) %>% 
+  filter_ambient_ttest(sampletable, metadata, 
+                       alpha = 0.05, adjust = "fdr") 
+chemtable$filter_final <- with(chemtable, filter_RT == "OK" & filter_match =="OK" & 
+                                 #(filter_freq.agg == "OK" | filter_freq.ten == "OK" | filter_freq.D == "OK" | filter_freq.N == "OK") &
+                                 (filter_freq.agg.N == "OK" | filter_freq.ten.N == "OK" | filter_freq.agg.D == "OK" | filter_freq.ten.D == "OK") &
+                                 filter_area == "OK" & filter_ambient_ratio == "OK" & filter_ambient_ttest == "OK" & filter_contaminant == "OK")
+
+plot_filters(chemtable, option="rarity")
+plot_filters(chemtable, option="ambient")
+plot_filters(chemtable, option="volcano")
+plot_filters(chemtable, option="prop")
+
+vol.qual <- prune_sampletable(sampletable, chemtable, metadata)
+files_exclude <- c("NEXP1_agg6n3_N_220725_8152022_10.qgd") # flower fell off
+vol.qual <- vol.qual[!(rownames(vol.qual) %in% files_exclude) ,]
+meta <- metadata[metadata$type == "floral" & !(metadata$sample %in% files_exclude),] %>% droplevels()
+vol.qual <- vol.qual / (as.numeric(meta$equil + meta$pumping)/3600) / meta$flrs #0.5 hr of equilibration plus 0.25 hr pumping, one flower
+```
+
+
 # Quantitative integrations
 
 ```{r quant}
 #read in the large 2022 quant integration output and cut it down to NEXP chromatograms
-# source("read_shimadzu.R")
+source("read_shimadzu.R") #loads the function that reads the shimadzu output text file
 # quantpath <- "~/MyDocs/MEGA/UCI/Schiedea/Analysis/scent/rmbl/RMBL Batches/quant_round3/"
 # bfiles <-  list.files(quantpath)
 # quant.full <- map_dfr(set_names(paste0(quantpath, bfiles), bfiles), read.shimadzu.quant, .id="batch") %>%
-#   mutate(Name = trimws(Name), Area=replace_na(Area, 0)) %>%
-#   distinct(Filename, Name, .keep_all=T)
-# quant.full %>% select(batch, Dirname, Filename, Name, Area) %>% 
-#   mutate(Dirname = fct_relabel(Dirname, str_remove, "C:/GCMSsolution/Data/Project1_190815/")) %>% 
-#   filter(Name != "1,6,10-Dodecatrien-3-ol, 3,7,11-trimethyl-") %>% 
-#   mutate(Name = recode(Name, !!!shortnames)) %>% 
-#   filter(str_detect(Filename, "^NEXP")) %>% select(-Dirname, -batch) %>%
-#   pivot_wider(names_from="Name", values_from="Area") %>%
-#   write_tsv("data/quant_2022.tsv")
+quant.full <- read.shimadzu.quant("data/NEXP1_field_greenhouse_quant.txt") %>% #reads in shimadzu text file with quant integrations
+  mutate(Name = trimws(Name), Area=replace_na(Area, 0)) %>%
+   distinct(Filename, Name, .keep_all=T) 
+quant.full %>% select(Dirname, Filename, Name, Area) %>%
+  mutate(Dirname = fct_relabel(Dirname, str_remove, "C:/GCMSsolution/Data/Project1_190815/")) %>%
+  filter(Name != "1,6,10-Dodecatrien-3-ol, 3,7,11-trimethyl-") %>% #John- why??
+  mutate(Name = recode(Name, !!!shortnames)) %>%
+  #filter(str_detect(Filename, "^NEXP")) %>%
+  select(-Dirname) %>%
+  pivot_wider(names_from="Name", values_from="Area") %>%
+  write_tsv("data/quant_2022_exp1_exp1field.tsv")
+vol.exp1.exp1field <- read_tsv("data/quant_2022_exp1_exp1field.tsv") 
 
-vol <- read_tsv("data/quant_2022.tsv") %>%  
+#vol.field <- vol.exp1.exp1field[rownames(vol.field.qual),]
+
+vol <- vol.exp1.exp1field %>% 
   left_join(select(exp1.verdicts, Filename = FileName, sample2)) %>% drop_na(sample2) %>% 
   select(-Filename) %>% rename(Filename = sample2) %>%  #replace FileName with the sample2 it holds (accounts for skips)
   column_to_rownames("Filename")
 contams <- c("methyl salicylate", "benzaldehyde","trans-Geranylgeraniol","Decanal", "D-limonene", "Nonanoic acid", "caprolactam",
              "(2E)-2,7-dimethylocta-2,6-dien-1-ol", #same peak as b-myrcene
              "3-methylbutanal oxime")#passed bouquet in OTC experiment but rare here
+
 vol <- vol[rownames(vol.qual), !colnames(vol) %in% contams]
 vol <- vol / (as.numeric(meta$equil + meta$pumping)/3600) / meta$flrs #0.5 hr of equilibration plus 0.25 hr pumping, one flower
 
@@ -217,22 +301,6 @@ vol <- vol / (as.numeric(meta$equil + meta$pumping)/3600) / meta$flrs #0.5 hr of
 (new_quant <- colnames(vol)[28:33]) #newly integrated, pass filters
 (need_quant <- setdiff(colnames(vol.qual), colnames(vol))) # filtered volatiles that need quant integration. 
 #vol <- bind_cols(vol, vol.qual[,need_quant]) #temporary, add a couple volatiles that don't have quant integrations yet (currently not on same scale!)
-```
-
-#Find chromatograms that have a diverse set of volatiles needed 
-  #for new quant integrations (don't need)
-```{r diverse, eval=FALSE}
-#best <- list()
-#i <- 1
-#vol.left <- vol.qual[,need_quant]^(1/4) # halfway between areas and presence-absence
-#while(ncol(vol.left)>0) {
-#  print(dim(vol.left))
-#  best[[i]] <- which.max(rowSums(vol.left))
-#  vol.left <- vol.left[ , !decostand(vol.left[best[[i]],], method="pa"), drop=FALSE]
-#  i <- i+1
-#}
-#(best.vol <- as.data.frame(t(vol.qual[unlist(best),need_quant])) %>% rownames_to_column("name"))
-#chemtable %>% filter(name %in% need_quant) %>% select(name, RT, RT.var) %>% arrange(RT)
 ```
 
 #To find chromatogram with most diverse set compounds (for quantitative integrations)

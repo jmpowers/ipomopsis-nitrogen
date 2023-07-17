@@ -126,7 +126,7 @@ JP,2022-07-21,Lagg,D,341,,10:21,10:53,11:08,1,0,JMP3,6.2,ambient,
 JP,2022-07-21,Lagg,D,563,,10:38,11:12,11:28,1,0,DRC5,6.5,ambient,trap fell out; flower fell off @ 11:25
 JP,2022-07-21,Lagg,D,293,,10:41,11:15,11:30,1,0,JMP2,7.3,ambient,trap fell out twice; stopped @11:50
 JP,2022-07-21,Lagg,D,562,,10:45,11:18,11:33,1,1,JMP3,6.2,water control,
-JP,2022-07-21,Lagg,D,AIRAA,,10:52,11:22,11:37,NA,NA,JMP1,NA,NA,
+JP,2022-07-21,Lagg,D,AIRJP,,10:52,11:22,11:37,NA,NA,JMP1,NA,NA,
 JP,2022-07-21,Lagg,D,2100,,11:20,11:51,12:08,1,1,JMP2,6.9,ambient,
 JP,2022-07-21,Lagg,D,297,,11:41,12:11,12:26,1,0,DRC5,5.8,ambient,
 JP,2022-07-21,Lagg,N,281,,20:44,21:26,21:41,1,0,JMP1,5.7,ambient,
