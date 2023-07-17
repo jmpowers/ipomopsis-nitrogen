@@ -47,15 +47,27 @@ exp1_meta <- read_sheet("1k2XJUsRyTsQEeEoZE24yTvsl7kSyf2Gg6gehs8pUvOo", sheet="m
 exp2_meta <- read_sheet("1EwPMsBAxqrRtuqH4uUBtthUOZlQluQICSvNr9u87h0E", sheet="metadata", guess_max=200) %>%
   mutate(plant = as.character(plant))
 
-### doesn't work lol
-exp1_field_meta <- read.csv("data/2022 Poverty Gulch Volatiles.csv", guess_max=200) %>%
-  mutate(plant = as.character(plant))
+exp1_field_meta <- read.csv("data/2022 Poverty Gulch Volatiles.csv") %>%
+  mutate(plant = as.character(plant),
+         Sample=paste0(plant, ifelse(is.na(replicate),"", replicate)), 
+         type= factor(ifelse(str_detect(Sample, "AIR"), "ambient", "floral"))) 
+  #^ 
 
 gc_verdicts <- read_sheet("1X8oo7qZlo1p6MVl_CBeBe6CUTHEAcd-FWQzfHud3Qws", sheet = "2022gc220929") %>% #verdicts = the truth of the skips, renames all skips in R 
   mutate(sample2 = ifelse(is.na(sample), FileName, sample))
 #verdicts 
 exp1_verdicts <- gc_verdicts %>% filter(sample2 %in% exp1_meta$filename) #sample2= if sample is blank on metadata then its the filename no renaming necessary but if sample has a filename then something before it skipped and your re lining up/ accounting for skip (translating between the filename you want and the filename you have) 
 exp2leaf_verdicts <- gc_verdicts %>% filter(sample2 %in% exp2_meta$filename)
+
+#New meta matching file name in meta with sample file name on GC
+
+
+exp1_field_verdicts <- gc_verdicts %>% filter(str_detect(batch,"PG_")) %>% separate(sample2, into=c("site", "plant", "d_n", "date", "run_date", "gc_n", "file"), remove=FALSE) %>% 
+  filter(site%in% c("Lagg", "Ihyb")) %>%  #sorts verdicts table by only Lagg or Ihyb samples (gets rid of the rest)
+   mutate(date=ymd(date)) #changes date to match formatting on both
+
+exp1_field_verd_merged <- left_join(exp1_field_verdicts, exp1_field_meta) 
+
 exp1_field_verdicts <- gc_verdicts %>% filter(sample2 %in% exp1_field_meta$filename)
 
 write_csv(exp1_verdicts, file = "data/exp1_verdicts.csv")
