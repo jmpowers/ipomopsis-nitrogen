@@ -1,0 +1,221 @@
+---
+title: "NEXP2_N_microbes_2023"
+author: "Janelle Bohey"
+date: "2023-08-22"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(reshape2)
+library(tidyverse)
+library(lubridate)
+library(vegan)
+library(knitr)
+#install.packages("remotes")
+#remotes::install_github("jmpowers/bouquet", build_vignettes = TRUE)
+library(bouquet)
+knitr::opts_chunk$set(comment="", cache=T, warning=F, message=F, 
+                      fig.path = "plots-nitrogen/", dev="svglite", dev.args=list(fix_text_size=FALSE), fig.height=8, fig.width=10)
+```
+
+
+```{r read_scents}
+library(googlesheets4)
+exp2_meta <- read_sheet("1Jw9XkjSVKy1ajPhcYH2qajfzk2QgLbGQkHFASIfn6yw", sheet="Volatiles", guess_max=200) %>% #sheet selects "Volatiles" sheet on Google Sheets, guess_max reads 200 lines before program guesses the type of each column (string vs integer vs date)
+  mutate(plant = as.character(plant))
+
+count(exp2_meta, date, time, vial, color) %>% arrange(desc(n)) %>% View() #looking how many are duplicated within one day
+
+exp2_meta_leaf <- read_sheet("1EwPMsBAxqrRtuqH4uUBtthUOZlQluQICSvNr9u87h0E", sheet="metadata", guess_max=200) %>%
+  mutate(plant = as.character(plant))
+
+#TODO: SKIPS!!!!!!!!!!!
+
+
+gc_verdicts <- read_sheet("1X8oo7qZlo1p6MVl_CBeBe6CUTHEAcd-FWQzfHud3Qws", sheet = "2022gc220929") %>% #verdicts = the truth of the skips, renames all skips in R 
+  mutate(sample2 = ifelse(is.na(sample), FileName, sample))
+#verdicts 
+exp1_verdicts <- gc_verdicts %>% filter(sample2 %in% exp1_meta$filename) #sample2= if sample is blank on metadata then its the filename no renaming necessary but if sample has a filename then something before it skipped and your re lining up/ accounting for skip (translating between the filename you want and the filename you have) 
+exp2leaf_verdicts <- gc_verdicts %>% filter(sample2 %in% exp2_meta$filename)
+
+#New meta matching file name in meta with sample file name on GC
+
+exp1_field_verdicts <- gc_verdicts %>% filter(FileName %in% exp1_field_meta$Filename)
+
+#exp1_field_verd_merged <- left_join(exp1_field_verdicts, exp1_field_meta)#merge by FileName 
+
+write_csv(exp1_verdicts, file = "data/exp1_verdicts.csv")
+write_csv(exp2leaf_verdicts, file = "data/exp2leaf_verdicts.csv")
+write_csv(exp1_field_verdicts, file = "data/exp1_field_verdicts.csv")
+
+load("data/shimadzu_data_22.rda") #loading qualitative integrations all of them from 2022
+
+#exp1.data = greenhouse N experiment data only
+#pg.data= field N experiment at Poverty Gulch data only 
+
+exp1.data <- shimadzu.data.22 %>% filter(Filename %in% exp1_verdicts$FileName) #
+#exp2leaf.data <- shimadzu.data.22 %>% filter(Filename %in% exp2_verdicts$FileName)
+exp1.field.data <- shimadzu.data.22 %>% filter(Filename %in% exp1_field_verdicts$FileName)
+save(exp1.data, file = "data/exp1_data.rda")
+#save(exp2leaf.data, file = "data/exp2leaf_data.rda")
+save(exp1.field.data, file = "data/exp1_field_data.rda")
+
+exp1.verdicts <- read_csv("data/exp1_verdicts.csv")
+load("data/exp1_data.rda") #loads exp1.data (Shimadzu output)
+
+exp1.data <- exp1.data %>% left_join(select(exp1.verdicts, Filename = FileName, sample2)) %>% 
+  select(-Filename) %>% rename(Filename = sample2) %>%  #replace FileName with the sample2 it holds (accounts for skips)
+  droplevels()
+
+exp1.field.verdicts <- read_csv("data/exp1_field_verdicts.csv")
+load("data/exp1_field_data.rda") #loads exp1.field.data (Shimadzu output)
+
+exp1.field.data <- exp1.field.data %>% left_join(select(exp1.field.verdicts, Filename = FileName, sample2)) %>% 
+  select(-Filename) %>% rename(Filename = sample2) %>%  #replace FileName with the sample2 it holds (accounts for skips)
+  droplevels()
+
+# load short names
+ipochems <- read_csv("data/Ipo volatile compounds - chemsf_ipo.csv") %>% 
+  select(name, shortname, standard, verdict) %>%  filter(verdict != "")
+            
+#shorten chemical names and merge compounds with multiple names
+shortnames <- ipochems %>% select(name, shortname) %>% filter(shortname!="") %>% deframe()
+
+exp1.data$Name <- recode(exp1.data$Name, !!!shortnames)
+exp1.field.data$Name <- recode(exp1.field.data$Name, !!!shortnames)
+
+exp1.all <- dcast(exp1.data, Filename~Name, sum, value.var="Area") #all means all VOCs unfiltered
+rownames(exp1.all) <- exp1.all[,1]
+exp1.all[,1] <- NULL
+
+exp1.field.all <- dcast(exp1.field.data, Filename~Name, sum, value.var="Area")
+rownames(exp1.field.all) <- exp1.field.all[,1]
+exp1.field.all[,1] <- NULL
+```
+
+# Read metadata for Weatherport experiment
+
+```{r metadata, fig.height=5, fig.width=5}
+metadata <- read_csv("data/EXP 1 (N) Volatile sampling  - metadata.csv") %>% 
+  filter(filename != "#N/A") %>% 
+  mutate(plantid = paste(species, plant), speciestime = paste(species, time, sep=".")) %>% 
+  left_join(read_csv("data/exp1_treatments.csv") %>% mutate(plant = as.character(plant)))
+rownames(metadata) <- metadata$filename
+metadata <- metadata[rownames(exp1.all),] #order metadata to match order of data (which already. corrected for skips above in exp1.all)
+
+metadata %>% count(species, time, treatment) %>% kable()
+metadata %>% filter(species !="AMB") %>% count(species, plantid, time) %>% 
+  ggplot(aes(x=n, fill=time))+ geom_histogram(binwidth=1) + facet_wrap(vars(time), ncol=1)+
+  labs(x="Samples per plant") 
+
+metadata %>% filter(species !="AMB") %>% group_by(time) %>% 
+  mutate(pump.dt = ymd_hms(paste(date, pump)), pump.hr = hour(pump.dt)+minute(pump.dt)/60,
+         bag.dt = ymd_hms(paste(date, bag)), bag.hr = hour(bag.dt)+minute(bag.dt)/60,
+         end.dt = ymd_hms(paste(date, bag)), end.hr = hour(end.dt)+minute(end.dt)/60) %>% 
+  summarize(min=min(bag.hr), max=max(end.hr))  %>% kable(caption="first bag time, last ending time, in hr", digits=2)
+
+ggplot(metadata, aes(y=equil, x=species)) + geom_boxplot() + labs(y="Equilibration duration")
+ggplot(metadata, aes(y=pumping, x=species)) + geom_boxplot() + labs(y="Pumping duration")
+
+metadata %>% count(species) %>% kable(caption="total volatile samples by species")
+
+digging_date <- ymd("2022-06-24")
+treatment_date <- digging_date + days(6)
+ggplot(metadata, aes(x=date-treatment_date, fill=species))+geom_histogram(binwidth=1)
+metadata %>% count(date-treatment_date) %>% kable(caption=paste("days since treatments began on", treatment_date))
+```
+
+
+# Filtering (Qualitative Integrations) 
+
+```{r filtering}
+#need to get rid of NA values in metadata.field for code below to run
+#group= speciestime, should we do the same for arturo's data? need to make new column if yes
+
+metadata.field <- metadata.field %>% as.data.frame() %>% 
+  load_metadata(date = "date", sample = "filename", group = "speciestime", type = "type") #combine species and time (previously separate)
+
+longdata.field <- load_longdata(exp1.field.data, sample = "Filename", RT = "Ret.Time", 
+                          name = "Name", area = "Area", match = "SI", maxmatch=100) %>% 
+  filter(name !="") %>% mutate(name = droplevels(name))
+
+setdiff(as.character(metadata.field$sample), longdata.field$sample)
+setdiff(longdata.field$sample, as.character(metadata.field$sample))
+
+sampletable.field <- make_sampletable(longdata.field, metadata.field)
+
+chemtable.field <- make_chemtable(longdata.field, metadata.field) %>% 
+  filter_RT(2, 17) %>% 
+  filter_match(0.8) %>% 
+  filter_freq(0.2, group = TRUE) %>% 
+  filter_contaminant(cont.list = c("Caprolactam")) %>% 
+  filter_area(min_maximum = 1e5) %>%
+  filter_ambient_ratio(sampletable.field, metadata.field, ratio = 3) %>% 
+  filter_ambient_ttest(sampletable.field, metadata.field, 
+                       alpha = 0.05, adjust = "fdr") 
+chemtable.field$filter_final <- with(chemtable.field, filter_RT == "OK" & filter_match =="OK" & 
+                                 (filter_freq.Lagg.N == "OK" | filter_freq.Ihyb.N == "OK" | 
+                                    filter_freq.Lagg.D == "OK" | filter_freq.Ihyb.D == "OK") &
+                                 filter_area == "OK" & filter_ambient_ratio == "OK" & 
+                                   filter_ambient_ttest == "OK" & filter_contaminant == "OK")
+
+plot_filters(chemtable.field, option="rarity")
+plot_filters(chemtable.field, option="ambient")
+plot_filters(chemtable.field, option="volcano")
+plot_filters(chemtable.field, option="prop")
+
+vol.qual.field <- prune_sampletable(sampletable.field, chemtable.field, metadata.field)
+files_exclude <- c("") 
+vol.qual.field <- vol.qual.field[!(rownames(vol.qual.field) %in% files_exclude) ,]
+meta.field <- metadata.field[metadata.field$type == "floral" & !(metadata.field$sample %in% files_exclude),] %>% droplevels()
+vol.qual.field <- vol.qual.field / (as.numeric(meta.field$equil + meta.field$pumping)/3600) / meta.field$flowers #0.5 hr of equilibration plus 0.25 hr pumping, one flower
+```
+
+
+# Retention times
+The puzzel - the 4 peaks we are not sure about compound identifications
+prints out graphs
+
+```{r retention, fig.width=12}
+longdata.RT <- longdata %>% filter(name %in% c(colnames(vol.qual), colnames(vol))) %>% 
+  group_by(name) %>%  mutate(n=n(), RT.sd=sd(RT)) %>% ungroup() %>% 
+  mutate(name=fct_reorder(name, RT))
+
+RT.tol <- 0.17  # 10 seconds before or after in quantitative params
+ggplot(longdata.RT, aes(x=RT, y=name,color=RT.sd)) + geom_jitter(width=0, height=0.4, size=1) + 
+  scale_color_viridis_c(option="magma") + geom_text(aes(x=4.5, label=n)) +
+  stat_summary(fun="median", fun.max=~median(.x)+RT.tol, fun.min=~median(.x)-RT.tol, geom="pointrange", color="magenta", size=0.5, shape=15)
+
+#TODO delete (2E)-2,7-dimethylocta-2,6-dien-1-ol (same peak as b-myrcene) from quant integrations
+#TODO the following compounds have multiple, overlapping RTs
+mess <- c("p-mentha-1,3,8-triene", "carveol", "cosmene", "4,7-Methano-1H-indene, 2,4,5,6,7,7a-hexahydro-")
+longdata.RT.mess <- longdata.RT %>% filter(name %in% mess) %>% 
+  arrange(RT) %>% mutate(cluster = kmeans(RT, 4, nstart=4)$cluster) %>% 
+  group_by(cluster) %>% mutate(RT.cluster = round(mean(RT),2)) %>% ungroup()
+ggplot(longdata.RT.mess, aes(x=factor(RT.cluster), fill=name)) + geom_bar()
+ggplot(longdata.RT.mess, aes(x=RT, color=name, fill=name)) + facet_wrap(vars(RT.cluster), scales="free_x") + theme_minimal() +
+  geom_density(alpha=0.2, linewidth=2) + geom_jitter(aes(y=-as.integer(factor(name))*10), width=0.0002, height=4)
+
+mess.wide <- longdata.RT.mess %>% select(sample, RT.cluster, area) %>% pivot_wider(names_from = RT.cluster, values_from=area, values_fn=sum, values_fill=0)
+```
+
+
+# Heatmap
+
+```{r heatmap, dev='png', dev.args=list()}
+library(pheatmap)
+library(dendsort)
+library(viridis)
+ph  <- pheatmap(as.matrix(t(vol))^(1/4), 
+         cluster_cols=T, show_colnames=F,
+         clustering_method="mcquitty", clustering_distance_rows="correlation",
+         clustering_distance_cols=vegdist(vol, method = "bray"),
+         clustering_callback = function(hc, ...){dendsort(hc, type="average")},
+         scale="none", color=magma(512),
+         annotation_col = data.frame(meta %>% select("species","treatment","time"), row.names=rownames(vol)),
+         annotation_row = data.frame(added = as.integer(colnames(vol) %in% added_quant), 
+                                     new = as.integer(colnames(vol) %in% new_quant),
+                                     row.names=colnames(vol)),
+   fontsize = 10, border_color = NA, legend=F, annotation_legend=T, cutree_rows=6
+)
+```

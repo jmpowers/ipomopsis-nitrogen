@@ -18,13 +18,11 @@ img{ max-width:200%; height: auto; }
 td, th { padding : 6px }
 </style>
 
-# This has correct quant integrations and full compound list
-# Speciestime & treatment grouping instead of species, time, treatment
-#34 compounds with quantitative integrations
+This has correct quant integrations and full compound list
+Speciestime & treatment grouping instead of species, time, treatment
+34 compounds with quantitative integrations
 
 =======
-#janelle was here
-#arturo was here
 
 ```{r setup, include=FALSE}
 library(reshape2)
@@ -44,14 +42,15 @@ library(googlesheets4)
 exp1_meta <- read_sheet("1k2XJUsRyTsQEeEoZE24yTvsl7kSyf2Gg6gehs8pUvOo", sheet="metadata", guess_max=200) %>% #sheet selects "metadata" sheet on Google Sheets, guess_max reads 200 lines before program guesses the type of each column (string vs integer vs date)
   mutate(plant = as.character(plant))
 
-exp2_meta <- read_sheet("1EwPMsBAxqrRtuqH4uUBtthUOZlQluQICSvNr9u87h0E", sheet="metadata", guess_max=200) %>%
+exp2leaf_meta <- read_sheet("1EwPMsBAxqrRtuqH4uUBtthUOZlQluQICSvNr9u87h0E", sheet="metadata", guess_max=200) %>%
   mutate(plant = as.character(plant))
 
-exp1_field_nofilename <- read.csv("data/2022 Poverty Gulch Volatiles.csv") %>%
+exp1_field_nofilename <- read_csv("data/2022 Poverty Gulch Volatiles.csv") %>%
   mutate(plant = as.character(plant),
          Sample=paste0(plant, ifelse(is.na(replicate),"", replicate)), 
          type= factor(ifelse(str_detect(Sample, "AIR"), "ambient", "floral")), date=ymd(date),
-         treatment=fct_recode(replace_na(treatment, "air"), air="", control="ambient")) 
+         treatment=fct_recode(replace_na(treatment, "air"),control="ambient"),
+         equil=pump-bag, pumping=end-pump) 
 
 exp1_field_link <-read_csv("data/AA_samples6.csv") %>%   #links filename and metadata
   mutate(date=ymd(date)) #these FileNames have already been corrected for skips
@@ -72,9 +71,11 @@ exp1_field_meta <- drop_na(exp1_field_meta, type)
 
 gc_verdicts <- read_sheet("1X8oo7qZlo1p6MVl_CBeBe6CUTHEAcd-FWQzfHud3Qws", sheet = "2022gc220929") %>% #verdicts = the truth of the skips, renames all skips in R 
   mutate(sample2 = ifelse(is.na(sample), FileName, sample))
+
 #verdicts 
 exp1_verdicts <- gc_verdicts %>% filter(sample2 %in% exp1_meta$filename) #sample2= if sample is blank on metadata then its the filename no renaming necessary but if sample has a filename then something before it skipped and your re lining up/ accounting for skip (translating between the filename you want and the filename you have) 
-exp2leaf_verdicts <- gc_verdicts %>% filter(sample2 %in% exp2_meta$filename)
+
+exp2leaf_verdicts <- gc_verdicts %>% filter(sample2 %in% exp2leaf_meta$filename)
 
 #New meta matching file name in meta with sample file name on GC
 
@@ -163,52 +164,15 @@ ggplot(metadata, aes(x=date-treatment_date, fill=species))+geom_histogram(binwid
 metadata %>% count(date-treatment_date) %>% kable(caption=paste("days since treatments began on", treatment_date))
 ```
 
-# Filtering Exp1
-
-```{r filtering}
-metadata <- metadata %>% mutate(type= ifelse(species=="AMB", "ambient","floral")) %>% rename(trap=sample) %>% as.data.frame() %>% 
-  load_metadata(date = "date", sample = "filename", group = "speciestime", type = "type") #combine species and time (previously separate)
-
-longdata <- load_longdata(exp1.data, sample = "Filename", RT = "Ret.Time", 
-                          name = "Name", area = "Area", match = "SI", maxmatch=100)
-
-sampletable <- make_sampletable(longdata, metadata)
-
-chemtable <- make_chemtable(longdata, metadata) %>% 
-  filter_RT(2, 17) %>% 
-  filter_match(0.8) %>% 
-  filter_freq(0.2, group = TRUE) %>% 
-  filter_contaminant(cont.list = c("13-Methyltetradecanal","Cyclohexane, 1,1-dimethyl-2-propyl-","2-hexyldecan-1-ol","Tridecane, 3-methylene-")) %>% 
-  filter_area(min_maximum = 1e5) %>%
-  filter_ambient_ratio(sampletable, metadata, ratio = 3) %>% 
-  filter_ambient_ttest(sampletable, metadata, 
-                       alpha = 0.05, adjust = "fdr") 
-chemtable$filter_final <- with(chemtable, filter_RT == "OK" & filter_match =="OK" & 
-                                 #(filter_freq.agg == "OK" | filter_freq.ten == "OK" | filter_freq.D == "OK" | filter_freq.N == "OK") &
-                                 (filter_freq.agg.N == "OK" | filter_freq.ten.N == "OK" | filter_freq.agg.D == "OK" | filter_freq.ten.D == "OK") &
-                                 filter_area == "OK" & filter_ambient_ratio == "OK" & filter_ambient_ttest == "OK" & filter_contaminant == "OK")
-
-plot_filters(chemtable, option="rarity")
-plot_filters(chemtable, option="ambient")
-plot_filters(chemtable, option="volcano")
-plot_filters(chemtable, option="prop")
-
-vol.qual <- prune_sampletable(sampletable, chemtable, metadata)
-files_exclude <- c("NEXP1_agg6n3_N_220725_8152022_10.qgd") # flower fell off
-vol.qual <- vol.qual[!(rownames(vol.qual) %in% files_exclude) ,]
-meta <- metadata[metadata$type == "floral" & !(metadata$sample %in% files_exclude),] %>% droplevels()
-vol.qual <- vol.qual / (as.numeric(meta$equil + meta$pumping)/3600) / meta$flrs #0.5 hr of equilibration plus 0.25 hr pumping, one flower
-```
 
 # Read Arturo's field metadata 
 
 ```{r metadata, fig.height=5, fig.width=5}
 metadata.field <- exp1_field_meta %>% #Filename already accounted for skips
-  rename(time=d_n) %>% 
-  rename(species=site) %>% 
-  mutate(plantid = paste(species, plant), speciestime = paste(species, time, sep=".")) %>% 
-   mutate(plant = as.character(plant)) %>% 
-  rename(sample2=Filename) %>% #to do the join
+  rename(time=d_n, species=site, sample2=Filename) %>% #to do the join
+  mutate(plantid = paste(species, plant), 
+         speciestime = paste(species, time, sep="."),
+         plant = as.character(plant)) %>% 
   left_join(exp1.field.verdicts) %>% rename(filename=sample2) %>% 
   drop_na(filename) %>% #TODO need to rescue some of these rows that might be good?
   mutate(type=replace_na(type,"floral"))
@@ -245,10 +209,48 @@ ggplot(metadata.field, aes(x=date-treatment_date, fill=species))+geom_histogram(
 metadata.field %>% count(date-treatment_date) %>% kable(caption=paste("days since treatments began on", treatment_date))
 ```
 
+
+# Filtering Exp1
+
+```{r filtering}
+metadata <- metadata %>% mutate(type= ifelse(species=="AMB", "ambient","floral")) %>% rename(trap=sample) %>% as.data.frame() %>% 
+  load_metadata(date = "date", sample = "filename", group = "speciestime", type = "type") #combine species and time (previously separate)
+
+longdata <- load_longdata(exp1.data, sample = "Filename", RT = "Ret.Time", 
+                          name = "Name", area = "Area", match = "SI", maxmatch=100)
+
+sampletable <- make_sampletable(longdata, metadata)
+
+chemtable <- make_chemtable(longdata, metadata) %>% 
+  filter_RT(2, 17) %>% 
+  filter_match(0.8) %>% 
+  filter_freq(0.2, group = TRUE) %>% 
+  filter_contaminant(cont.list = c("13-Methyltetradecanal","Cyclohexane, 1,1-dimethyl-2-propyl-","2-hexyldecan-1-ol","Tridecane, 3-methylene-")) %>% 
+  filter_area(min_maximum = 1e5) %>%
+  filter_ambient_ratio(sampletable, metadata, ratio = 3) %>% 
+  filter_ambient_ttest(sampletable, metadata, 
+                       alpha = 0.05, adjust = "fdr") 
+chemtable$filter_final <- with(chemtable, filter_RT == "OK" & filter_match =="OK" & 
+                                 (filter_freq.agg.N == "OK" | filter_freq.ten.N == "OK" |
+                                    filter_freq.agg.D == "OK" | filter_freq.ten.D == "OK") &
+                                 filter_area == "OK" & filter_ambient_ratio == "OK" &
+                                 filter_ambient_ttest == "OK" & filter_contaminant == "OK")
+
+plot_filters(chemtable, option="rarity")
+plot_filters(chemtable, option="ambient")
+plot_filters(chemtable, option="volcano")
+plot_filters(chemtable, option="prop")
+
+vol.qual <- prune_sampletable(sampletable, chemtable, metadata)
+files_exclude <- c("NEXP1_agg6n3_N_220725_8152022_10.qgd") # flower fell off
+vol.qual <- vol.qual[!(rownames(vol.qual) %in% files_exclude) ,]
+meta <- metadata[metadata$type == "floral" & !(metadata$sample %in% files_exclude),] %>% droplevels()
+vol.qual <- vol.qual / (as.numeric(meta$equil + meta$pumping)/3600) / meta$flrs #0.5 hr of equilibration plus 0.25 hr pumping, one flower
+```
+
 # Filtering Exp1 Field
 
-change this to arturos stuff
-```{r filtering}
+```{r filtering_field}
 #need to get rid of NA values in metadata.field for code below to run
 #group= speciestime, should we do the same for arturo's data? need to make new column if yes
 
@@ -256,7 +258,8 @@ metadata.field <- metadata.field %>% as.data.frame() %>%
   load_metadata(date = "date", sample = "filename", group = "speciestime", type = "type") #combine species and time (previously separate)
 
 longdata.field <- load_longdata(exp1.field.data, sample = "Filename", RT = "Ret.Time", 
-                          name = "Name", area = "Area", match = "SI", maxmatch=100)
+                          name = "Name", area = "Area", match = "SI", maxmatch=100) %>% 
+  filter(name !="") %>% mutate(name = droplevels(name))
 
 setdiff(as.character(metadata.field$sample), longdata.field$sample)
 setdiff(longdata.field$sample, as.character(metadata.field$sample))
@@ -267,15 +270,16 @@ chemtable.field <- make_chemtable(longdata.field, metadata.field) %>%
   filter_RT(2, 17) %>% 
   filter_match(0.8) %>% 
   filter_freq(0.2, group = TRUE) %>% 
-  filter_contaminant(cont.list = c("13-Methyltetradecanal","Cyclohexane, 1,1-dimethyl-2-propyl-","2-hexyldecan-1-ol","Tridecane, 3-methylene-")) %>% 
+  filter_contaminant(cont.list = c("Caprolactam")) %>% 
   filter_area(min_maximum = 1e5) %>%
   filter_ambient_ratio(sampletable.field, metadata.field, ratio = 3) %>% 
   filter_ambient_ttest(sampletable.field, metadata.field, 
                        alpha = 0.05, adjust = "fdr") 
 chemtable.field$filter_final <- with(chemtable.field, filter_RT == "OK" & filter_match =="OK" & 
-                                 #(filter_freq.agg == "OK" | filter_freq.ten == "OK" | filter_freq.D == "OK" | filter_freq.N == "OK") &
-                                 (filter_freq.Lagg.N == "OK" | filter_freq.Ihyb.N == "OK" | filter_freq.Lagg.D == "OK" | filter_freq.Ihyb.D == "OK") &
-                                 filter_area == "OK" & filter_ambient_ratio == "OK" & filter_ambient_ttest == "OK" & filter_contaminant == "OK")
+                                 (filter_freq.Lagg.N == "OK" | filter_freq.Ihyb.N == "OK" | 
+                                    filter_freq.Lagg.D == "OK" | filter_freq.Ihyb.D == "OK") &
+                                 filter_area == "OK" & filter_ambient_ratio == "OK" & 
+                                   filter_ambient_ttest == "OK" & filter_contaminant == "OK")
 
 plot_filters(chemtable.field, option="rarity")
 plot_filters(chemtable.field, option="ambient")
@@ -283,12 +287,23 @@ plot_filters(chemtable.field, option="volcano")
 plot_filters(chemtable.field, option="prop")
 
 vol.qual.field <- prune_sampletable(sampletable.field, chemtable.field, metadata.field)
-files_exclude <- c("NEXP1_agg6n3_N_220725_8152022_10.qgd") # flower fell off
+files_exclude <- c("") 
 vol.qual.field <- vol.qual.field[!(rownames(vol.qual.field) %in% files_exclude) ,]
-meta <- metadata.field[metadata.field$type == "floral" & !(metadata.field$sample %in% files_exclude),] %>% droplevels()
-vol.qual <- vol.qual / (as.numeric(meta$equil + meta$pumping)/3600) / meta$flrs #0.5 hr of equilibration plus 0.25 hr pumping, one flower
+meta.field <- metadata.field[metadata.field$type == "floral" & !(metadata.field$sample %in% files_exclude),-48] %>%#48 is the second sample colum (skips)
+  droplevels() %>% mutate(species=factor(species), time=factor(time))
+vol.qual.field <- vol.qual.field / (as.numeric(meta.field$equil + meta.field$pumping)/3600) / meta.field$flowers #0.5 hr of equilibration plus 0.25 hr pumping, one flower
 ```
 
+# Compare field and weatherport filtering
+
+```{r compare_field}
+print("both datasets:")
+intersect(colnames(vol.qual), colnames(vol.qual.field))
+print("weatherport, not field:")
+setdiff(colnames(vol.qual), colnames(vol.qual.field))
+print("field, not weatherport:")
+setdiff(colnames(vol.qual.field), colnames(vol.qual))
+```
 
 # Quantitative integrations
 
@@ -311,19 +326,28 @@ quant.full %>% select(Dirname, Filename, Name, Area) %>%
   write_tsv("data/quant_2022_exp1_exp1field.tsv")
 vol.exp1.exp1field <- read_tsv("data/quant_2022_exp1_exp1field.tsv") 
 
-#vol.field <- vol.exp1.exp1field[rownames(vol.field.qual),]
-
-vol <- vol.exp1.exp1field %>% 
-  left_join(select(exp1.verdicts, Filename = FileName, sample2)) %>% drop_na(sample2) %>% 
+#weatherport quant
+vol <- vol.exp1.exp1field %>% #takes origional file names and left joins it with verdicts 
+  left_join(select(exp1.verdicts, Filename = FileName, sample2)) %>% drop_na(sample2) %>% #grabs two columns from verdicts - Filename (which is the origional filename on hard drive) and sample2 (which is the sample that is in that file name)
   select(-Filename) %>% rename(Filename = sample2) %>%  #replace FileName with the sample2 it holds (accounts for skips)
   column_to_rownames("Filename")
 contams <- c("methyl salicylate", "benzaldehyde","trans-Geranylgeraniol","Decanal", "D-limonene", "Nonanoic acid", "caprolactam",
              "(2E)-2,7-dimethylocta-2,6-dien-1-ol", #same peak as b-myrcene
              "3-methylbutanal oxime")#passed bouquet in OTC experiment but rare here
 
-vol <- vol[rownames(vol.qual), !colnames(vol) %in% contams]
+vol <- vol[rownames(vol.qual), !colnames(vol) %in% contams] # reorders rows to match vol.qual and removes contaminates 
 vol <- vol / (as.numeric(meta$equil + meta$pumping)/3600) / meta$flrs #0.5 hr of equilibration plus 0.25 hr pumping, one flower
 
+#field quant
+vol.field <-  vol.exp1.exp1field %>% #takes origional file names and left joins it with verdicts 
+  left_join(select(exp1.field.verdicts, Filename = FileName, sample2)) %>% drop_na(sample2) %>% #grabs two columns from verdicts - Filename (which is the origional filename on hard drive) and sample2 (which is the sample that is in that file name)
+  select(-Filename) %>% rename(Filename = sample2) %>%  #replace FileName with the sample2 it holds (accounts for skips)
+  column_to_rownames("Filename")
+
+vol.field <- vol.field[rownames(vol.qual.field), !colnames(vol.field) %in% contams] # reorders rows to match vol.qual and removes contaminates 
+vol.field <- vol.field / (as.numeric(meta.field$equil + meta.field$pumping)/3600) / meta.field$flowers #0.5 hr of equilibration plus 0.25 hr pumping, one flower
+
+#compare lists
 (added_quant <- setdiff(colnames(vol), colnames(vol.qual)))#in quant (from temp experiment) but do not pass filters in this dataset
 (new_quant <- colnames(vol)[28:33]) #newly integrated, pass filters
 (need_quant <- setdiff(colnames(vol.qual), colnames(vol))) # filtered volatiles that need quant integration. 
@@ -333,14 +357,9 @@ vol <- vol / (as.numeric(meta$equil + meta$pumping)/3600) / meta$flrs #0.5 hr of
 Find out how much variation there is between samples from same plant
 
 ```{r}
-
-betadisper(vegdist(vol), plantid)
-
-
+betadisper(vegdist(vol), meta$plantid)
 count(plantid)
-
 ```
-
 
 #To find chromatogram with most diverse set compounds (for quantitative integrations)
 
@@ -360,8 +379,8 @@ chemtable %>% filter(name %in% need_quant) %>% select(name, RT, RT.var) %>% arra
 ```
 
 # Retention times
-## The puzzel - the 4 peaks we are not sure about compound identifications
-### prints out graphs
+The puzzel - the 4 peaks we are not sure about compound identifications
+prints out graphs
 
 ```{r retention, fig.width=12}
 longdata.RT <- longdata %>% filter(name %in% c(colnames(vol.qual), colnames(vol))) %>% 
@@ -389,6 +408,8 @@ mess.wide <- longdata.RT.mess %>% select(sample, RT.cluster, area) %>% pivot_wid
 
 # Heatmap
 
+## greenhouse
+
 ```{r heatmap, dev='png', dev.args=list()}
 library(pheatmap)
 library(dendsort)
@@ -407,8 +428,30 @@ ph  <- pheatmap(as.matrix(t(vol))^(1/4),
 )
 ```
 
+
+##field 
+
+```{r heatmap field, dev='png', dev.args=list()}
+library(pheatmap)
+library(dendsort)
+library(viridis)
+ph  <- pheatmap(as.matrix(t(vol.field))^(1/4), 
+         cluster_cols=T, show_colnames=F,
+         clustering_method="mcquitty", clustering_distance_rows="correlation",
+         clustering_distance_cols=vegdist(vol.field, method = "bray"),
+         clustering_callback = function(hc, ...){dendsort(hc, type="average")},
+         scale="none", color=magma(512),
+         annotation_col = data.frame(meta.field %>% select("species","treatment","time"), row.names=rownames(vol.field)),
+         annotation_row = data.frame(added = as.integer(colnames(vol.field) %in% added_quant), 
+                                     new = as.integer(colnames(vol.field) %in% new_quant),
+                                     row.names=colnames(vol.field)),
+   fontsize = 10, border_color = NA, legend=F, annotation_legend=T, cutree_rows=6
+)
+```
+
 # Ordination
 
+##weatherport
 ```{r cap}
 (cap_treat <- vegan::capscale(sqrt(vol) ~ species + time + treatment, data=meta))
 anova.cca(cap_treat, by="margin") # samples should be averaged by plant first
@@ -422,6 +465,23 @@ legend("topright", levels(meta$time), title="Time", pch=c(1,19))
 text(cap_treat, display="species", cex=0.5, col=3)
 text(cap_treat, display="cn", cex=0.5)
 kable(arrange(as.data.frame(cap_treat$CCA$v), CAP1)) 
+
+```
+
+##field
+```{r cap}
+(cap_treat_field <- vegan::capscale(sqrt(vol.field) ~ species + time + treatment, data=meta.field))
+anova.cca(cap_treat_field, by="margin") # samples should be averaged by plant first
+
+plot(cap_treat_field, type="n")
+points(cap_treat_field, display="sites", 
+       pch=c(1,19)[as.integer(meta.field$time)],
+       col=c("darkred","magenta")[as.integer(meta.field$species)])
+legend("topleft", levels(meta.field$species), title="Species", fill=c("darkred","magenta"))
+legend("topright", levels(meta.field$time), title="Time", pch=c(1,19))
+text(cap_treat_field, display="species", cex=0.5, col=3)
+text(cap_treat_field, display="cn", cex=0.5)
+kable(arrange(as.data.frame(cap_treat_field$CCA$v), CAP1)) 
 
 ```
 
