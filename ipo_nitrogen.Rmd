@@ -210,7 +210,7 @@ metadata.field %>% count(date-treatment_date) %>% kable(caption=paste("days sinc
 ```
 
 
-# Filtering Exp1
+# Filtering Exp1 Greenhouse
 
 ```{r filtering}
 metadata <- metadata %>% mutate(type= ifelse(species=="AMB", "ambient","floral")) %>% rename(trap=sample) %>% as.data.frame() %>% 
@@ -357,25 +357,26 @@ vol.field <- vol.field / (as.numeric(meta.field$equil + meta.field$pumping)/3600
 Find out how much variation there is between samples from same plant
 
 ```{r}
-betadisper(vegdist(vol), meta$plantid)
-count(plantid)
+#TODO: Fix code lol 
+#betadisper(vegdist(vol), meta$plantid)
+#count(plantid)
 ```
 
 #To find chromatogram with most diverse set compounds (for quantitative integrations)
 
 ```{r diverse, eval=FALSE}
-#optional - look for a set of chromatograms that have all of the volatiles needed to set up Shimadzu quantitative integrations
-best <- list()
-i <- 1
-vol.left <- vol.qual[,need_quant]^(1/4) # halfway between areas and presence-absence
-while(ncol(vol.left)>0) {
-  print(dim(vol.left))
-  best[[i]] <- which.max(rowSums(vol.left))
-  vol.left <- vol.left[ , !decostand(vol.left[best[[i]],], method="pa"), drop=FALSE]
-  i <- i+1
-}
-(best.vol <- as.data.frame(t(vol.qual[unlist(best),need_quant])) %>% rownames_to_column("name"))
-chemtable %>% filter(name %in% need_quant) %>% select(name, RT, RT.var) %>% arrange(RT)
+##optional - look for a set of chromatograms that have all of the volatiles needed to set up Shimadzu quantitative integrations
+# best <- list()
+# i <- 1
+# vol.left <- vol.qual[,need_quant]^(1/4) # halfway between areas and presence-absence
+# while(ncol(vol.left)>0) {
+#   print(dim(vol.left))
+#   best[[i]] <- which.max(rowSums(vol.left))
+#   vol.left <- vol.left[ , !decostand(vol.left[best[[i]],], method="pa"), drop=FALSE]
+#   i <- i+1
+# }
+# (best.vol <- as.data.frame(t(vol.qual[unlist(best),need_quant])) %>% rownames_to_column("name"))
+# chemtable %>% filter(name %in% need_quant) %>% select(name, RT, RT.var) %>% arrange(RT)
 ```
 
 # Retention times
@@ -383,26 +384,26 @@ The puzzel - the 4 peaks we are not sure about compound identifications
 prints out graphs
 
 ```{r retention, fig.width=12}
-longdata.RT <- longdata %>% filter(name %in% c(colnames(vol.qual), colnames(vol))) %>% 
-  group_by(name) %>%  mutate(n=n(), RT.sd=sd(RT)) %>% ungroup() %>% 
-  mutate(name=fct_reorder(name, RT))
-
-RT.tol <- 0.17  # 10 seconds before or after in quantitative params
-ggplot(longdata.RT, aes(x=RT, y=name,color=RT.sd)) + geom_jitter(width=0, height=0.4, size=1) + 
-  scale_color_viridis_c(option="magma") + geom_text(aes(x=4.5, label=n)) +
-  stat_summary(fun="median", fun.max=~median(.x)+RT.tol, fun.min=~median(.x)-RT.tol, geom="pointrange", color="magenta", size=0.5, shape=15)
-
-#TODO delete (2E)-2,7-dimethylocta-2,6-dien-1-ol (same peak as b-myrcene) from quant integrations
-#TODO the following compounds have multiple, overlapping RTs
-mess <- c("p-mentha-1,3,8-triene", "carveol", "cosmene", "4,7-Methano-1H-indene, 2,4,5,6,7,7a-hexahydro-")
-longdata.RT.mess <- longdata.RT %>% filter(name %in% mess) %>% 
-  arrange(RT) %>% mutate(cluster = kmeans(RT, 4, nstart=4)$cluster) %>% 
-  group_by(cluster) %>% mutate(RT.cluster = round(mean(RT),2)) %>% ungroup()
-ggplot(longdata.RT.mess, aes(x=factor(RT.cluster), fill=name)) + geom_bar()
-ggplot(longdata.RT.mess, aes(x=RT, color=name, fill=name)) + facet_wrap(vars(RT.cluster), scales="free_x") + theme_minimal() +
-  geom_density(alpha=0.2, linewidth=2) + geom_jitter(aes(y=-as.integer(factor(name))*10), width=0.0002, height=4)
-
-mess.wide <- longdata.RT.mess %>% select(sample, RT.cluster, area) %>% pivot_wider(names_from = RT.cluster, values_from=area, values_fn=sum, values_fill=0)
+# longdata.RT <- longdata %>% filter(name %in% c(colnames(vol.qual), colnames(vol))) %>% 
+#   group_by(name) %>%  mutate(n=n(), RT.sd=sd(RT)) %>% ungroup() %>% 
+#   mutate(name=fct_reorder(name, RT))
+# 
+# RT.tol <- 0.17  # 10 seconds before or after in quantitative params
+# ggplot(longdata.RT, aes(x=RT, y=name,color=RT.sd)) + geom_jitter(width=0, height=0.4, size=1) + 
+#   scale_color_viridis_c(option="magma") + geom_text(aes(x=4.5, label=n)) +
+#   stat_summary(fun="median", fun.max=~median(.x)+RT.tol, fun.min=~median(.x)-RT.tol, geom="pointrange", color="magenta", size=0.5, shape=15)
+# 
+# #TODO delete (2E)-2,7-dimethylocta-2,6-dien-1-ol (same peak as b-myrcene) from quant integrations
+# #TODO the following compounds have multiple, overlapping RTs
+# mess <- c("p-mentha-1,3,8-triene", "carveol", "cosmene", "4,7-Methano-1H-indene, 2,4,5,6,7,7a-hexahydro-")
+# longdata.RT.mess <- longdata.RT %>% filter(name %in% mess) %>% 
+#   arrange(RT) %>% mutate(cluster = kmeans(RT, 4, nstart=4)$cluster) %>% 
+#   group_by(cluster) %>% mutate(RT.cluster = round(mean(RT),2)) %>% ungroup()
+# ggplot(longdata.RT.mess, aes(x=factor(RT.cluster), fill=name)) + geom_bar()
+# ggplot(longdata.RT.mess, aes(x=RT, color=name, fill=name)) + facet_wrap(vars(RT.cluster), scales="free_x") + theme_minimal() +
+#   geom_density(alpha=0.2, linewidth=2) + geom_jitter(aes(y=-as.integer(factor(name))*10), width=0.0002, height=4)
+# 
+# mess.wide <- longdata.RT.mess %>% select(sample, RT.cluster, area) %>% pivot_wider(names_from = RT.cluster, values_from=area, values_fn=sum, values_fill=0)
 ```
 
 
@@ -487,6 +488,7 @@ kable(arrange(as.data.frame(cap_treat_field$CCA$v), CAP1))
 
 #Average volatiles
 
+# Greenhouse Average VOCs
 ```{r}
 #make average volailte table: 
 noaverage <- bind_cols(meta,vol)%>%   #want to make table with metadata and volatile list that is not averaged to run Anova on
@@ -520,8 +522,46 @@ AverageVOCcapTime <- capscale(sqrt(averagetable) ~ time, data = averagemetadata,
 anova(AverageVOCcapTime)
 ```
 
+# Field Average VOCs
+```{r}
+#make average volailte table: 
+noaverage.field <- bind_cols(meta.field,vol.field)%>%   #want to make table with metadata and volatile list that is not averaged to run Anova on
+  group_by(time, treatment, species)%>%
+  mutate(timetreatment=paste0(time,treatment)) #paste0 because glht doesn't like spaces in data sets
+
+averagePlant.field<-bind_cols(meta.field,vol.field) %>% group_by(plantid, time, treatment, species) %>% 
+  summarize(across(where(is.numeric),mean))       
+#takes average of each sample for dayand night
+
+#TODO: change column numbers below!!!!
+averagetable.field<- averagePlant.field[,12:ncol(averagePlant.field)] #seperates table into meta data and volatile list table (not necesaary)
+averagemetadata.field<- averagePlant.field[,1:12]
+
+#cap species * treatment * time p=
+Field.AverageVOCcapS.T.T <- capscale(sqrt(averagetable.field) ~ species * treatment * time, data = averagemetadata.field, distance = "bray")
+
+anova(Field.AverageVOCcapS.T.T)
+
+#cap Treatment*Time p=
+Field.AverageVOCcapT.T <- capscale(sqrt(averagetable.field) ~ treatment * time, data = averagemetadata.field, distance = "bray")
+
+anova(Field.AverageVOCcapT.T)
+
+#cap Treatment p=
+Field.AverageVOCcapTreatment <- capscale(sqrt(averagetable.field) ~ treatment, data = averagemetadata.field, distance = "bray")
+
+anova(Field.AverageVOCcapTreatment)
+
+#cap Time p=0.001***
+Field.AverageVOCcapTime <- capscale(sqrt(averagetable.field) ~ time, data = averagemetadata.field, distance = "bray")
+
+anova(Field.AverageVOCcapTime)
+```
+
+
 # Indole 
 
+# Greenhouse Indole
 ```{r}
 #make average tenuituba table
 averageTENmetadata<- averagemetadata[averagemetadata$species=="ten",]
@@ -572,6 +612,62 @@ summary(multcomp::glht(indolelmer, linfct= multcomp::mcp(S.T.T = c("aggDhigh-agg
 
 ```
 
+# Field Indole
+```{r}
+#make average Hybrid table
+averageHYBmetadata.field<- averagemetadata.field[averagemetadata.field$species=="Ihyb",]
+
+averageHYBtable.field<-averagetable.field[averagemetadata.field$species=="Ihyb",]
+averageHYB.field <- bind_cols(averageHYBmetadata.field, averageHYBtable.field) %>%  #combines averaged meta data table and average volatile                                                                           list table together
+  mutate(timetreatment=paste(time,treatment))           #want to combine time and treatment into the same colum bc glht                                                                   needs that
+#only ten indole boxplot
+ggplot(averageHYB.field, aes(color=treatment, x=time, y=indole))+geom_boxplot()+scale_y_sqrt() #box plot for HYB indole 
+
+# agg and ten indole boxplot
+facet.labs <- c(Lagg="I. aggregata", Ihyb="Hybrids")
+
+plot.indole.agghyb.field=
+  ggplot(averageHYB.field, aes(color=treatment, x=time,y=indole))+
+  #geom_boxplot(position=position_dodge(width=0.9))+
+  #geom_point (position=position_dodge(width=0.9))+
+  geom_boxplot()+
+  scale_y_sqrt()+
+  ylab("Indole Emissions Hybrids")+
+  #ylim(0,25000) + #scales y-axis 
+  facet_wrap(vars(species))+ #makes two columns for species
+    facet_grid(. ~ species, labeller=labeller(species = facet.labs))+ 
+    theme(panel.border = element_blank(),
+      panel.grid.major = element_line(colour="white"),
+      #panel.grid.minor = element_blank(),
+      panel.background = element_rect(fill = "gray96",
+                                #colour = "lightblue",
+                                  linetype = "solid"),
+      strip.text.x = element_text(size=11),
+      strip.background = element_rect(colour="white", fill="white"))+
+    scale_color_manual(name="Nitrogen Level", 
+        labels= c("High",  "Low"), 
+        values=c("tan2","cadetblue3"))+
+    theme(legend.title = element_text(size=11, color = "black"),
+        legend.text=element_text(size=9))
+print(plot.indole.agghyb.field)    
+ggsave(plot.indole.agghyb.field, file='Indole_boxplot.jpg', width=150, height=110, units= 'mm', dpi=300)
+
+library(car)
+library(lmerTest)
+library(lme4)
+
+
+#TODO: change for field exp
+#Only indole lmer with plantid as random effect
+
+# noaverage$S.T.T.field <- factor(paste0(noaverage.field$species, noaverage$time, noaverage.field$treatment))
+# (indolelmer.field<-lmer(sqrt(indole)~S.T.T.field + (1|plantid), data=noaverage.field)) #use not averaged data! d
+# summary(multcomp::glht(indolelmer.field, linfct= multcomp::mcp(S.T.T.field =TukeyHSD(idkwhat to put here)))
+
+```
+
+### START HERE (fix indole)
+
 ```{r}
 #SD - because indole model above not working, says SD=0 but not true
 #noaverage%>% group_by(plantid,S.T.T) %>% 
@@ -580,6 +676,7 @@ summary(multcomp::glht(indolelmer, linfct= multcomp::mcp(S.T.T = c("aggDhigh-agg
 
 #compound changes (see below -> individual compound changes)
 
+# Greenhouse compound changes
 ```{r}
 
 #library(lme4)
@@ -605,7 +702,7 @@ summary(multcomp::glht(indolelmer, linfct= multcomp::mcp(S.T.T = c("aggDhigh-agg
 ```
 
 
-# I. tenuituba Day Volatiles
+# Greenhouse- I. tenuituba Day Volatiles
 
 ```{r}
  
@@ -619,7 +716,7 @@ anova(TENcapday, by="term")
 
 ```
 
-# I. tenuituba Night Volatiles
+#Greenhouse- I. tenuituba Night Volatiles
 
 ```{r}
 TENnighttable<-averageTENtable[averageTENmetadata$time=="N",]
@@ -632,7 +729,7 @@ anova(TENcapnight, by="term")
 ```
 
 
-# I. aggregata Daytime Volatiles
+# Greenhouse- I. aggregata Daytime Volatiles
 
 ```{r}
 averageaggmetadata<- averagemetadata[averagemetadata$species=="agg"& averagemetadata$time=="D",]
@@ -705,7 +802,7 @@ anova(agg.day.cap, by="term")
 
 ```
 
-# I. agg Night time volatiles (average)
+# Greenhouse- I. agg Night time volatiles (average)
 ```{r}
 averageaggmetadataNIGHT<- averagemetadata[averagemetadata$species=="agg"& averagemetadata$time=="N",]
 averageaggtableNIGHT<-averagetable[averagemetadata$species=="agg"& averagemetadata$time=="N",]
@@ -722,6 +819,7 @@ anova(agg.night.cap, by="term")
 
 # Total emissions 
 
+# Greenhouse- total emissions
 ```{r}
 averageaggmetadata$totalemssions <-rowSums(averageaggtable) #sums rows of volatiles to get total emissions (via adding all peak areas) for each sample
 
@@ -789,6 +887,7 @@ summary(glht(total.emission.model2, linfct=mcp(S.T.T=
 
 # Individual compound change for treatment based on species and time
 
+# Greenhouse- individual compound change for treatment 
 ```{r}
 dominantvocs <-averagePlant%>% pivot_longer(any_of(colnames(vol)))%>%     group_by(species,time,treatment,name)%>% 
    summarise(value=mean(value))%>%
@@ -807,6 +906,7 @@ ggplot(dominantvocs, aes(y=fct_reorder(name, value), x=value, color=treatment, s
 
 #anova on specific/individual compounds 
 
+# Greenhouse-anova on specific/individual compounds
 ```{r}
 library(broom.mixed)
 library(dplyr)
@@ -830,6 +930,7 @@ individualcompoundpvalue <- bind_cols(meta, vol) %>%
 
 # Relative Amount
 
+# Greenhouse- relative amount
 ```{r}
 library(vegan)
 library(dplyr)
