@@ -11,7 +11,7 @@
 
 <meta name="author" content="Janelle Bohey, John Powers" />
 
-<meta name="date" content="2023-05-17" />
+<meta name="date" content="2023-11-30" />
 
 <title>Ipomopsis nitrogen experiment 1 volatiles</title>
 
@@ -253,7 +253,7 @@ div.tocify {
 <h1 class="title toc-ignore">Ipomopsis nitrogen experiment 1
 volatiles</h1>
 <h4 class="author">Janelle Bohey, John Powers</h4>
-<h4 class="date">2023-05-17</h4>
+<h4 class="date">2023-11-30</h4>
 
 </div>
 
@@ -263,26 +263,93 @@ volatiles</h1>
 img{ max-width:200%; height: auto; }
 td, th { padding : 6px }
 </style>
-<pre class="r"><code># library(googlesheets4)
-# exp1_meta &lt;- read_sheet(&quot;1k2XJUsRyTsQEeEoZE24yTvsl7kSyf2Gg6gehs8pUvOo&quot;, sheet=&quot;metadata&quot;, guess_max=200) %&gt;% 
-#   mutate(plant = as.character(plant))
-# exp2_meta &lt;- read_sheet(&quot;1EwPMsBAxqrRtuqH4uUBtthUOZlQluQICSvNr9u87h0E&quot;, sheet=&quot;metadata&quot;, guess_max=200) %&gt;% 
-#   mutate(plant = as.character(plant))
-# gc_verdicts &lt;- read_sheet(&quot;1X8oo7qZlo1p6MVl_CBeBe6CUTHEAcd-FWQzfHud3Qws&quot;, sheet = &quot;2022gc220929&quot;) %&gt;% 
-#   mutate(sample2 = ifelse(is.na(sample), FileName, sample))
-# exp1_verdicts &lt;- gc_verdicts %&gt;% filter(sample2 %in% exp1_meta$filename)
-# exp2leaf_verdicts &lt;- gc_verdicts %&gt;% filter(sample2 %in% exp2_meta$filename)
-# write_csv(exp1_verdicts, file = &quot;data/exp1_verdicts.csv&quot;)
-# write_csv(exp2leaf_verdicts, file = &quot;data/exp2leaf_verdicts.csv&quot;)
-# load(&quot;~/MyDocs/MEGA/UCI/Schiedea/Analysis/scent/rmbl/Inventory/shimadzu_data_22.rda&quot;)
-# exp1.data &lt;- shimadzu.data.22 %&gt;% filter(Filename %in% exp1_verdicts$FileName)
-# exp2leaf.data &lt;- shimadzu.data.22 %&gt;% filter(Filename %in% exp2_verdicts$FileName)
-# save(exp1.data, file = &quot;data/exp1_data.rda&quot;)
-# save(exp2leaf.data, file = &quot;data/exp2leaf_data.rda&quot;)
+<p>This has correct quant integrations and full compound list
+Speciestime &amp; treatment grouping instead of species, time, treatment
+34 compounds with quantitative integrations</p>
+<p>=======</p>
+<pre class="r"><code>setwd(&quot;~/Desktop/ipomopsis-nitrogen&quot;) #set working directory
+library(googlesheets4) #need for read_sheets 
+exp1_meta &lt;- read_sheet(&quot;1k2XJUsRyTsQEeEoZE24yTvsl7kSyf2Gg6gehs8pUvOo&quot;, sheet=&quot;metadata&quot;, guess_max=200) %&gt;% #sheet selects &quot;metadata&quot; sheet on Google Sheets, guess_max reads 200 lines before program guesses the type of each column (string vs integer vs date)
+  mutate(plant = as.character(plant))
+
+exp2leaf_meta &lt;- read_sheet(&quot;1EwPMsBAxqrRtuqH4uUBtthUOZlQluQICSvNr9u87h0E&quot;, sheet=&quot;metadata&quot;, guess_max=200) %&gt;%
+  mutate(plant = as.character(plant))
+
+exp1_field_nofilename &lt;- read_csv(&quot;data/2022 Poverty Gulch Volatiles.csv&quot;) %&gt;%
+  mutate(plant = as.character(plant),
+         Sample=paste0(plant, ifelse(is.na(replicate),&quot;&quot;, replicate)), 
+         type= factor(ifelse(str_detect(Sample, &quot;AIR&quot;), &quot;ambient&quot;, &quot;floral&quot;)), date=ymd(date),
+         treatment=fct_recode(replace_na(treatment, &quot;air&quot;),control=&quot;ambient&quot;),
+         equil=pump-bag, pumping=end-pump) 
+
+exp1_field_link &lt;-read_csv(&quot;data/AA_samples6.csv&quot;) %&gt;%   #links filename and metadata
+  mutate(date=ymd(date)) #these FileNames have already been corrected for skips
+
+exp1_field_meta &lt;- left_join(exp1_field_link, exp1_field_nofilename)
+
+#trying to figure out mismatch in filemane and metadata bc there are NAs
+filter(exp1_field_meta, is.na(type)) %&gt;% pull(Filename)</code></pre>
+<pre><code>[1] &quot;Ihyb_T10_D_220712_822022_10.qgd&quot;     &quot;Ihyb_NOIDJP_D_220712_822022_09.qgd&quot; 
+[3] &quot;Ihyb_530_D_220712_822022_14.qgd&quot;     &quot;Ihyb_84aT9_N_220711_842022_09.qgd&quot;  
+[5] &quot;Blank1_7262022_01.qgd&quot;               &quot;Lagg_AIRJP2_N_220721_7282022_19.qgd&quot;
+[7] &quot;Ihyb_T27__220722_7282022_27.qgd&quot;    </code></pre>
+<pre class="r"><code># filters to list only filenames with NAs
+filter(exp1_field_link, !Filename %in% exp1_field_meta$Filename) %&gt;% pull(Filename)</code></pre>
+<pre><code>character(0)</code></pre>
+<pre class="r"><code>#setdiff finds differences in dataframes to identify missing samples
+setdiff(exp1_field_link$Filename, drop_na(exp1_field_meta, type)$Filename) </code></pre>
+<pre><code>[1] &quot;Ihyb_T10_D_220712_822022_10.qgd&quot;     &quot;Ihyb_NOIDJP_D_220712_822022_09.qgd&quot; 
+[3] &quot;Ihyb_530_D_220712_822022_14.qgd&quot;     &quot;Ihyb_84aT9_N_220711_842022_09.qgd&quot;  
+[5] &quot;Blank1_7262022_01.qgd&quot;               &quot;Lagg_AIRJP2_N_220721_7282022_19.qgd&quot;
+[7] &quot;Ihyb_T27__220722_7282022_27.qgd&quot;    </code></pre>
+<pre class="r"><code>#setdiff shows the difference between links and meta, 
+#trying to find if there are filenames and metadata that don&#39;t match up but we didn&#39;t find any
+setdiff(drop_na(exp1_field_meta, type)$Filename, exp1_field_link$Filename)</code></pre>
+<pre><code>character(0)</code></pre>
+<pre class="r"><code>#dropping filenames with no metadata; remove later
+exp1_field_meta &lt;- drop_na(exp1_field_meta, type)
+
+gc_verdicts &lt;- read_sheet(&quot;1X8oo7qZlo1p6MVl_CBeBe6CUTHEAcd-FWQzfHud3Qws&quot;, sheet = &quot;2022gc220929&quot;) %&gt;% #verdicts = the truth of the skips, renames all skips in R 
+  mutate(sample2 = ifelse(is.na(sample), FileName, sample))
+
+#verdicts 
+exp1_verdicts &lt;- gc_verdicts %&gt;% filter(sample2 %in% exp1_meta$filename) #sample2= if sample is blank on metadata then its the filename no renaming necessary but if sample has a filename then something before it skipped and your re lining up/ accounting for skip (translating between the filename you want and the filename you have) 
+
+exp2leaf_verdicts &lt;- gc_verdicts %&gt;% filter(sample2 %in% exp2leaf_meta$filename)
+
+#New meta matching file name in meta with sample file name on GC
+
+exp1_field_verdicts &lt;- gc_verdicts %&gt;% filter(FileName %in% exp1_field_meta$Filename)
+
+#exp1_field_verd_merged &lt;- left_join(exp1_field_verdicts, exp1_field_meta)#merge by FileName 
+
+write_csv(exp1_verdicts, file = &quot;data/exp1_verdicts.csv&quot;)
+write_csv(exp2leaf_verdicts, file = &quot;data/exp2leaf_verdicts.csv&quot;)
+write_csv(exp1_field_verdicts, file = &quot;data/exp1_field_verdicts.csv&quot;)
+
+load(&quot;data/shimadzu_data_22.rda&quot;) #loading qualitative integrations all of them from 2022
+
+#exp1.data = greenhouse N experiment data only
+#pg.data= field N experiment at Poverty Gulch data only 
+
+exp1.data &lt;- shimadzu.data.22 %&gt;% filter(Filename %in% exp1_verdicts$FileName) #
+#exp2leaf.data &lt;- shimadzu.data.22 %&gt;% filter(Filename %in% exp2_verdicts$FileName)
+exp1.field.data &lt;- shimadzu.data.22 %&gt;% filter(Filename %in% exp1_field_verdicts$FileName)
+save(exp1.data, file = &quot;data/exp1_data.rda&quot;)
+#save(exp2leaf.data, file = &quot;data/exp2leaf_data.rda&quot;)
+save(exp1.field.data, file = &quot;data/exp1_field_data.rda&quot;)
 
 exp1.verdicts &lt;- read_csv(&quot;data/exp1_verdicts.csv&quot;)
 load(&quot;data/exp1_data.rda&quot;) #loads exp1.data (Shimadzu output)
+
 exp1.data &lt;- exp1.data %&gt;% left_join(select(exp1.verdicts, Filename = FileName, sample2)) %&gt;% 
+  select(-Filename) %&gt;% rename(Filename = sample2) %&gt;%  #replace FileName with the sample2 it holds (accounts for skips)
+  droplevels()
+
+exp1.field.verdicts &lt;- read_csv(&quot;data/exp1_field_verdicts.csv&quot;)
+load(&quot;data/exp1_field_data.rda&quot;) #loads exp1.field.data (Shimadzu output)
+
+exp1.field.data &lt;- exp1.field.data %&gt;% left_join(select(exp1.field.verdicts, Filename = FileName, sample2)) %&gt;% 
   select(-Filename) %&gt;% rename(Filename = sample2) %&gt;%  #replace FileName with the sample2 it holds (accounts for skips)
   droplevels()
 
@@ -294,18 +361,24 @@ ipochems &lt;- read_csv(&quot;data/Ipo volatile compounds - chemsf_ipo.csv&quot;
 shortnames &lt;- ipochems %&gt;% select(name, shortname) %&gt;% filter(shortname!=&quot;&quot;) %&gt;% deframe()
 
 exp1.data$Name &lt;- recode(exp1.data$Name, !!!shortnames)
+exp1.field.data$Name &lt;- recode(exp1.field.data$Name, !!!shortnames)
 
-exp1.all &lt;- dcast(exp1.data, Filename~Name, sum, value.var=&quot;Area&quot;)
+exp1.all &lt;- dcast(exp1.data, Filename~Name, sum, value.var=&quot;Area&quot;) #all means all VOCs unfiltered
 rownames(exp1.all) &lt;- exp1.all[,1]
-exp1.all[,1] &lt;- NULL</code></pre>
-<div id="read-metadata" class="section level1">
-<h1>Read metadata</h1>
+exp1.all[,1] &lt;- NULL
+
+exp1.field.all &lt;- dcast(exp1.field.data, Filename~Name, sum, value.var=&quot;Area&quot;)
+rownames(exp1.field.all) &lt;- exp1.field.all[,1]
+exp1.field.all[,1] &lt;- NULL</code></pre>
+<div id="read-metadata-for-weatherport-experiment"
+class="section level1">
+<h1>Read metadata for Weatherport experiment</h1>
 <pre class="r"><code>metadata &lt;- read_csv(&quot;data/EXP 1 (N) Volatile sampling  - metadata.csv&quot;) %&gt;% 
   filter(filename != &quot;#N/A&quot;) %&gt;% 
   mutate(plantid = paste(species, plant), speciestime = paste(species, time, sep=&quot;.&quot;)) %&gt;% 
   left_join(read_csv(&quot;data/exp1_treatments.csv&quot;) %&gt;% mutate(plant = as.character(plant)))
 rownames(metadata) &lt;- metadata$filename
-metadata &lt;- metadata[rownames(exp1.all),] #order metaddata to match order of data
+metadata &lt;- metadata[rownames(exp1.all),] #order metadata to match order of data (which already. corrected for skips above in exp1.all)
 
 metadata %&gt;% count(species, time, treatment) %&gt;% kable()</code></pre>
 <table>
@@ -480,8 +553,211 @@ ggplot(metadata, aes(x=date-treatment_date, fill=species))+geom_histogram(binwid
 </tbody>
 </table>
 </div>
-<div id="filtering" class="section level1">
-<h1>Filtering</h1>
+<div id="read-arturos-field-metadata" class="section level1">
+<h1>Read Arturo’s field metadata</h1>
+<pre class="r"><code>metadata.field &lt;- exp1_field_meta %&gt;% #Filename already accounted for skips
+  rename(time=d_n, species=site, sample2=Filename) %&gt;% #to do the join
+  mutate(plantid = paste(species, plant), 
+         speciestime = paste(species, time, sep=&quot;.&quot;),
+         plant = as.character(plant)) %&gt;% 
+  mutate(treatmentx2=fct_recode(treatment, control=&quot;water control&quot;)) %&gt;%  #combine water control and control 
+  left_join(exp1.field.verdicts) %&gt;% rename(filename=sample2) %&gt;%
+  
+  drop_na(filename) %&gt;% #TODO need to rescue some of these rows that might be good?
+  mutate(type=replace_na(type,&quot;floral&quot;))
+rownames(metadata.field) &lt;- metadata.field$filename #adds row names (makes row name the filename)
+metadata.field &lt;- metadata.field[rownames(exp1.field.all),] #order metadata to match order of shimadzu data
+MnD &lt;- setdiff(metadata.field$filename, rownames(exp1.field.all)) #dropping differences between metadata.field and exp1.field.all. MnD= in metadata but not in data
+DnM &lt;- setdiff(rownames(exp1.field.all), metadata.field$filename) #DnM= in data but not in metadata
+
+metadata.field &lt;- filter(metadata.field, !filename %in% MnD) #drops filenames that are in metadata but not in data
+exp1.field.all &lt;- filter(exp1.field.all, !rownames(exp1.field.all) %in% DnM)
+exp1.field.data &lt;- filter(exp1.field.data, !exp1.field.data$Filename %in% DnM)
+
+metadata.field %&gt;% count(species, time, treatment) %&gt;% kable() #TODO change the treatment names to make more sense</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="left">species</th>
+<th align="left">time</th>
+<th align="left">treatment</th>
+<th align="right">n</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Ihyb</td>
+<td align="left">D</td>
+<td align="left">air</td>
+<td align="right">5</td>
+</tr>
+<tr class="even">
+<td align="left">Ihyb</td>
+<td align="left">D</td>
+<td align="left">control</td>
+<td align="right">7</td>
+</tr>
+<tr class="odd">
+<td align="left">Ihyb</td>
+<td align="left">D</td>
+<td align="left">nitrogen</td>
+<td align="right">16</td>
+</tr>
+<tr class="even">
+<td align="left">Ihyb</td>
+<td align="left">D</td>
+<td align="left">water control</td>
+<td align="right">8</td>
+</tr>
+<tr class="odd">
+<td align="left">Ihyb</td>
+<td align="left">N</td>
+<td align="left">air</td>
+<td align="right">7</td>
+</tr>
+<tr class="even">
+<td align="left">Ihyb</td>
+<td align="left">N</td>
+<td align="left">control</td>
+<td align="right">26</td>
+</tr>
+<tr class="odd">
+<td align="left">Ihyb</td>
+<td align="left">N</td>
+<td align="left">nitrogen</td>
+<td align="right">30</td>
+</tr>
+<tr class="even">
+<td align="left">Ihyb</td>
+<td align="left">N</td>
+<td align="left">water control</td>
+<td align="right">29</td>
+</tr>
+<tr class="odd">
+<td align="left">Lagg</td>
+<td align="left">D</td>
+<td align="left">air</td>
+<td align="right">3</td>
+</tr>
+<tr class="even">
+<td align="left">Lagg</td>
+<td align="left">D</td>
+<td align="left">control</td>
+<td align="right">23</td>
+</tr>
+<tr class="odd">
+<td align="left">Lagg</td>
+<td align="left">D</td>
+<td align="left">nitrogen</td>
+<td align="right">7</td>
+</tr>
+<tr class="even">
+<td align="left">Lagg</td>
+<td align="left">D</td>
+<td align="left">water control</td>
+<td align="right">9</td>
+</tr>
+<tr class="odd">
+<td align="left">Lagg</td>
+<td align="left">N</td>
+<td align="left">air</td>
+<td align="right">5</td>
+</tr>
+<tr class="even">
+<td align="left">Lagg</td>
+<td align="left">N</td>
+<td align="left">control</td>
+<td align="right">24</td>
+</tr>
+<tr class="odd">
+<td align="left">Lagg</td>
+<td align="left">N</td>
+<td align="left">nitrogen</td>
+<td align="right">7</td>
+</tr>
+<tr class="even">
+<td align="left">Lagg</td>
+<td align="left">N</td>
+<td align="left">water control</td>
+<td align="right">7</td>
+</tr>
+</tbody>
+</table>
+<pre class="r"><code>metadata.field %&gt;% drop_na(species) %&gt;% count(species, plantid, time) %&gt;% 
+  ggplot(aes(x=n, fill=time))+ geom_histogram(binwidth=1) + facet_wrap(vars(time), ncol=1)+
+  labs(x=&quot;Samples per plant&quot;) </code></pre>
+<p><img src="plots-nitrogen/metadata.field-1.svg" width="480" /></p>
+<pre class="r"><code>#figure out type==NA
+
+# metadata.field %&gt;% filter(type==&quot;floral&quot;) %&gt;% group_by(time) %&gt;% 
+#   mutate(pump.dt = ymd_hms(paste(date, pump)), pump.hr = hour(pump.dt)+minute(pump.dt)/60,
+#          bag.dt = ymd_hms(paste(date, bag)), bag.hr = hour(bag.dt)+minute(bag.dt)/60,
+#          end.dt = ymd_hms(paste(date, bag)), end.hr = hour(end.dt)+minute(end.dt)/60) %&gt;% 
+#   summarize(min=min(bag.hr), max=max(end.hr))  %&gt;% kable(caption=&quot;first bag time, last ending time, in hr&quot;, digits=2)
+
+#ggplot(metadata.field, aes(y=equil, x=species)) + geom_boxplot() + labs(y=&quot;Equilibration duration&quot;)
+#ggplot(metadata.field, aes(y=pumping, x=species)) + geom_boxplot() + labs(y=&quot;Pumping duration&quot;)
+
+metadata.field %&gt;% count(species) %&gt;% kable(caption=&quot;total volatile samples by species&quot;)</code></pre>
+<table>
+<caption>total volatile samples by species</caption>
+<thead>
+<tr class="header">
+<th align="left">species</th>
+<th align="right">n</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Ihyb</td>
+<td align="right">128</td>
+</tr>
+<tr class="even">
+<td align="left">Lagg</td>
+<td align="right">85</td>
+</tr>
+</tbody>
+</table>
+<pre class="r"><code>treatment_date &lt;-  ymd(&quot;2022-06-24&quot;)#this is not the right date
+#start N addition date: june 21st for agg; june 28th for ihyb site
+#end date: July 19th for agg; july 26th for ihyb
+ggplot(metadata.field, aes(x=date-treatment_date, fill=species))+geom_histogram(binwidth=1)</code></pre>
+<p><img src="plots-nitrogen/metadata.field-2.svg" width="480" /></p>
+<pre class="r"><code>metadata.field %&gt;% count(date-treatment_date) %&gt;% kable(caption=paste(&quot;days since treatments began on&quot;, treatment_date))</code></pre>
+<table>
+<caption>days since treatments began on 2022-06-24</caption>
+<thead>
+<tr class="header">
+<th align="left">date - treatment_date</th>
+<th align="right">n</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">17 days</td>
+<td align="right">36</td>
+</tr>
+<tr class="even">
+<td align="left">18 days</td>
+<td align="right">24</td>
+</tr>
+<tr class="odd">
+<td align="left">27 days</td>
+<td align="right">85</td>
+</tr>
+<tr class="even">
+<td align="left">33 days</td>
+<td align="right">56</td>
+</tr>
+<tr class="odd">
+<td align="left">34 days</td>
+<td align="right">12</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="filtering-exp1-greenhouse" class="section level1">
+<h1>Filtering Exp1 Greenhouse</h1>
 <pre class="r"><code>metadata &lt;- metadata %&gt;% mutate(type= ifelse(species==&quot;AMB&quot;, &quot;ambient&quot;,&quot;floral&quot;)) %&gt;% rename(trap=sample) %&gt;% as.data.frame() %&gt;% 
   load_metadata(date = &quot;date&quot;, sample = &quot;filename&quot;, group = &quot;speciestime&quot;, type = &quot;type&quot;) #combine species and time (previously separate)
 
@@ -500,9 +776,10 @@ chemtable &lt;- make_chemtable(longdata, metadata) %&gt;%
   filter_ambient_ttest(sampletable, metadata, 
                        alpha = 0.05, adjust = &quot;fdr&quot;) 
 chemtable$filter_final &lt;- with(chemtable, filter_RT == &quot;OK&quot; &amp; filter_match ==&quot;OK&quot; &amp; 
-                                 #(filter_freq.agg == &quot;OK&quot; | filter_freq.ten == &quot;OK&quot; | filter_freq.D == &quot;OK&quot; | filter_freq.N == &quot;OK&quot;) &amp;
-                                 (filter_freq.agg.N == &quot;OK&quot; | filter_freq.ten.N == &quot;OK&quot; | filter_freq.agg.D == &quot;OK&quot; | filter_freq.ten.D == &quot;OK&quot;) &amp;
-                                 filter_area == &quot;OK&quot; &amp; filter_ambient_ratio == &quot;OK&quot; &amp; filter_ambient_ttest == &quot;OK&quot; &amp; filter_contaminant == &quot;OK&quot;)
+                                 (filter_freq.agg.N == &quot;OK&quot; | filter_freq.ten.N == &quot;OK&quot; |
+                                    filter_freq.agg.D == &quot;OK&quot; | filter_freq.ten.D == &quot;OK&quot;) &amp;
+                                 filter_area == &quot;OK&quot; &amp; filter_ambient_ratio == &quot;OK&quot; &amp;
+                                 filter_ambient_ttest == &quot;OK&quot; &amp; filter_contaminant == &quot;OK&quot;)
 
 plot_filters(chemtable, option=&quot;rarity&quot;)</code></pre>
 <p><img src="plots-nitrogen/filtering-1.svg" width="960" /></p>
@@ -518,104 +795,346 @@ vol.qual &lt;- vol.qual[!(rownames(vol.qual) %in% files_exclude) ,]
 meta &lt;- metadata[metadata$type == &quot;floral&quot; &amp; !(metadata$sample %in% files_exclude),] %&gt;% droplevels()
 vol.qual &lt;- vol.qual / (as.numeric(meta$equil + meta$pumping)/3600) / meta$flrs #0.5 hr of equilibration plus 0.25 hr pumping, one flower</code></pre>
 </div>
-<div id="quantitative-integrations" class="section level1">
-<h1>Quantitative integrations</h1>
+<div id="filtering-exp1-field" class="section level1">
+<h1>Filtering Exp1 Field</h1>
+<pre class="r"><code>#need to get rid of NA values in metadata.field for code below to run
+#group= speciestime, should we do the same for arturo&#39;s data? need to make new column if yes
+
+metadata.field &lt;- metadata.field %&gt;% as.data.frame() %&gt;% 
+  load_metadata(date = &quot;date&quot;, sample = &quot;filename&quot;, group = &quot;speciestime&quot;, type = &quot;type&quot;) #combine species and time (previously separate)
+
+longdata.field &lt;- load_longdata(exp1.field.data, sample = &quot;Filename&quot;, RT = &quot;Ret.Time&quot;, 
+                          name = &quot;Name&quot;, area = &quot;Area&quot;, match = &quot;SI&quot;, maxmatch=100) %&gt;% 
+  filter(name !=&quot;&quot;) %&gt;% mutate(name = droplevels(name))
+
+setdiff(as.character(metadata.field$sample), longdata.field$sample)</code></pre>
+<pre><code>character(0)</code></pre>
+<pre class="r"><code>setdiff(longdata.field$sample, as.character(metadata.field$sample))</code></pre>
+<pre><code>character(0)</code></pre>
+<pre class="r"><code>sampletable.field &lt;- make_sampletable(longdata.field, metadata.field)
+
+chemtable.field &lt;- make_chemtable(longdata.field, metadata.field) %&gt;% 
+  filter_RT(2, 17) %&gt;% 
+  filter_match(0.8) %&gt;% 
+  filter_freq(0.2, group = TRUE) %&gt;% 
+  filter_contaminant(cont.list = c(&quot;Caprolactam&quot;)) %&gt;% 
+  filter_area(min_maximum = 1e5) %&gt;%
+  filter_ambient_ratio(sampletable.field, metadata.field, ratio = 3) %&gt;% 
+  filter_ambient_ttest(sampletable.field, metadata.field, 
+                       alpha = 0.05, adjust = &quot;fdr&quot;) 
+chemtable.field$filter_final &lt;- with(chemtable.field, filter_RT == &quot;OK&quot; &amp; filter_match ==&quot;OK&quot; &amp; 
+                                 (filter_freq.Lagg.N == &quot;OK&quot; | filter_freq.Ihyb.N == &quot;OK&quot; | 
+                                    filter_freq.Lagg.D == &quot;OK&quot; | filter_freq.Ihyb.D == &quot;OK&quot;) &amp;
+                                 filter_area == &quot;OK&quot; &amp; filter_ambient_ratio == &quot;OK&quot; &amp; 
+                                   filter_ambient_ttest == &quot;OK&quot; &amp; filter_contaminant == &quot;OK&quot;)
+
+plot_filters(chemtable.field, option=&quot;rarity&quot;)</code></pre>
+<p><img src="plots-nitrogen/filtering_field-1.svg" width="960" /></p>
+<pre class="r"><code>plot_filters(chemtable.field, option=&quot;ambient&quot;)</code></pre>
+<p><img src="plots-nitrogen/filtering_field-2.svg" width="960" /></p>
+<pre class="r"><code>plot_filters(chemtable.field, option=&quot;volcano&quot;)</code></pre>
+<p><img src="plots-nitrogen/filtering_field-3.svg" width="960" /></p>
+<pre class="r"><code>plot_filters(chemtable.field, option=&quot;prop&quot;)</code></pre>
+<p><img src="plots-nitrogen/filtering_field-4.svg" width="960" /></p>
+<pre class="r"><code>vol.qual.field &lt;- prune_sampletable(sampletable.field, chemtable.field, metadata.field)
+files_exclude &lt;- c(&quot;&quot;) 
+vol.qual.field &lt;- vol.qual.field[!(rownames(vol.qual.field) %in% files_exclude) ,]
+meta.field &lt;- metadata.field[metadata.field$type == &quot;floral&quot; &amp; !(metadata.field$sample %in% files_exclude),-48] %&gt;%#48 is the second sample colum (skips)
+  droplevels() %&gt;% mutate(species=factor(species), time=factor(time))
+vol.qual.field &lt;- vol.qual.field / (as.numeric(meta.field$equil + meta.field$pumping)/3600) / meta.field$flowers #0.5 hr of equilibration plus 0.25 hr pumping, one flower</code></pre>
+</div>
+<div id="compare-field-and-weatherport-filtering"
+class="section level1">
+<h1>Compare field and weatherport filtering</h1>
+<pre class="r"><code>print(&quot;both datasets:&quot;)</code></pre>
+<pre><code>[1] &quot;both datasets:&quot;</code></pre>
+<pre class="r"><code>intersect(colnames(vol.qual), colnames(vol.qual.field))</code></pre>
+<pre><code> [1] &quot;b-myrcene&quot;                                                      
+ [2] &quot;(E)-b-ocimene&quot;                                                  
+ [3] &quot;a-pinene&quot;                                                       
+ [4] &quot;(E)-hex-2-enal&quot;                                                 
+ [5] &quot;(4E,6Z)-alloocimene&quot;                                            
+ [6] &quot;cosmene&quot;                                                        
+ [7] &quot;verbenone&quot;                                                      
+ [8] &quot;b-caryophyllene&quot;                                                
+ [9] &quot;carveol&quot;                                                        
+[10] &quot;(Z)-b-ocimene&quot;                                                  
+[11] &quot;a-farnesene&quot;                                                    
+[12] &quot;Tricyclo[3.1.0.0(2,4)]hexane, 3,6-diethyl-3,6-dimethyl-, trans-&quot;</code></pre>
+<pre class="r"><code>print(&quot;weatherport, not field:&quot;)</code></pre>
+<pre><code>[1] &quot;weatherport, not field:&quot;</code></pre>
+<pre class="r"><code>setdiff(colnames(vol.qual), colnames(vol.qual.field))</code></pre>
+<pre><code>[1] &quot;(E)-4-oxohex-2-enal&quot;           &quot;Benzyl isopentyl ether&quot;       
+[3] &quot;linalool&quot;                      &quot;1-Decanol, 2-hexyl-&quot;          
+[5] &quot;p-mentha-1,3,8-triene&quot;         &quot;Farnesol&quot;                     
+[7] &quot;3-Furaldehyde&quot;                 &quot;tricyclo[5.2.1.02,6]dec-2-ene&quot;</code></pre>
+<pre class="r"><code>print(&quot;field, not weatherport:&quot;)</code></pre>
+<pre><code>[1] &quot;field, not weatherport:&quot;</code></pre>
+<pre class="r"><code>setdiff(colnames(vol.qual.field), colnames(vol.qual))</code></pre>
+<pre><code> [1] &quot;(3E)-4,8-dimethylnona-1,3,7-triene&quot;       
+ [2] &quot;2-Decanone&quot;                               
+ [3] &quot;3-Hexen-1-ol&quot;                             
+ [4] &quot;D-limonene&quot;                               
+ [5] &quot;a-terpineol&quot;                              
+ [6] &quot;(3E,5E)-2,6-dimethylocta-3,5,7-trien-2-ol&quot;
+ [7] &quot;3-ethenyl-1,2-dimethylcyclohexa-1,4-diene&quot;
+ [8] &quot;Benzenebutanoic acid, .gamma.-oxo-&quot;       
+ [9] &quot;Benzoic acid, ethyl ester&quot;                
+[10] &quot;(E)-hex-3-en-1-ol&quot;                        
+[11] &quot;2,6-Octadienal, 3,7-dimethyl-, (E)-&quot;      </code></pre>
+</div>
+<div id="quantitative-integrations-greenhouse-field"
+class="section level1">
+<h1>Quantitative integrations greenhouse &amp; field</h1>
 <pre class="r"><code>#read in the large 2022 quant integration output and cut it down to NEXP chromatograms
-# source(&quot;read_shimadzu.R&quot;)
+source(&quot;read_shimadzu.R&quot;) #loads the function that reads the shimadzu output text file
 # quantpath &lt;- &quot;~/MyDocs/MEGA/UCI/Schiedea/Analysis/scent/rmbl/RMBL Batches/quant_round3/&quot;
 # bfiles &lt;-  list.files(quantpath)
 # quant.full &lt;- map_dfr(set_names(paste0(quantpath, bfiles), bfiles), read.shimadzu.quant, .id=&quot;batch&quot;) %&gt;%
-#   mutate(Name = trimws(Name), Area=replace_na(Area, 0)) %&gt;%
-#   distinct(Filename, Name, .keep_all=T)
-# quant.full %&gt;% select(batch, Dirname, Filename, Name, Area) %&gt;% 
-#   mutate(Dirname = fct_relabel(Dirname, str_remove, &quot;C:/GCMSsolution/Data/Project1_190815/&quot;)) %&gt;% 
-#   filter(Name != &quot;1,6,10-Dodecatrien-3-ol, 3,7,11-trimethyl-&quot;) %&gt;% 
-#   mutate(Name = recode(Name, !!!shortnames)) %&gt;% 
-#   filter(str_detect(Filename, &quot;^NEXP&quot;)) %&gt;% select(-Dirname, -batch) %&gt;%
-#   pivot_wider(names_from=&quot;Name&quot;, values_from=&quot;Area&quot;) %&gt;%
-#   write_tsv(&quot;data/quant_2022.tsv&quot;)
+quant.full &lt;- read.shimadzu.quant(&quot;data/quant_Ipo2022part1_5.txt&quot;) %&gt;% #reads in shimadzu text file with quant integrations
+  mutate(Name = trimws(Name), Area=replace_na(Area, 0)) %&gt;%
+   distinct(Filename, Name, .keep_all=T) 
+quant.full %&gt;% select(Dirname, Filename, Name, Area) %&gt;%
+  mutate(Dirname = fct_relabel(Dirname, str_remove, &quot;C:/GCMSsolution/Data/Project1_190815/&quot;)) %&gt;%
+  filter(Name != &quot;1,6,10-Dodecatrien-3-ol, 3,7,11-trimethyl-&quot;) %&gt;% #John- why??
+  mutate(Name = recode(Name, !!!shortnames)) %&gt;%
+  #filter(str_detect(Filename, &quot;^NEXP&quot;)) %&gt;%
+  select(-Dirname) %&gt;%
+  pivot_wider(names_from=&quot;Name&quot;, values_from=&quot;Area&quot;) %&gt;%
+  write_tsv(&quot;data/quant_2022_exp1_exp1field.tsv&quot;)
+vol.exp1.exp1field &lt;- read_tsv(&quot;data/quant_2022_exp1_exp1field.tsv&quot;) 
 
-vol &lt;- read_tsv(&quot;data/quant_2022.tsv&quot;) %&gt;%  
-  left_join(select(exp1.verdicts, Filename = FileName, sample2)) %&gt;% drop_na(sample2) %&gt;% 
+#weatherport quant
+vol &lt;- vol.exp1.exp1field %&gt;% #takes origional file names and left joins it with verdicts 
+  left_join(select(exp1.verdicts, Filename = FileName, sample2)) %&gt;% drop_na(sample2) %&gt;% #grabs two columns from verdicts - Filename (which is the origional filename on hard drive) and sample2 (which is the sample that is in that file name)
   select(-Filename) %&gt;% rename(Filename = sample2) %&gt;%  #replace FileName with the sample2 it holds (accounts for skips)
   column_to_rownames(&quot;Filename&quot;)
 contams &lt;- c(&quot;methyl salicylate&quot;, &quot;benzaldehyde&quot;,&quot;trans-Geranylgeraniol&quot;,&quot;Decanal&quot;, &quot;D-limonene&quot;, &quot;Nonanoic acid&quot;, &quot;caprolactam&quot;,
              &quot;(2E)-2,7-dimethylocta-2,6-dien-1-ol&quot;, #same peak as b-myrcene
              &quot;3-methylbutanal oxime&quot;)#passed bouquet in OTC experiment but rare here
-vol &lt;- vol[rownames(vol.qual), !colnames(vol) %in% contams]
+
+vol &lt;- vol[rownames(vol.qual), !colnames(vol) %in% contams] # reorders rows to match vol.qual and removes contaminates 
 vol &lt;- vol / (as.numeric(meta$equil + meta$pumping)/3600) / meta$flrs #0.5 hr of equilibration plus 0.25 hr pumping, one flower
 
+#field quant
+vol.field &lt;-  vol.exp1.exp1field %&gt;% #takes origional file names and left joins it with verdicts 
+  left_join(select(exp1.field.verdicts, Filename = FileName, sample2)) %&gt;% drop_na(sample2) %&gt;% #grabs two columns from verdicts - Filename (which is the origional filename on hard drive) and sample2 (which is the sample that is in that file name)
+  select(-Filename) %&gt;% rename(Filename = sample2) %&gt;%  #replace FileName with the sample2 it holds (accounts for skips)
+  column_to_rownames(&quot;Filename&quot;)
+
+vol.field &lt;- vol.field[rownames(vol.qual.field), !colnames(vol.field) %in% contams] # reorders rows to match vol.qual and removes contaminates 
+vol.field &lt;- vol.field / (as.numeric(meta.field$equil + meta.field$pumping)/3600) / meta.field$flowers #0.5 hr of equilibration plus 0.25 hr pumping, one flower
+
+#compare lists
 (added_quant &lt;- setdiff(colnames(vol), colnames(vol.qual)))#in quant (from temp experiment) but do not pass filters in this dataset</code></pre>
 <pre><code> [1] &quot;g-terpinene&quot;                                           
  [2] &quot;methyl benzoate&quot;                                       
  [3] &quot;(3E)-4,8-dimethylnona-1,3,7-triene&quot;                    
  [4] &quot;2-methylbenzonitrile&quot;                                  
  [5] &quot;a-campholenal&quot;                                         
- [6] &quot;indole&quot;                                                
- [7] &quot;a-copaene&quot;                                             
- [8] &quot;petasitene&quot;                                            
- [9] &quot;trans-a-bergamotene&quot;                                   
-[10] &quot;trans-b-bergamotene&quot;                                   
-[11] &quot;pseudoionone&quot;                                          
-[12] &quot;(E)-hex-3-en-1-ol&quot;                                     
-[13] &quot;[(E)-hex-3-enyl] acetate&quot;                              
-[14] &quot;[(E)-hex-3-enyl] butanoate&quot;                            
-[15] &quot;[(Z)-hex-3-enyl] butanoate&quot;                            
-[16] &quot;a-terpineol&quot;                                           
-[17] &quot;cis-a-bergamotene&quot;                                     
-[18] &quot;(1Z,4Z,7Z)-1,5,9,9-tetramethylcycloundeca-1,4,7-triene&quot;</code></pre>
+ [6] &quot;Caprolactam&quot;                                           
+ [7] &quot;indole&quot;                                                
+ [8] &quot;a-copaene&quot;                                             
+ [9] &quot;petasitene&quot;                                            
+[10] &quot;trans-a-bergamotene&quot;                                   
+[11] &quot;trans-b-bergamotene&quot;                                   
+[12] &quot;pseudoionone&quot;                                          
+[13] &quot;(E)-hex-3-en-1-ol&quot;                                     
+[14] &quot;[(E)-hex-3-enyl] acetate&quot;                              
+[15] &quot;[(E)-hex-3-enyl] butanoate&quot;                            
+[16] &quot;[(Z)-hex-3-enyl] butanoate&quot;                            
+[17] &quot;a-terpineol&quot;                                           
+[18] &quot;cis-a-bergamotene&quot;                                     
+[19] &quot;(1Z,4Z,7Z)-1,5,9,9-tetramethylcycloundeca-1,4,7-triene&quot;
+[20] &quot;sabinene&quot;                                              
+[21] &quot;3-carene&quot;                                              
+[22] &quot;b-caryophyllene oxide&quot;                                 
+[23] &quot;[(Z)-hex-3-enyl] 2-methylbutanoate&quot;                    
+[24] &quot;2-butyloctan-1-ol&quot;                                     
+[25] &quot;hexan-1-ol&quot;                                            
+[26] &quot;3-methylbutan-1-ol&quot;                                    
+[27] &quot;3-ethenyl-1,2-dimethylcyclohexa-1,4-diene&quot;             
+[28] &quot;2-Decanone&quot;                                            
+[29] &quot;2,6-Octadienal, 3,7-dimethyl-, (E)-&quot;                   
+[30] &quot;1,2,3-Propanetriol, 1-acetate&quot;                         
+[31] &quot;Benzamide&quot;                                             
+[32] &quot;Benzenebutanoic acid, .gamma.-oxo-&quot;                    </code></pre>
 <pre class="r"><code>(new_quant &lt;- colnames(vol)[28:33]) #newly integrated, pass filters</code></pre>
-<pre><code>[1] &quot;p-mentha-1,3,8-triene&quot;                                          
-[2] &quot;4,7-Methano-1H-indene, 2,4,5,6,7,7a-hexahydro-&quot;                 
-[3] &quot;cosmene&quot;                                                        
-[4] &quot;(4E,6Z)-alloocimene&quot;                                            
-[5] &quot;Tricyclo[3.1.0.0(2,4)]hexane, 3,6-diethyl-3,6-dimethyl-, trans-&quot;
-[6] &quot;3-Furaldehyde&quot;                                                  </code></pre>
+<pre><code>[1] &quot;(E)-4-oxohex-2-enal&quot;                                            
+[2] &quot;p-mentha-1,3,8-triene&quot;                                          
+[3] &quot;tricyclo[5.2.1.02,6]dec-2-ene&quot;                                  
+[4] &quot;cosmene&quot;                                                        
+[5] &quot;(4E,6Z)-alloocimene&quot;                                            
+[6] &quot;Tricyclo[3.1.0.0(2,4)]hexane, 3,6-diethyl-3,6-dimethyl-, trans-&quot;</code></pre>
 <pre class="r"><code>(need_quant &lt;- setdiff(colnames(vol.qual), colnames(vol))) # filtered volatiles that need quant integration. </code></pre>
-<pre><code>[1] &quot;Benzyl isopentyl ether&quot;                    
-[2] &quot;verbenone&quot;                                 
-[3] &quot;carveol&quot;                                   
-[4] &quot;2,6,10-Dodecatrien-1-ol, 3,7,11-trimethyl-&quot;</code></pre>
+<pre><code>[1] &quot;Benzyl isopentyl ether&quot; &quot;carveol&quot;                &quot;1-Decanol, 2-hexyl-&quot;   
+[4] &quot;Farnesol&quot;              </code></pre>
 <pre class="r"><code>#vol &lt;- bind_cols(vol, vol.qual[,need_quant]) #temporary, add a couple volatiles that don&#39;t have quant integrations yet (currently not on same scale!)</code></pre>
-<pre class="r"><code>#optional - look for a set of chromatograms that have all of the volatiles needed to set up Shimadzu quantitative integrations
-best &lt;- list()
-i &lt;- 1
-vol.left &lt;- vol.qual[,need_quant]^(1/4) # halfway between areas and presence-absence
-while(ncol(vol.left)&gt;0) {
-  print(dim(vol.left))
-  best[[i]] &lt;- which.max(rowSums(vol.left))
-  vol.left &lt;- vol.left[ , !decostand(vol.left[best[[i]],], method=&quot;pa&quot;), drop=FALSE]
-  i &lt;- i+1
-}
-(best.vol &lt;- as.data.frame(t(vol.qual[unlist(best),need_quant])) %&gt;% rownames_to_column(&quot;name&quot;))
-chemtable %&gt;% filter(name %in% need_quant) %&gt;% select(name, RT, RT.var) %&gt;% arrange(RT)</code></pre>
+<p>Find out how much variation there is between samples from same
+plant</p>
+<pre class="r"><code>bd &lt;- betadisper(vegdist(vol), meta$plantid) #gives bray curtis distance
+plot(bd)</code></pre>
+<p><img src="plots-nitrogen/unnamed-chunk-1-1.svg" width="960" /></p>
+<pre class="r"><code>bdday &lt;- betadisper(vegdist(vol[meta$time==&quot;D&quot;,]), meta$plantid[meta$time==&quot;D&quot;])
+plot(bdday)</code></pre>
+<p><img src="plots-nitrogen/unnamed-chunk-1-2.svg" width="960" /></p>
+<pre class="r"><code>count(meta,species,plant) #number of samples per plant</code></pre>
+<pre><code>   species plant  n
+1      agg     1  6
+2      agg    10  7
+3      agg    11  5
+4      agg    12  6
+5      agg    13  6
+6      agg    14  6
+7      agg    15  7
+8      agg    16  5
+9      agg    17  5
+10     agg    18  4
+11     agg    19  4
+12     agg     2  6
+13     agg    20  5
+14     agg     3  5
+15     agg     4  5
+16     agg     5  5
+17     agg     6  6
+18     agg     7  4
+19     agg     8  7
+20     agg     9  3
+21     ten     1  3
+22     ten    10  8
+23     ten    11  4
+24     ten    12  5
+25     ten    13  5
+26     ten    14  5
+27     ten    15  5
+28     ten    16 10
+29     ten    17  4
+30     ten    18  5
+31     ten    19  6
+32     ten     2  3
+33     ten    20  5
+34     ten     3  6
+35     ten     4  6
+36     ten     5  7
+37     ten     6  6
+38     ten     7  3
+39     ten     8  4
+40     ten     9 10</code></pre>
+<pre class="r"><code>##variation within one plant is similar to variation among all plants
+##Do the plants have different levels of variation in their scents? 
+##anova(bdday)
+anova(bdday) #for day only</code></pre>
+<pre><code>Analysis of Variance Table
+
+Response: Distances
+          Df Sum Sq  Mean Sq F value Pr(&gt;F)
+Groups    38 1.4041 0.036950  1.3199 0.1699
+Residuals 56 1.5677 0.027995               </code></pre>
+<pre class="r"><code>##are the plants different from one another
+anova(capscale(vol~time+plantid, data=meta), by=&quot;term&quot;)</code></pre>
+<pre><code>Permutation test for capscale under reduced model
+Terms added sequentially (first to last)
+Permutation: free
+Number of permutations: 999
+
+Model: capscale(formula = vol ~ time + plantid, data = meta)
+          Df   Variance       F Pr(&gt;F)    
+time       1 6.7054e+11 30.4729  0.001 ***
+plantid   39 1.2159e+12  1.4169  0.027 *  
+Residual 176 3.8728e+12                   
+---
+Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
+<pre class="r"><code>##yes the plants are unique when you throw out the variation due to time (or at least 1 plant is different than the rest)
+
+#do day and night have different variances? 
+#moth pollinated less variation at night? 
+bdten &lt;- betadisper(vegdist(vol[meta$species==&quot;ten&quot;,]), meta$time[meta$species==&quot;ten&quot;])
+plot(bdten)</code></pre>
+<p><img src="plots-nitrogen/unnamed-chunk-1-3.svg" width="960" /></p>
+<pre class="r"><code>anova(bdten) #no difference in spread of night vs day volatiles</code></pre>
+<pre><code>Analysis of Variance Table
+
+Response: Distances
+           Df  Sum Sq   Mean Sq F value Pr(&gt;F)
+Groups      1 0.00333 0.0033280  0.3455 0.5579
+Residuals 108 1.04034 0.0096328               </code></pre>
+<pre class="r"><code>bdagg &lt;- betadisper(vegdist(vol[meta$species==&quot;agg&quot;,]), meta$time[meta$species==&quot;agg&quot;])
+plot(bdagg)</code></pre>
+<p><img src="plots-nitrogen/unnamed-chunk-1-4.svg" width="960" /></p>
+<pre class="r"><code>anova(bdagg)</code></pre>
+<pre><code>Analysis of Variance Table
+
+Response: Distances
+           Df  Sum Sq   Mean Sq F value Pr(&gt;F)
+Groups      1 0.00021 0.0002078   0.015 0.9026
+Residuals 105 1.45083 0.0138175               </code></pre>
+<pre class="r"><code>bdihyb &lt;- betadisper(vegdist(vol.field[meta.field$species==&quot;Ihyb&quot;,]), meta.field$time[meta.field$species==&quot;Ihyb&quot;])
+plot(bdihyb)</code></pre>
+<p><img src="plots-nitrogen/unnamed-chunk-1-5.svg" width="960" /></p>
+<pre class="r"><code>boxplot(bdihyb)</code></pre>
+<p><img src="plots-nitrogen/unnamed-chunk-1-6.svg" width="960" /></p>
+<pre class="r"><code>anova(bdihyb)</code></pre>
+<pre><code>Analysis of Variance Table
+
+Response: Distances
+           Df  Sum Sq   Mean Sq F value Pr(&gt;F)
+Groups      1 0.00221 0.0022078    0.11 0.7407
+Residuals 114 2.28712 0.0200625               </code></pre>
+<pre class="r"><code>bdLagg &lt;- betadisper(vegdist(vol.field[meta.field$species==&quot;Lagg&quot;,]), meta.field$time[meta.field$species==&quot;Lagg&quot;])
+plot(bdLagg)</code></pre>
+<p><img src="plots-nitrogen/unnamed-chunk-1-7.svg" width="960" /></p>
+<pre class="r"><code>anova(bdLagg)</code></pre>
+<pre><code>Analysis of Variance Table
+
+Response: Distances
+          Df  Sum Sq  Mean Sq F value Pr(&gt;F)
+Groups     1 0.02410 0.024104  1.8653 0.1761
+Residuals 75 0.96914 0.012922               </code></pre>
+<pre class="r"><code>#TODO: check metadata to make sure samples correctly listed as D vs N</code></pre>
+<p>#To find chromatogram with most diverse set compounds (for
+quantitative integrations)</p>
+<pre class="r"><code>##optional - look for a set of chromatograms that have all of the volatiles needed to set up Shimadzu quantitative integrations
+# best &lt;- list()
+# i &lt;- 1
+# vol.left &lt;- vol.qual[,need_quant]^(1/4) # halfway between areas and presence-absence
+# while(ncol(vol.left)&gt;0) {
+#   print(dim(vol.left))
+#   best[[i]] &lt;- which.max(rowSums(vol.left))
+#   vol.left &lt;- vol.left[ , !decostand(vol.left[best[[i]],], method=&quot;pa&quot;), drop=FALSE]
+#   i &lt;- i+1
+# }
+# (best.vol &lt;- as.data.frame(t(vol.qual[unlist(best),need_quant])) %&gt;% rownames_to_column(&quot;name&quot;))
+# chemtable %&gt;% filter(name %in% need_quant) %&gt;% select(name, RT, RT.var) %&gt;% arrange(RT)</code></pre>
 </div>
 <div id="retention-times" class="section level1">
 <h1>Retention times</h1>
-<pre class="r"><code>longdata.RT &lt;- longdata %&gt;% filter(name %in% c(colnames(vol.qual), colnames(vol))) %&gt;% 
-  group_by(name) %&gt;%  mutate(n=n(), RT.sd=sd(RT)) %&gt;% ungroup() %&gt;% 
-  mutate(name=fct_reorder(name, RT))
-
-RT.tol &lt;- 0.17  # 10 seconds before or after in quantitative params
-ggplot(longdata.RT, aes(x=RT, y=name,color=RT.sd)) + geom_jitter(width=0, height=0.4, size=1) + 
-  scale_color_viridis_c(option=&quot;magma&quot;) + geom_text(aes(x=4.5, label=n)) +
-  stat_summary(fun=&quot;median&quot;, fun.max=~median(.x)+RT.tol, fun.min=~median(.x)-RT.tol, geom=&quot;pointrange&quot;, color=&quot;magenta&quot;, size=0.5, shape=15)</code></pre>
-<p><img src="plots-nitrogen/retention-1.svg" width="1152" /></p>
-<pre class="r"><code>#TODO delete (2E)-2,7-dimethylocta-2,6-dien-1-ol (same peak as b-myrcene) from quant integrations
-#TODO the following compounds have multiple, overlapping RTs
-mess &lt;- c(&quot;p-mentha-1,3,8-triene&quot;, &quot;carveol&quot;, &quot;cosmene&quot;, &quot;4,7-Methano-1H-indene, 2,4,5,6,7,7a-hexahydro-&quot;)
-longdata.RT.mess &lt;- longdata.RT %&gt;% filter(name %in% mess) %&gt;% 
-  arrange(RT) %&gt;% mutate(cluster = kmeans(RT, 4, nstart=4)$cluster) %&gt;% 
-  group_by(cluster) %&gt;% mutate(RT.cluster = round(mean(RT),2)) %&gt;% ungroup()
-ggplot(longdata.RT.mess, aes(x=factor(RT.cluster), fill=name)) + geom_bar()</code></pre>
-<p><img src="plots-nitrogen/retention-2.svg" width="1152" /></p>
-<pre class="r"><code>ggplot(longdata.RT.mess, aes(x=RT, color=name, fill=name)) + facet_wrap(vars(RT.cluster), scales=&quot;free_x&quot;) + theme_minimal() +
-  geom_density(alpha=0.2, linewidth=2) + geom_jitter(aes(y=-as.integer(factor(name))*10), width=0.0002, height=4)</code></pre>
-<p><img src="plots-nitrogen/retention-3.svg" width="1152" /></p>
-<pre class="r"><code>mess.wide &lt;- longdata.RT.mess %&gt;% select(sample, RT.cluster, area) %&gt;% pivot_wider(names_from = RT.cluster, values_from=area, values_fn=sum, values_fill=0)</code></pre>
+<p>The puzzel - the 4 peaks we are not sure about compound
+identifications prints out graphs</p>
+<pre class="r"><code># longdata.RT &lt;- longdata %&gt;% filter(name %in% c(colnames(vol.qual), colnames(vol))) %&gt;% 
+#   group_by(name) %&gt;%  mutate(n=n(), RT.sd=sd(RT)) %&gt;% ungroup() %&gt;% 
+#   mutate(name=fct_reorder(name, RT))
+# 
+# RT.tol &lt;- 0.17  # 10 seconds before or after in quantitative params
+# ggplot(longdata.RT, aes(x=RT, y=name,color=RT.sd)) + geom_jitter(width=0, height=0.4, size=1) + 
+#   scale_color_viridis_c(option=&quot;magma&quot;) + geom_text(aes(x=4.5, label=n)) +
+#   stat_summary(fun=&quot;median&quot;, fun.max=~median(.x)+RT.tol, fun.min=~median(.x)-RT.tol, geom=&quot;pointrange&quot;, color=&quot;magenta&quot;, size=0.5, shape=15)
+# 
+# #TODO delete (2E)-2,7-dimethylocta-2,6-dien-1-ol (same peak as b-myrcene) from quant integrations
+# #TODO the following compounds have multiple, overlapping RTs
+# mess &lt;- c(&quot;p-mentha-1,3,8-triene&quot;, &quot;carveol&quot;, &quot;cosmene&quot;, &quot;4,7-Methano-1H-indene, 2,4,5,6,7,7a-hexahydro-&quot;)
+# longdata.RT.mess &lt;- longdata.RT %&gt;% filter(name %in% mess) %&gt;% 
+#   arrange(RT) %&gt;% mutate(cluster = kmeans(RT, 4, nstart=4)$cluster) %&gt;% 
+#   group_by(cluster) %&gt;% mutate(RT.cluster = round(mean(RT),2)) %&gt;% ungroup()
+# ggplot(longdata.RT.mess, aes(x=factor(RT.cluster), fill=name)) + geom_bar()
+# ggplot(longdata.RT.mess, aes(x=RT, color=name, fill=name)) + facet_wrap(vars(RT.cluster), scales=&quot;free_x&quot;) + theme_minimal() +
+#   geom_density(alpha=0.2, linewidth=2) + geom_jitter(aes(y=-as.integer(factor(name))*10), width=0.0002, height=4)
+# 
+# mess.wide &lt;- longdata.RT.mess %&gt;% select(sample, RT.cluster, area) %&gt;% pivot_wider(names_from = RT.cluster, values_from=area, values_fn=sum, values_fill=0)</code></pre>
 </div>
 <div id="heatmap" class="section level1">
 <h1>Heatmap</h1>
+<div id="greenhouse" class="section level2">
+<h2>greenhouse</h2>
 <pre class="r"><code>library(pheatmap)
 library(dendsort)
 library(viridis)
@@ -628,33 +1147,51 @@ ph  &lt;- pheatmap(as.matrix(t(vol))^(1/4),
          annotation_col = data.frame(meta %&gt;% select(&quot;species&quot;,&quot;treatment&quot;,&quot;time&quot;), row.names=rownames(vol)),
          annotation_row = data.frame(added = as.integer(colnames(vol) %in% added_quant), 
                                      new = as.integer(colnames(vol) %in% new_quant),
-                                     need = as.integer(colnames(vol) %in% need_quant),
                                      row.names=colnames(vol)),
    fontsize = 10, border_color = NA, legend=F, annotation_legend=T, cutree_rows=6
 )</code></pre>
 <p><img src="plots-nitrogen/heatmap-1.png" width="960" /></p>
+<p>##field heatmap</p>
+<pre class="r"><code>library(pheatmap)
+library(dendsort)
+library(viridis)
+ph  &lt;- pheatmap(as.matrix(t(vol.field))^(1/4), 
+         cluster_cols=T, show_colnames=F,
+         clustering_method=&quot;mcquitty&quot;, clustering_distance_rows=&quot;correlation&quot;,
+         clustering_distance_cols=vegdist(vol.field, method = &quot;bray&quot;),
+         clustering_callback = function(hc, ...){dendsort(hc, type=&quot;average&quot;)},
+         scale=&quot;none&quot;, color=magma(512),
+         annotation_col = data.frame(meta.field %&gt;% select(&quot;species&quot;,&quot;treatment&quot;,&quot;time&quot;), row.names=rownames(vol.field)),
+         annotation_row = data.frame(added = as.integer(colnames(vol.field) %in% added_quant), 
+                                     new = as.integer(colnames(vol.field) %in% new_quant),
+                                     row.names=colnames(vol.field)),
+   fontsize = 10, border_color = NA, legend=F, annotation_legend=T, cutree_rows=6
+)</code></pre>
+<p><img src="plots-nitrogen/heatmap%20field-1.png" width="960" /></p>
+</div>
 </div>
 <div id="ordination" class="section level1">
 <h1>Ordination</h1>
+<p>##weatherport -</p>
 <pre class="r"><code>(cap_treat &lt;- vegan::capscale(sqrt(vol) ~ species + time + treatment, data=meta))</code></pre>
 <pre><code>Call: vegan::capscale(formula = sqrt(vol) ~ species + time + treatment,
 data = meta)
 
                 Inertia Proportion Rank
-Total         1.097e+06  1.000e+00     
-Constrained   2.684e+05  2.447e-01    3
-Unconstrained 8.285e+05  7.553e-01   33
+Total         1.499e+06  1.000e+00     
+Constrained   2.762e+05  1.843e-01    3
+Unconstrained 1.222e+06  8.157e-01   48
 Inertia is mean squared Euclidean distance 
 Species scores projected from &#39;sqrt&#39; &#39;vol&#39; 
 
 Eigenvalues for constrained axes:
   CAP1   CAP2   CAP3 
-251440  13500   3483 
+255113  16458   4597 
 
 Eigenvalues for unconstrained axes:
   MDS1   MDS2   MDS3   MDS4   MDS5   MDS6   MDS7   MDS8 
-533695 143628  68638  24426  15259   8514   6892   5638 
-(Showing 8 of 33 unconstrained eigenvalues)</code></pre>
+548213 312218 142785  69578  38142  22313  21883  10883 
+(Showing 8 of 48 unconstrained eigenvalues)</code></pre>
 <pre class="r"><code>anova.cca(cap_treat, by=&quot;margin&quot;) # samples should be averaged by plant first</code></pre>
 <pre><code>Permutation test for capscale under reduced model
 Marginal effects of terms
@@ -663,28 +1200,77 @@ Number of permutations: 999
 
 Model: vegan::capscale(formula = sqrt(vol) ~ species + time + treatment, data = meta)
            Df Variance       F Pr(&gt;F)    
-species     1    13318  3.4241  0.037 *  
-time        1   245419 63.0977  0.001 ***
-treatment   1    11435  2.9401  0.051 .  
-Residual  213   828464                   
+species     1    16483  2.8721  0.036 *  
+time        1   248811 43.3541  0.001 ***
+treatment   1    12578  2.1917  0.087 .  
+Residual  213  1222415                   
 ---
 Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
-<pre class="r"><code>plot(cap_treat, type=&quot;n&quot;)
+<pre class="r"><code>#species (p= 0.03 and time (p=0.001) effect
+
+plot(cap_treat, type=&quot;n&quot;)
 points(cap_treat, display=&quot;sites&quot;, 
        pch=c(1,19)[as.integer(factor(meta$time))],
        col=c(&quot;darkred&quot;,&quot;magenta&quot;)[as.integer(factor(meta$species))])
-legend(&quot;topleft&quot;, levels(factor(meta$species)), title=&quot;Species&quot;, fill=c(&quot;darkred&quot;,&quot;magenta&quot;))
-legend(&quot;topright&quot;, levels(factor(meta$time)), title=&quot;Time&quot;, pch=c(1,19))
+legend(&quot;topleft&quot;, legend=levels(factor((meta$species))), title=&quot;Species&quot;, fill=c(&quot;darkred&quot;,&quot;magenta&quot;))
+legend(&quot;topright&quot;, levels(factor((meta$time))), title=&quot;Time&quot;, pch=c(1,19))
 text(cap_treat, display=&quot;species&quot;, cex=0.5, col=3)
 text(cap_treat, display=&quot;cn&quot;, cex=0.5)</code></pre>
 <p><img src="plots-nitrogen/cap-1.svg" width="960" /></p>
-<pre class="r"><code>kable(arrange(as.data.frame(cap_treat$CCA$v), CAP1)) </code></pre>
+<pre class="r"><code>#kable(arrange(as.data.frame(cap_treat$CCA$v), CAP1)) </code></pre>
+<p>##field</p>
+<pre class="r"><code>(cap_treat_field &lt;- vegan::capscale(sqrt(vol.field) ~ species + time + treatment, data=meta.field))</code></pre>
+<pre><code>Call: vegan::capscale(formula = sqrt(vol.field) ~ species + time +
+treatment, data = meta.field)
+
+                Inertia Proportion Rank
+Total         1.119e+06  1.000e+00     
+Constrained   2.957e+05  2.642e-01    4
+Unconstrained 8.235e+05  7.358e-01   48
+Inertia is mean squared Euclidean distance 
+Species scores projected from &#39;sqrt&#39; &#39;vol.field&#39; 
+
+Eigenvalues for constrained axes:
+  CAP1   CAP2   CAP3   CAP4 
+286826   6303   1550    981 
+
+Eigenvalues for unconstrained axes:
+  MDS1   MDS2   MDS3   MDS4   MDS5   MDS6   MDS7   MDS8 
+444980 110672  78721  48006  41019  29780  17867   6619 
+(Showing 8 of 48 unconstrained eigenvalues)</code></pre>
+<pre class="r"><code>anova.cca(cap_treat_field, by=&quot;margin&quot;) # samples should be averaged by plant first</code></pre>
+<pre><code>Permutation test for capscale under reduced model
+Marginal effects of terms
+Permutation: free
+Number of permutations: 999
+
+Model: vegan::capscale(formula = sqrt(vol.field) ~ species + time + treatment, data = meta.field)
+           Df Variance       F Pr(&gt;F)    
+species     1    11114  2.5370  0.059 .  
+time        1   241696 55.1751  0.001 ***
+treatment   2     5862  0.6691  0.663    
+Residual  188   823541                   
+---
+Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
+<pre class="r"><code>#species (p= 0.063), time (p=0.001)
+
+plot(cap_treat_field, type=&quot;n&quot;)
+points(cap_treat_field, display=&quot;sites&quot;, 
+       pch=c(1,19)[as.integer(meta.field$time)],
+       col=c(&quot;darkred&quot;,&quot;magenta&quot;)[as.integer(meta.field$species)])
+legend(&quot;topleft&quot;, levels(meta.field$species), title=&quot;Species&quot;, fill=c(&quot;darkred&quot;,&quot;magenta&quot;))
+legend(&quot;topright&quot;, levels(meta.field$time), title=&quot;Time&quot;, pch=c(1,19))
+text(cap_treat_field, display=&quot;species&quot;, cex=0.5, col=3)
+text(cap_treat_field, display=&quot;cn&quot;, cex=0.5)</code></pre>
+<p><img src="plots-nitrogen/cap.field-1.svg" width="960" /></p>
+<pre class="r"><code>kable(arrange(as.data.frame(cap_treat_field$CCA$v), CAP1)) </code></pre>
 <table>
 <colgroup>
-<col width="65%" />
-<col width="11%" />
-<col width="11%" />
-<col width="11%" />
+<col width="59%" />
+<col width="10%" />
+<col width="10%" />
+<col width="10%" />
+<col width="10%" />
 </colgroup>
 <thead>
 <tr class="header">
@@ -692,211 +1278,1657 @@ text(cap_treat, display=&quot;cn&quot;, cex=0.5)</code></pre>
 <th align="right">CAP1</th>
 <th align="right">CAP2</th>
 <th align="right">CAP3</th>
+<th align="right">CAP4</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td align="left">pseudoionone</td>
-<td align="right">-0.0468595</td>
-<td align="right">-0.0277860</td>
-<td align="right">-0.0488536</td>
+<td align="left">(E)-b-ocimene</td>
+<td align="right">-0.8111715</td>
+<td align="right">-0.1995576</td>
+<td align="right">-0.0340556</td>
+<td align="right">0.3087096</td>
 </tr>
 <tr class="even">
-<td align="left">3-Furaldehyde</td>
-<td align="right">-0.0316076</td>
-<td align="right">-0.1714546</td>
-<td align="right">0.1761951</td>
+<td align="left">a-farnesene</td>
+<td align="right">-0.4663901</td>
+<td align="right">0.5369336</td>
+<td align="right">-0.1869997</td>
+<td align="right">-0.3740772</td>
 </tr>
 <tr class="odd">
-<td align="left">(E)-hex-3-en-1-ol</td>
-<td align="right">-0.0146706</td>
-<td align="right">-0.0546419</td>
-<td align="right">-0.2815745</td>
+<td align="left">(Z)-b-ocimene</td>
+<td align="right">-0.2170780</td>
+<td align="right">-0.0432004</td>
+<td align="right">0.1442393</td>
+<td align="right">-0.0976530</td>
 </tr>
 <tr class="even">
-<td align="left">[(E)-hex-3-enyl] acetate</td>
-<td align="right">-0.0108742</td>
-<td align="right">-0.0200470</td>
-<td align="right">-0.1121079</td>
+<td align="left">b-myrcene</td>
+<td align="right">-0.1205347</td>
+<td align="right">-0.1024417</td>
+<td align="right">-0.1475859</td>
+<td align="right">0.0843210</td>
 </tr>
 <tr class="odd">
-<td align="left">(E)-4-oxohex-2-enal</td>
-<td align="right">-0.0104037</td>
-<td align="right">-0.1050306</td>
-<td align="right">-0.2283654</td>
+<td align="left">(4E,6Z)-alloocimene</td>
+<td align="right">-0.0951723</td>
+<td align="right">-0.0051774</td>
+<td align="right">0.0370764</td>
+<td align="right">0.0286175</td>
 </tr>
 <tr class="even">
-<td
-align="left">(1Z,4Z,7Z)-1,5,9,9-tetramethylcycloundeca-1,4,7-triene</td>
-<td align="right">-0.0080425</td>
-<td align="right">0.0206907</td>
-<td align="right">-0.1022689</td>
+<td align="left">trans-b-bergamotene</td>
+<td align="right">-0.0890123</td>
+<td align="right">0.0855299</td>
+<td align="right">0.1281621</td>
+<td align="right">-0.0896393</td>
 </tr>
 <tr class="odd">
-<td align="left">a-copaene</td>
-<td align="right">-0.0030817</td>
-<td align="right">0.0066886</td>
-<td align="right">-0.0653931</td>
-</tr>
-<tr class="even">
-<td align="left">(E)-hex-2-enal</td>
-<td align="right">-0.0025714</td>
-<td align="right">-0.1075125</td>
-<td align="right">-0.1118949</td>
-</tr>
-<tr class="odd">
-<td align="left">petasitene</td>
-<td align="right">-0.0020178</td>
-<td align="right">0.0040163</td>
-<td align="right">-0.0031458</td>
-</tr>
-<tr class="even">
-<td align="left">a-campholenal</td>
-<td align="right">-0.0005086</td>
-<td align="right">-0.0098690</td>
-<td align="right">0.0029135</td>
-</tr>
-<tr class="odd">
-<td align="left">a-terpineol</td>
-<td align="right">-0.0004446</td>
-<td align="right">-0.0112170</td>
-<td align="right">-0.0294736</td>
-</tr>
-<tr class="even">
-<td align="left">b-caryophyllene</td>
-<td align="right">0.0021472</td>
-<td align="right">0.0396636</td>
-<td align="right">-0.0980308</td>
-</tr>
-<tr class="odd">
-<td align="left">[(Z)-hex-3-enyl] butanoate</td>
-<td align="right">0.0024749</td>
-<td align="right">0.0196590</td>
-<td align="right">-0.0675260</td>
-</tr>
-<tr class="even">
-<td align="left">cis-a-bergamotene</td>
-<td align="right">0.0028493</td>
-<td align="right">-0.0705866</td>
-<td align="right">-0.1785473</td>
-</tr>
-<tr class="odd">
-<td align="left">(3E)-4,8-dimethylnona-1,3,7-triene</td>
-<td align="right">0.0047373</td>
-<td align="right">-0.0203897</td>
-<td align="right">-0.1342093</td>
-</tr>
-<tr class="even">
-<td align="left">2-methylbenzonitrile</td>
-<td align="right">0.0056062</td>
-<td align="right">0.0003792</td>
-<td align="right">0.0176753</td>
-</tr>
-<tr class="odd">
-<td align="left">a-pinene</td>
-<td align="right">0.0128898</td>
-<td align="right">-0.3585528</td>
-<td align="right">-0.7247198</td>
-</tr>
-<tr class="even">
-<td align="left">[(E)-hex-3-enyl] butanoate</td>
-<td align="right">0.0136505</td>
-<td align="right">0.0409154</td>
-<td align="right">-0.1560888</td>
-</tr>
-<tr class="odd">
-<td align="left">indole</td>
-<td align="right">0.0154294</td>
-<td align="right">0.0060868</td>
-<td align="right">-0.0141610</td>
-</tr>
-<tr class="even">
-<td align="left">methyl benzoate</td>
-<td align="right">0.0181368</td>
-<td align="right">0.0711800</td>
-<td align="right">-0.0909887</td>
-</tr>
-<tr class="odd">
-<td align="left">linalool</td>
-<td align="right">0.0233407</td>
-<td align="right">0.0039806</td>
-<td align="right">-0.0964102</td>
-</tr>
-<tr class="even">
-<td align="left">g-terpinene</td>
-<td align="right">0.0254553</td>
-<td align="right">-0.0936318</td>
-<td align="right">-0.0391870</td>
-</tr>
-<tr class="odd">
-<td align="left">4,7-Methano-1H-indene, 2,4,5,6,7,7a-hexahydro-</td>
-<td align="right">0.0333898</td>
-<td align="right">-0.0211147</td>
-<td align="right">0.0113278</td>
-</tr>
-<tr class="even">
-<td align="left">cosmene</td>
-<td align="right">0.0419815</td>
-<td align="right">-0.0257257</td>
-<td align="right">-0.0262099</td>
-</tr>
-<tr class="odd">
-<td align="left">trans-a-bergamotene</td>
-<td align="right">0.0445147</td>
-<td align="right">0.1471357</td>
-<td align="right">-0.1082574</td>
+<td align="left">p-mentha-1,3,8-triene</td>
+<td align="right">-0.0796759</td>
+<td align="right">-0.0169343</td>
+<td align="right">0.0088199</td>
+<td align="right">-0.0184515</td>
 </tr>
 <tr class="even">
 <td align="left">Tricyclo[3.1.0.0(2,4)]hexane,
 3,6-diethyl-3,6-dimethyl-, trans-</td>
-<td align="right">0.0605167</td>
-<td align="right">0.1421645</td>
-<td align="right">0.0031642</td>
+<td align="right">-0.0548336</td>
+<td align="right">0.0999380</td>
+<td align="right">0.0433102</td>
+<td align="right">-0.0312586</td>
 </tr>
 <tr class="odd">
-<td align="left">p-mentha-1,3,8-triene</td>
-<td align="right">0.0820639</td>
-<td align="right">-0.0287215</td>
-<td align="right">0.0777143</td>
+<td align="left">cosmene</td>
+<td align="right">-0.0531347</td>
+<td align="right">-0.0189968</td>
+<td align="right">0.1183307</td>
+<td align="right">-0.0260153</td>
 </tr>
 <tr class="even">
-<td align="left">trans-b-bergamotene</td>
-<td align="right">0.0867977</td>
-<td align="right">0.1302282</td>
-<td align="right">-0.0560906</td>
+<td align="left">trans-a-bergamotene</td>
+<td align="right">-0.0527990</td>
+<td align="right">0.1231266</td>
+<td align="right">0.1678685</td>
+<td align="right">-0.1357603</td>
 </tr>
 <tr class="odd">
-<td align="left">b-myrcene</td>
-<td align="right">0.0958230</td>
-<td align="right">-0.2103861</td>
-<td align="right">-0.1364098</td>
+<td align="left">a-pinene</td>
+<td align="right">-0.0500242</td>
+<td align="right">0.0598790</td>
+<td align="right">0.3951249</td>
+<td align="right">0.4669515</td>
 </tr>
 <tr class="even">
-<td align="left">(4E,6Z)-alloocimene</td>
-<td align="right">0.0988892</td>
-<td align="right">-0.0598990</td>
-<td align="right">0.0261218</td>
+<td align="left">tricyclo[5.2.1.02,6]dec-2-ene</td>
+<td align="right">-0.0480145</td>
+<td align="right">-0.0223154</td>
+<td align="right">-0.0125900</td>
+<td align="right">0.0201911</td>
 </tr>
 <tr class="odd">
-<td align="left">(Z)-b-ocimene</td>
-<td align="right">0.1986623</td>
-<td align="right">-0.1176787</td>
-<td align="right">0.0430174</td>
+<td align="left">Benzenebutanoic acid, .gamma.-oxo-</td>
+<td align="right">-0.0464088</td>
+<td align="right">-0.2857719</td>
+<td align="right">-0.0772381</td>
+<td align="right">-0.0879839</td>
 </tr>
 <tr class="even">
-<td align="left">a-farnesene</td>
-<td align="right">0.5176193</td>
-<td align="right">0.7005375</td>
-<td align="right">-0.2784305</td>
+<td align="left">3-ethenyl-1,2-dimethylcyclohexa-1,4-diene</td>
+<td align="right">-0.0404033</td>
+<td align="right">0.0225010</td>
+<td align="right">0.0023776</td>
+<td align="right">-0.0200314</td>
 </tr>
 <tr class="odd">
-<td align="left">(E)-b-ocimene</td>
-<td align="right">0.8030853</td>
-<td align="right">-0.4224447</td>
-<td align="right">0.2018962</td>
+<td align="left">linalool</td>
+<td align="right">-0.0398059</td>
+<td align="right">0.0368078</td>
+<td align="right">0.0057711</td>
+<td align="right">-0.0494577</td>
+</tr>
+<tr class="even">
+<td align="left">g-terpinene</td>
+<td align="right">-0.0189251</td>
+<td align="right">0.0001962</td>
+<td align="right">0.0353207</td>
+<td align="right">-0.0763095</td>
+</tr>
+<tr class="odd">
+<td align="left">2,6-Octadienal, 3,7-dimethyl-, (E)-</td>
+<td align="right">-0.0185827</td>
+<td align="right">0.0451147</td>
+<td align="right">0.0821501</td>
+<td align="right">0.0668930</td>
+</tr>
+<tr class="even">
+<td align="left">2-butyloctan-1-ol</td>
+<td align="right">-0.0181303</td>
+<td align="right">-0.0424746</td>
+<td align="right">-0.0961561</td>
+<td align="right">-0.0082855</td>
+</tr>
+<tr class="odd">
+<td align="left">sabinene</td>
+<td align="right">-0.0097743</td>
+<td align="right">-0.0723260</td>
+<td align="right">-0.2943964</td>
+<td align="right">0.0515582</td>
+</tr>
+<tr class="even">
+<td align="left">Benzamide</td>
+<td align="right">-0.0091220</td>
+<td align="right">-0.1079022</td>
+<td align="right">-0.0612176</td>
+<td align="right">-0.0567657</td>
+</tr>
+<tr class="odd">
+<td align="left">b-caryophyllene</td>
+<td align="right">-0.0081564</td>
+<td align="right">0.1663668</td>
+<td align="right">0.0341407</td>
+<td align="right">-0.2792918</td>
+</tr>
+<tr class="even">
+<td align="left">methyl benzoate</td>
+<td align="right">-0.0075603</td>
+<td align="right">0.0598734</td>
+<td align="right">0.0992596</td>
+<td align="right">0.0077602</td>
+</tr>
+<tr class="odd">
+<td align="left">indole</td>
+<td align="right">-0.0074970</td>
+<td align="right">0.0400245</td>
+<td align="right">0.0803443</td>
+<td align="right">-0.0791541</td>
+</tr>
+<tr class="even">
+<td align="left">3-Furaldehyde</td>
+<td align="right">-0.0039641</td>
+<td align="right">0.0236636</td>
+<td align="right">-0.1484238</td>
+<td align="right">0.0492210</td>
+</tr>
+<tr class="odd">
+<td align="left">verbenone</td>
+<td align="right">-0.0023009</td>
+<td align="right">-0.0088312</td>
+<td align="right">0.0283823</td>
+<td align="right">0.0261141</td>
+</tr>
+<tr class="even">
+<td align="left">2-Decanone</td>
+<td align="right">-0.0017537</td>
+<td align="right">0.0215634</td>
+<td align="right">-0.0520632</td>
+<td align="right">-0.0652537</td>
+</tr>
+<tr class="odd">
+<td align="left">2-methylbenzonitrile</td>
+<td align="right">-0.0007849</td>
+<td align="right">0.0155224</td>
+<td align="right">-0.0035846</td>
+<td align="right">0.0043262</td>
+</tr>
+<tr class="even">
+<td align="left">cis-a-bergamotene</td>
+<td align="right">-0.0007196</td>
+<td align="right">0.0359525</td>
+<td align="right">0.0910205</td>
+<td align="right">0.2716524</td>
+</tr>
+<tr class="odd">
+<td align="left">b-caryophyllene oxide</td>
+<td align="right">-0.0002799</td>
+<td align="right">0.0330453</td>
+<td align="right">0.0667505</td>
+<td align="right">-0.0658423</td>
+</tr>
+<tr class="even">
+<td align="left">[(Z)-hex-3-enyl] butanoate</td>
+<td align="right">-0.0001670</td>
+<td align="right">0.0449504</td>
+<td align="right">0.0418574</td>
+<td align="right">0.0637141</td>
+</tr>
+<tr class="odd">
+<td align="left">[(E)-hex-3-enyl] butanoate</td>
+<td align="right">0.0001897</td>
+<td align="right">0.0754275</td>
+<td align="right">-0.1172752</td>
+<td align="right">0.0327540</td>
+</tr>
+<tr class="even">
+<td
+align="left">(1Z,4Z,7Z)-1,5,9,9-tetramethylcycloundeca-1,4,7-triene</td>
+<td align="right">0.0015532</td>
+<td align="right">0.0868245</td>
+<td align="right">-0.0145675</td>
+<td align="right">-0.0321135</td>
+</tr>
+<tr class="odd">
+<td align="left">a-terpineol</td>
+<td align="right">0.0039394</td>
+<td align="right">0.0339904</td>
+<td align="right">-0.0924874</td>
+<td align="right">-0.0330025</td>
+</tr>
+<tr class="even">
+<td align="left">3-carene</td>
+<td align="right">0.0050834</td>
+<td align="right">-0.0951400</td>
+<td align="right">-0.2953708</td>
+<td align="right">0.1400640</td>
+</tr>
+<tr class="odd">
+<td align="left">1,2,3-Propanetriol, 1-acetate</td>
+<td align="right">0.0050905</td>
+<td align="right">0.0314708</td>
+<td align="right">-0.1164029</td>
+<td align="right">0.1228816</td>
+</tr>
+<tr class="even">
+<td align="left">[(Z)-hex-3-enyl] 2-methylbutanoate</td>
+<td align="right">0.0056367</td>
+<td align="right">0.0245969</td>
+<td align="right">-0.0357769</td>
+<td align="right">0.0318790</td>
+</tr>
+<tr class="odd">
+<td align="left">(3E)-4,8-dimethylnona-1,3,7-triene</td>
+<td align="right">0.0062469</td>
+<td align="right">0.0129277</td>
+<td align="right">-0.1492490</td>
+<td align="right">0.0568849</td>
+</tr>
+<tr class="even">
+<td align="left">petasitene</td>
+<td align="right">0.0079761</td>
+<td align="right">-0.0105684</td>
+<td align="right">-0.0412548</td>
+<td align="right">0.0143401</td>
+</tr>
+<tr class="odd">
+<td align="left">pseudoionone</td>
+<td align="right">0.0085723</td>
+<td align="right">-0.0477200</td>
+<td align="right">-0.2917459</td>
+<td align="right">0.0708413</td>
+</tr>
+<tr class="even">
+<td align="left">a-campholenal</td>
+<td align="right">0.0097594</td>
+<td align="right">0.0052820</td>
+<td align="right">0.0177363</td>
+<td align="right">-0.0756369</td>
+</tr>
+<tr class="odd">
+<td align="left">a-copaene</td>
+<td align="right">0.0098169</td>
+<td align="right">0.0374127</td>
+<td align="right">0.0307447</td>
+<td align="right">0.1448035</td>
+</tr>
+<tr class="even">
+<td align="left">(E)-hex-2-enal</td>
+<td align="right">0.0132975</td>
+<td align="right">0.0024742</td>
+<td align="right">-0.1305881</td>
+<td align="right">0.1042343</td>
+</tr>
+<tr class="odd">
+<td align="left">3-methylbutan-1-ol</td>
+<td align="right">0.0187155</td>
+<td align="right">0.0075850</td>
+<td align="right">-0.0671011</td>
+<td align="right">0.1322765</td>
+</tr>
+<tr class="even">
+<td align="left">(E)-hex-3-en-1-ol</td>
+<td align="right">0.0285699</td>
+<td align="right">0.0122304</td>
+<td align="right">-0.2151324</td>
+<td align="right">0.0753444</td>
+</tr>
+<tr class="odd">
+<td align="left">[(E)-hex-3-enyl] acetate</td>
+<td align="right">0.0310707</td>
+<td align="right">-0.0223625</td>
+<td align="right">-0.3775740</td>
+<td align="right">-0.0336934</td>
+</tr>
+<tr class="even">
+<td align="left">hexan-1-ol</td>
+<td align="right">0.0385866</td>
+<td align="right">-0.0170899</td>
+<td align="right">-0.0441519</td>
+<td align="right">0.0799528</td>
+</tr>
+<tr class="odd">
+<td align="left">(E)-4-oxohex-2-enal</td>
+<td align="right">0.0409178</td>
+<td align="right">-0.0335377</td>
+<td align="right">-0.2606870</td>
+<td align="right">0.0546762</td>
+</tr>
+<tr class="even">
+<td align="left">Caprolactam</td>
+<td align="right">0.1155286</td>
+<td align="right">0.6695518</td>
+<td align="right">-0.1289416</td>
+<td align="right">0.4254637</td>
 </tr>
 </tbody>
 </table>
+<p>#Average volatiles</p>
+</div>
+<div id="greenhouse-average-vocs" class="section level1">
+<h1>Greenhouse Average VOCs</h1>
+<pre class="r"><code>#make average volatile table: 
+noaverage &lt;- bind_cols(meta,vol)%&gt;%   #want to make table with metadata and volatile list that is not averaged to run Anova on
+  group_by(time, treatment, species)%&gt;%
+  mutate(timetreatment=paste0(time,treatment)) #paste0 because glht doesn&#39;t like spaces in data sets
+
+averagePlant&lt;-bind_cols(meta,vol) %&gt;% group_by(plantid, time, treatment, species) %&gt;% 
+  summarize(across(where(is.numeric),mean))       #takes average of each sample for day                                                                                             and night
+
+averagetable&lt;- averagePlant[,12:ncol(averagePlant)] #seperates table into meta data and volatile list table (not necesaary)
+averagemetadata&lt;- averagePlant[,1:12]
+
+#cap species * treatment * time p=0.001
+AverageVOCcapS.T.T &lt;- capscale(sqrt(averagetable) ~ species * treatment * time, data = averagemetadata, distance = &quot;bray&quot;)
+
+anova(AverageVOCcapS.T.T, by=&quot;term&quot;)</code></pre>
+<pre><code>Permutation test for capscale under reduced model
+Terms added sequentially (first to last)
+Permutation: free
+Number of permutations: 999
+
+Model: capscale(formula = sqrt(averagetable) ~ species * treatment * time, data = averagemetadata, distance = &quot;bray&quot;)
+                       Df SumOfSqs       F Pr(&gt;F)    
+species                 1   0.1238  1.4926  0.121    
+treatment               1   0.1232  1.4849  0.122    
+time                    1   1.3858 16.7028  0.001 ***
+species:treatment       1   0.0833  1.0034  0.409    
+species:time            1   0.0686  0.8266  0.567    
+treatment:time          1   0.0384  0.4622  0.943    
+species:treatment:time  1   0.1132  1.3644  0.170    
+Residual               71   5.8907                   
+---
+Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
+</div>
+<div id="field-average-vocs" class="section level1">
+<h1>Field Average VOCs</h1>
+<pre class="r"><code>#TODO: noaverage.field lots of NAs and no compounds, bind_cols not work
+
+#make average volatile table: 
+noaverage.field &lt;- bind_cols(meta.field,vol.field)%&gt;%   #want to make table with metadata and volatile list that is not averaged to run Anova on
+  group_by(time, treatment, species)%&gt;%
+  mutate(timetreatment=paste0(time,treatment)) #paste0 because glht doesn&#39;t like spaces in data sets
+
+averagePlant.field&lt;-bind_cols(meta.field,vol.field) %&gt;% group_by(plantid, time, treatment, species) %&gt;% 
+  summarize(across(where(is.numeric),mean)) %&gt;% ungroup()    
+#takes average of each sample for dayand night
+
+#TODO: change column numbers below???
+averagetable.field&lt;- averagePlant.field[,12:ncol(averagePlant.field)] #seperates table into meta data and volatile list table (not necesaary)
+averagemetadata.field&lt;- averagePlant.field[,1:12]
+
+#Number of plants sampled for time, species and treatment
+count(averagemetadata.field, species, time, treatment)</code></pre>
+<pre><code># A tibble: 12 × 4
+   species time  treatment         n
+   &lt;fct&gt;   &lt;fct&gt; &lt;fct&gt;         &lt;int&gt;
+ 1 Ihyb    D     control           6
+ 2 Ihyb    D     nitrogen         10
+ 3 Ihyb    D     water control     4
+ 4 Ihyb    N     control          11
+ 5 Ihyb    N     nitrogen         10
+ 6 Ihyb    N     water control    11
+ 7 Lagg    D     control          22
+ 8 Lagg    D     nitrogen          6
+ 9 Lagg    D     water control     9
+10 Lagg    N     control          22
+11 Lagg    N     nitrogen          7
+12 Lagg    N     water control     7</code></pre>
+<pre class="r"><code>#cap species * treatment * time 
+Field.AverageVOCcapS.T.T &lt;- capscale(sqrt(averagetable.field) ~ species * treatment * time, data = averagemetadata.field, distance = &quot;bray&quot;)
+
+anova(Field.AverageVOCcapS.T.T, by=&quot;term&quot;)</code></pre>
+<pre><code>Permutation test for capscale under reduced model
+Terms added sequentially (first to last)
+Permutation: free
+Number of permutations: 999
+
+Model: capscale(formula = sqrt(averagetable.field) ~ species * treatment * time, data = averagemetadata.field, distance = &quot;bray&quot;)
+                        Df SumOfSqs       F Pr(&gt;F)    
+species                  1   0.6021  6.3498  0.001 ***
+treatment                2   0.1694  0.8931  0.518    
+time                     1   2.7966 29.4932  0.001 ***
+species:treatment        2   0.1599  0.8432  0.580    
+species:time             1   0.3038  3.2036  0.006 ** 
+treatment:time           2   0.1648  0.8691  0.557    
+species:treatment:time   2   0.2066  1.0894  0.330    
+Residual               113  10.7150                   
+---
+Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
+<pre class="r"><code>#species p= 0.002, time p=0.001, species:time p=0.008</code></pre>
+</div>
+<div id="indole" class="section level1">
+<h1>Indole</h1>
+</div>
+<div id="greenhouse-indole" class="section level1">
+<h1>Greenhouse Indole</h1>
+<pre class="r"><code>#make average tenuituba table
+averageTENmetadata&lt;- averagemetadata[averagemetadata$species==&quot;ten&quot;,]
+averageTENtable&lt;-averagetable[averagemetadata$species==&quot;ten&quot;,]
+averageTEN &lt;- bind_cols(averageTENmetadata, averageTENtable) %&gt;%  #combines averaged meta data table and average volatile                                                                           list table together
+  mutate(timetreatment=paste(time,treatment))           #want to combine time and treatment into the same colum bc glht                                                                   needs that
+#only ten indole boxplot
+ggplot(averageTEN, aes(color=treatment, x=time, y=indole))+geom_boxplot()+scale_y_sqrt() #box plot for TEN indole </code></pre>
+<p><img src="plots-nitrogen/unnamed-chunk-4-1.svg" width="960" /></p>
+<pre class="r"><code># agg and ten indole boxplot
+facet.labs &lt;- c(agg=&quot;I. aggregata&quot;, ten=&quot;I. tenuituba&quot;)
+
+plot.indole.aggten=
+  ggplot(averagePlant, aes(color=treatment, x=time,y=indole))+
+  #geom_boxplot(position=position_dodge(width=0.9))+
+  #geom_point (position=position_dodge(width=0.9))+
+  geom_boxplot()+
+  scale_y_sqrt()+
+  ylab(&quot;Indole Emissions&quot;)+
+  #ylim(0,25000) + #scales y-axis 
+  facet_wrap(vars(species))+ #makes two columns for species
+    facet_grid(. ~ species, labeller=labeller(species = facet.labs))+ 
+    theme(panel.border = element_blank(),
+      panel.grid.major = element_line(colour=&quot;white&quot;),
+      #panel.grid.minor = element_blank(),
+      panel.background = element_rect(fill = &quot;gray96&quot;,
+                                #colour = &quot;lightblue&quot;,
+                                  linetype = &quot;solid&quot;),
+      strip.text.x = element_text(size=11),
+      strip.background = element_rect(colour=&quot;white&quot;, fill=&quot;white&quot;))+
+    scale_color_manual(name=&quot;Nitrogen Level&quot;, 
+        labels= c(&quot;High&quot;,  &quot;Low&quot;), 
+        values=c(&quot;tan2&quot;,&quot;cadetblue3&quot;))+
+    theme(legend.title = element_text(size=11, color = &quot;black&quot;),
+        legend.text=element_text(size=9))
+print(plot.indole.aggten)    </code></pre>
+<p><img src="plots-nitrogen/unnamed-chunk-4-2.svg" width="960" /></p>
+<pre class="r"><code>ggsave(plot.indole.aggten, file=&#39;Indole_boxplot.jpg&#39;, width=150, height=110, units= &#39;mm&#39;, dpi=300)
+
+library(car)
+library(lmerTest)
+library(lme4)
+
+#Only indole lmer with plantid as random effect
+
+noaverage$S.T.T &lt;- factor(paste0(noaverage$species, noaverage$time, noaverage$treatment))
+(indolelmer&lt;-lmer(sqrt(indole)~S.T.T + (1|plantid), data=noaverage)) #use not averaged data! d</code></pre>
+<pre><code>Linear mixed model fit by REML [&#39;lmerModLmerTest&#39;]
+Formula: sqrt(indole) ~ S.T.T + (1 | plantid)
+   Data: noaverage
+REML criterion at convergence: 2231.377
+Random effects:
+ Groups   Name        Std.Dev.
+ plantid  (Intercept)  0.00   
+ Residual             47.29   
+Number of obs: 217, groups:  plantid, 40
+Fixed Effects:
+  (Intercept)   S.T.TaggDlow  S.T.TaggNhigh   S.T.TaggNlow  S.T.TtenDhigh  
+       58.216        -16.998          1.438          8.253        -12.000  
+ S.T.TtenDlow  S.T.TtenNhigh   S.T.TtenNlow  
+       -5.793         14.010          1.556  
+optimizer (nloptwrap) convergence code: 0 (OK) ; 0 optimizer warnings; 1 lme4 warnings </code></pre>
+<pre class="r"><code>summary(multcomp::glht(indolelmer, linfct= multcomp::mcp(S.T.T = c(&quot;aggDhigh-aggDlow == 0&quot;,&quot;aggNhigh - aggNlow == 0&quot;, &quot;tenNhigh - tenNlow == 0&quot;, &quot;tenDhigh-tenDlow==0&quot;))))</code></pre>
+<pre><code>
+     Simultaneous Tests for General Linear Hypotheses
+
+Multiple Comparisons of Means: User-defined Contrasts
+
+
+Fit: lmer(formula = sqrt(indole) ~ S.T.T + (1 | plantid), data = noaverage)
+
+Linear Hypotheses:
+                        Estimate Std. Error z value Pr(&gt;|z|)
+aggDhigh - aggDlow == 0   16.998     13.652   1.245    0.617
+aggNhigh - aggNlow == 0   -6.815     12.358  -0.551    0.969
+tenNhigh - tenNlow == 0   12.454     11.918   1.045    0.754
+tenDhigh - tenDlow == 0   -6.206     13.952  -0.445    0.986
+(Adjusted p values reported -- single-step method)</code></pre>
+</div>
+<div id="field-indole" class="section level1">
+<h1>Field Indole</h1>
+<pre class="r"><code>#make average Hybrid table
+averageHYBmetadata.field&lt;- averagemetadata.field[averagemetadata.field$species==&quot;Ihyb&quot;,]
+
+averageHYBtable.field&lt;-averagetable.field[averagemetadata.field$species==&quot;Ihyb&quot;,]
+averageHYB.field &lt;- bind_cols(averageHYBmetadata.field, averageHYBtable.field) %&gt;%  #combines averaged meta data table and average volatile                                                                           list table together
+  mutate(timetreatment=paste(time,treatment))           #want to combine time and treatment into the same colum bc glht                                                                   needs that
+#only hybrid indole boxplot
+ggplot(averageHYB.field, aes(color=treatment, x=time, y=indole))+geom_boxplot()+scale_y_sqrt() #box plot for HYB indole </code></pre>
+<p><img src="plots-nitrogen/unnamed-chunk-5-1.svg" width="960" /></p>
+<pre class="r"><code># agg and ten indole boxplot
+facet.labs &lt;- c(Lagg=&quot;I. aggregata&quot;, Ihyb=&quot;Hybrids&quot;)
+
+
+plot.indole.Lagghyb.field=
+  ggplot(averagePlant.field, aes(color=treatment, x=time,y=indole))+
+  #geom_boxplot(position=position_dodge(width=0.9))+
+  #geom_point (position=position_dodge(width=0.9))+
+  geom_boxplot()+
+  scale_y_sqrt()+
+  ylab(&quot;Indole Emissions&quot;)+
+  #ylim(0,25000) + #scales y-axis 
+ # facet_wrap(vars(species))+ #makes two columns for species
+    facet_grid(. ~ species, labeller=labeller(species = facet.labs))+ 
+    theme(panel.border = element_blank(),
+      panel.grid.major = element_line(colour=&quot;white&quot;),
+      #panel.grid.minor = element_blank(),
+      panel.background = element_rect(fill = &quot;gray96&quot;,
+                                #colour = &quot;lightblue&quot;,
+                                  linetype = &quot;solid&quot;),
+      strip.text.x = element_text(size=11),
+      strip.background = element_rect(colour=&quot;white&quot;, fill=&quot;white&quot;))+
+    scale_color_manual(name=&quot;Nitrogen Level&quot;, 
+       # labels= c(&quot;High&quot;,  &quot;Low&quot;, &quot;Control&quot;), #rename legend treatment names
+        values=c(&quot;tan2&quot;,&quot;cadetblue3&quot;,&quot;purple&quot;))+
+    theme(legend.title = element_text(size=11, color = &quot;black&quot;),
+        legend.text=element_text(size=9))
+print(plot.indole.Lagghyb.field)    </code></pre>
+<p><img src="plots-nitrogen/unnamed-chunk-5-2.svg" width="960" /></p>
+<pre class="r"><code>ggsave(plot.indole.Lagghyb.field, file=&#39;Indole_field_agghyb_boxplot.jpg&#39;, width=150, height=110, units= &#39;mm&#39;, dpi=300)
+
+library(car)
+library(lmerTest)
+library(lme4)
+
+#Only indole lmer with plantid as random effect for field
+
+noaverage.field$S.T.T &lt;- factor(paste0(noaverage.field$species, noaverage.field$time, noaverage.field$treatment))
+(indolelmer.field&lt;-lmer(sqrt(indole)~S.T.T + (1|plantid), data=noaverage.field)) #use not averaged data! d</code></pre>
+<pre><code>Linear mixed model fit by REML [&#39;lmerModLmerTest&#39;]
+Formula: sqrt(indole) ~ S.T.T + (1 | plantid)
+   Data: noaverage.field
+REML criterion at convergence: 1667.48
+Random effects:
+ Groups   Name        Std.Dev.
+ plantid  (Intercept)  0.00   
+ Residual             22.23   
+Number of obs: 193, groups:  plantid, 77
+Fixed Effects:
+            (Intercept)       S.T.TIhybDnitrogen  S.T.TIhybDwater control  
+                48.0419                  -0.1922                   1.0198  
+      S.T.TIhybNcontrol       S.T.TIhybNnitrogen  S.T.TIhybNwater control  
+                 9.6652                   3.9000                   7.9837  
+      S.T.TLaggDcontrol       S.T.TLaggDnitrogen  S.T.TLaggDwater control  
+                -8.5751                 -11.0826                  -0.9965  
+      S.T.TLaggNcontrol       S.T.TLaggNnitrogen  S.T.TLaggNwater control  
+                -4.5951                  -8.8086                 -11.3295  
+optimizer (nloptwrap) convergence code: 0 (OK) ; 0 optimizer warnings; 1 lme4 warnings </code></pre>
+<pre class="r"><code>summary(multcomp::glht(indolelmer.field, linfct= multcomp::mcp(S.T.T = &quot;Tukey&quot;)))</code></pre>
+<pre><code>
+     Simultaneous Tests for General Linear Hypotheses
+
+Multiple Comparisons of Means: Tukey Contrasts
+
+
+Fit: lmer(formula = sqrt(indole) ~ S.T.T + (1 | plantid), data = noaverage.field)
+
+Linear Hypotheses:
+                                             Estimate Std. Error z value
+IhybDnitrogen - IhybDcontrol == 0             -0.1922    10.0718  -0.019
+IhybDwater control - IhybDcontrol == 0         1.0198    11.5029   0.089
+IhybNcontrol - IhybDcontrol == 0               9.6652     9.4640   1.021
+IhybNnitrogen - IhybDcontrol == 0              3.9000     9.3292   0.418
+IhybNwater control - IhybDcontrol == 0         7.9837     9.3596   0.853
+LaggDcontrol - IhybDcontrol == 0              -8.5751     9.5940  -0.894
+LaggDnitrogen - IhybDcontrol == 0            -11.0826    11.8801  -0.933
+LaggDwater control - IhybDcontrol == 0        -0.9965    11.2007  -0.089
+LaggNcontrol - IhybDcontrol == 0              -4.5951     9.5473  -0.481
+LaggNnitrogen - IhybDcontrol == 0             -8.8086    11.8801  -0.741
+LaggNwater control - IhybDcontrol == 0       -11.3295    11.8801  -0.954
+IhybDwater control - IhybDnitrogen == 0        1.2120     9.6240   0.126
+IhybNcontrol - IhybDnitrogen == 0              9.8574     7.0621   1.396
+IhybNnitrogen - IhybDnitrogen == 0             4.0922     6.8804   0.595
+IhybNwater control - IhybDnitrogen == 0        8.1759     6.9215   1.181
+LaggDcontrol - IhybDnitrogen == 0             -8.3829     7.2354  -1.159
+LaggDnitrogen - IhybDnitrogen == 0           -10.8904    10.0718  -1.081
+LaggDwater control - IhybDnitrogen == 0       -0.8043     9.2607  -0.087
+LaggNcontrol - IhybDnitrogen == 0             -4.4029     7.1733  -0.614
+LaggNnitrogen - IhybDnitrogen == 0            -8.6164    10.0718  -0.855
+LaggNwater control - IhybDnitrogen == 0      -11.1373    10.0718  -1.106
+IhybNcontrol - IhybDwater control == 0         8.6454     8.9859   0.962
+IhybNnitrogen - IhybDwater control == 0        2.8802     8.8438   0.326
+IhybNwater control - IhybDwater control == 0   6.9639     8.8759   0.785
+LaggDcontrol - IhybDwater control == 0        -9.5949     9.1228  -1.052
+LaggDnitrogen - IhybDwater control == 0      -12.1024    11.5029  -1.052
+LaggDwater control - IhybDwater control == 0  -2.0163    10.7997  -0.187
+LaggNcontrol - IhybDwater control == 0        -5.6149     9.0736  -0.619
+LaggNnitrogen - IhybDwater control == 0       -9.8284    11.5029  -0.854
+LaggNwater control - IhybDwater control == 0 -12.3493    11.5029  -1.074
+IhybNnitrogen - IhybNcontrol == 0             -5.7652     5.9553  -0.968
+IhybNwater control - IhybNcontrol == 0        -1.6815     6.0027  -0.280
+LaggDcontrol - IhybNcontrol == 0             -18.2403     6.3621  -2.867
+LaggDnitrogen - IhybNcontrol == 0            -20.7478     9.4640  -2.192
+LaggDwater control - IhybNcontrol == 0       -10.6617     8.5957  -1.240
+LaggNcontrol - IhybNcontrol == 0             -14.2603     6.2914  -2.267
+LaggNnitrogen - IhybNcontrol == 0            -18.4738     9.4640  -1.952
+LaggNwater control - IhybNcontrol == 0       -20.9947     9.4640  -2.218
+IhybNwater control - IhybNnitrogen == 0        4.0837     5.7879   0.706
+LaggDcontrol - IhybNnitrogen == 0            -12.4751     6.1598  -2.025
+LaggDnitrogen - IhybNnitrogen == 0           -14.9826     9.3292  -1.606
+LaggDwater control - IhybNnitrogen == 0       -4.8965     8.4470  -0.580
+LaggNcontrol - IhybNnitrogen == 0             -8.4951     6.0867  -1.396
+LaggNnitrogen - IhybNnitrogen == 0           -12.7086     9.3292  -1.362
+LaggNwater control - IhybNnitrogen == 0      -15.2295     9.3292  -1.632
+LaggDcontrol - IhybNwater control == 0       -16.5588     6.2057  -2.668
+LaggDnitrogen - IhybNwater control == 0      -19.0663     9.3596  -2.037
+LaggDwater control - IhybNwater control == 0  -8.9802     8.4806  -1.059
+LaggNcontrol - IhybNwater control == 0       -12.5788     6.1332  -2.051
+LaggNnitrogen - IhybNwater control == 0      -16.7923     9.3596  -1.794
+LaggNwater control - IhybNwater control == 0 -19.3132     9.3596  -2.063
+LaggDnitrogen - LaggDcontrol == 0             -2.5075     9.5940  -0.261
+LaggDwater control - LaggDcontrol == 0         7.5786     8.7386   0.867
+LaggNcontrol - LaggDcontrol == 0               3.9800     6.4853   0.614
+LaggNnitrogen - LaggDcontrol == 0             -0.2335     9.5940  -0.024
+LaggNwater control - LaggDcontrol == 0        -2.7544     9.5940  -0.287
+LaggDwater control - LaggDnitrogen == 0       10.0861    11.2007   0.900
+LaggNcontrol - LaggDnitrogen == 0              6.4875     9.5473   0.680
+LaggNnitrogen - LaggDnitrogen == 0             2.2740    11.8801   0.191
+LaggNwater control - LaggDnitrogen == 0       -0.2469    11.8801  -0.021
+LaggNcontrol - LaggDwater control == 0        -3.5986     8.6873  -0.414
+LaggNnitrogen - LaggDwater control == 0       -7.8121    11.2007  -0.697
+LaggNwater control - LaggDwater control == 0 -10.3330    11.2007  -0.923
+LaggNnitrogen - LaggNcontrol == 0             -4.2135     9.5473  -0.441
+LaggNwater control - LaggNcontrol == 0        -6.7344     9.5473  -0.705
+LaggNwater control - LaggNnitrogen == 0       -2.5209    11.8801  -0.212
+                                             Pr(&gt;|z|)
+IhybDnitrogen - IhybDcontrol == 0               1.000
+IhybDwater control - IhybDcontrol == 0          1.000
+IhybNcontrol - IhybDcontrol == 0                0.997
+IhybNnitrogen - IhybDcontrol == 0               1.000
+IhybNwater control - IhybDcontrol == 0          0.999
+LaggDcontrol - IhybDcontrol == 0                0.999
+LaggDnitrogen - IhybDcontrol == 0               0.999
+LaggDwater control - IhybDcontrol == 0          1.000
+LaggNcontrol - IhybDcontrol == 0                1.000
+LaggNnitrogen - IhybDcontrol == 0               1.000
+LaggNwater control - IhybDcontrol == 0          0.998
+IhybDwater control - IhybDnitrogen == 0         1.000
+IhybNcontrol - IhybDnitrogen == 0               0.960
+IhybNnitrogen - IhybDnitrogen == 0              1.000
+IhybNwater control - IhybDnitrogen == 0         0.989
+LaggDcontrol - IhybDnitrogen == 0               0.991
+LaggDnitrogen - IhybDnitrogen == 0              0.995
+LaggDwater control - IhybDnitrogen == 0         1.000
+LaggNcontrol - IhybDnitrogen == 0               1.000
+LaggNnitrogen - IhybDnitrogen == 0              0.999
+LaggNwater control - IhybDnitrogen == 0         0.994
+IhybNcontrol - IhybDwater control == 0          0.998
+IhybNnitrogen - IhybDwater control == 0         1.000
+IhybNwater control - IhybDwater control == 0    1.000
+LaggDcontrol - IhybDwater control == 0          0.996
+LaggDnitrogen - IhybDwater control == 0         0.996
+LaggDwater control - IhybDwater control == 0    1.000
+LaggNcontrol - IhybDwater control == 0          1.000
+LaggNnitrogen - IhybDwater control == 0         0.999
+LaggNwater control - IhybDwater control == 0    0.995
+IhybNnitrogen - IhybNcontrol == 0               0.998
+IhybNwater control - IhybNcontrol == 0          1.000
+LaggDcontrol - IhybNcontrol == 0                0.141
+LaggDnitrogen - IhybNcontrol == 0               0.532
+LaggDwater control - IhybNcontrol == 0          0.984
+LaggNcontrol - IhybNcontrol == 0                0.479
+LaggNnitrogen - IhybNcontrol == 0               0.706
+LaggNwater control - IhybNcontrol == 0          0.513
+IhybNwater control - IhybNnitrogen == 0         1.000
+LaggDcontrol - IhybNnitrogen == 0               0.655
+LaggDnitrogen - IhybNnitrogen == 0              0.898
+LaggDwater control - IhybNnitrogen == 0         1.000
+LaggNcontrol - IhybNnitrogen == 0               0.960
+LaggNnitrogen - IhybNnitrogen == 0              0.967
+LaggNwater control - IhybNnitrogen == 0         0.887
+LaggDcontrol - IhybNwater control == 0          0.225
+LaggDnitrogen - IhybNwater control == 0         0.646
+LaggDwater control - IhybNwater control == 0    0.996
+LaggNcontrol - IhybNwater control == 0          0.636
+LaggNnitrogen - IhybNwater control == 0         0.806
+LaggNwater control - IhybNwater control == 0    0.627
+LaggDnitrogen - LaggDcontrol == 0               1.000
+LaggDwater control - LaggDcontrol == 0          0.999
+LaggNcontrol - LaggDcontrol == 0                1.000
+LaggNnitrogen - LaggDcontrol == 0               1.000
+LaggNwater control - LaggDcontrol == 0          1.000
+LaggDwater control - LaggDnitrogen == 0         0.999
+LaggNcontrol - LaggDnitrogen == 0               1.000
+LaggNnitrogen - LaggDnitrogen == 0              1.000
+LaggNwater control - LaggDnitrogen == 0         1.000
+LaggNcontrol - LaggDwater control == 0          1.000
+LaggNnitrogen - LaggDwater control == 0         1.000
+LaggNwater control - LaggDwater control == 0    0.999
+LaggNnitrogen - LaggNcontrol == 0               1.000
+LaggNwater control - LaggNcontrol == 0          1.000
+LaggNwater control - LaggNnitrogen == 0         1.000
+(Adjusted p values reported -- single-step method)</code></pre>
+<pre class="r"><code>#no significant p values :(
+  
+  #&quot;LaggDhigh - LaggDlow == 0&quot;,&quot;LaggNhigh - LaggNlow == 0&quot;, &quot;IhybNhigh - IhybNlow == 0&quot;, &quot;IhybDhigh - IhybDlow==0&quot;))))</code></pre>
+<div id="fix-indole" class="section level3">
+<h3>(fix indole)</h3>
+<pre class="r"><code>#SD - because indole model above not working, says SD=0 but not true
+#noaverage%&gt;% group_by(plantid,S.T.T) %&gt;% 
+  #summarise(SD=sd(indole), mean=mean(indole))</code></pre>
+<p>#compound changes (see below -&gt; individual compound changes)</p>
+</div>
+</div>
+<div id="greenhouse-compound-changes" class="section level1">
+<h1>Greenhouse compound changes</h1>
+<pre class="r"><code>#library(lme4)
+#library(lmerTest)
+#library(broom.mixed)
+#library(dplyr)
+
+
+#compoundmodels &lt;- bind_cols(vol, meta) %&gt;% 
+#  pivot_longer(all_of(colnames(vol)), names_to=&quot;chem&quot;, values_to=&quot;amount&quot;)%&gt;% # move volatiles into column
+#  group_by(species, time, chem) %&gt;%  #tells nest what to nest by species, time and chemical name
+#    nest() %&gt;% 
+#    mutate(model=map(data, ~lmer(sqrt(amount)~ treatment + (1|plantid), data=.x)),
+#           test=map(model, ~ tidy(anova(.x)))) #anova on each compound in each subset of species and time, stores in                                                                    column test
+#compoundtests &lt;- compoundmodels %&gt;% dplyr::select(test) %&gt;% 
+#  unnest(test) %&gt;% mutate(p.adjusted= p.adjust(p.value, method = &quot;bonferroni&quot;, n=108)) #read wiki page on false discovery
+
+#how much of a difference the treatment made
+#compoundchanges &lt;- compoundmodels %&gt;% mutate(coef= map(model, ~tidy(.x))) %&gt;% 
+#  dplyr::select(coef) %&gt;% unnest(coef) %&gt;%
+#  summarise(nitrogeneffect= estimate[1]/(estimate[1]+estimate[2]), p.value=p.value[2])  #nitrogeneffect = change of compound (i.e. X compound increased 3.2 fold in high nitrogen treatment
+# for nitrogeneffect subtract by 1 to get the % change</code></pre>
+</div>
+<div id="greenhouse--i.-tenuituba-day-volatiles" class="section level1">
+<h1>Greenhouse- I. tenuituba Day Volatiles</h1>
+<pre class="r"><code>TENdaytable&lt;-averageTENtable[averageTENmetadata$time==&quot;D&quot;,]
+TENdaymetadata&lt;-averageTENmetadata[averageTENmetadata$time==&quot;D&quot;,]
+
+TENcapday &lt;- capscale(sqrt(TENdaytable) ~ treatment , data = TENdaymetadata, distance = &quot;bray&quot;)
+
+anova(TENcapday, by=&quot;term&quot;)</code></pre>
+<pre><code>Permutation test for capscale under reduced model
+Terms added sequentially (first to last)
+Permutation: free
+Number of permutations: 999
+
+Model: capscale(formula = sqrt(TENdaytable) ~ treatment, data = TENdaymetadata, distance = &quot;bray&quot;)
+          Df SumOfSqs      F Pr(&gt;F)
+treatment  1  0.07079 0.6297  0.923
+Residual  17  1.91121              </code></pre>
+<pre class="r"><code>#p=0.86</code></pre>
+<p>#Greenhouse- I. tenuituba Night Volatiles</p>
+<pre class="r"><code>TENnighttable&lt;-averageTENtable[averageTENmetadata$time==&quot;N&quot;,]
+TENnightmetadata&lt;-averageTENmetadata[averageTENmetadata$time==&quot;N&quot;,]
+
+TENcapnight &lt;- capscale(sqrt(TENnighttable) ~  treatment, data = TENnightmetadata, distance = &quot;bray&quot;) #no interaction terms bc only looking at tenuituba at night
+
+anova(TENcapnight, by=&quot;term&quot;)</code></pre>
+<pre><code>Permutation test for capscale under reduced model
+Terms added sequentially (first to last)
+Permutation: free
+Number of permutations: 999
+
+Model: capscale(formula = sqrt(TENnighttable) ~ treatment, data = TENnightmetadata, distance = &quot;bray&quot;)
+          Df SumOfSqs      F Pr(&gt;F)
+treatment  1  0.06764 1.0801  0.339
+Residual  18  1.12725              </code></pre>
+<pre class="r"><code>#p=0.229</code></pre>
+</div>
+<div id="greenhouse--i.-aggregata-daytime-volatiles"
+class="section level1">
+<h1>Greenhouse- I. aggregata Daytime Volatiles</h1>
+<pre class="r"><code>averageaggmetadata&lt;- averagemetadata[averagemetadata$species==&quot;agg&quot;&amp; averagemetadata$time==&quot;D&quot;,]
+averageaggtable&lt;-averagetable[averagemetadata$species==&quot;agg&quot;&amp; averagemetadata$time==&quot;D&quot;,]
+
+agg.day.cap &lt;- capscale(sqrt(averageaggtable) ~ treatment, data = averageaggmetadata, distance = &quot;bray&quot;)
+
+#To get % explained (= eigenvalues) for each cap axis
+eig &lt;-eigenvals(agg.day.cap)
+axis.eig &lt;- eig/ sum(eig)
+print(axis.eig)</code></pre>
+<pre><code>     CAP1      MDS1      MDS2      MDS3      MDS4      MDS5      MDS6      MDS7 
+0.0954518 0.3680878 0.1656166 0.1423149 0.0594292 0.0427847 0.0291157 0.0250241 
+     MDS8      MDS9     MDS10     MDS11     MDS12     MDS13     MDS14     MDS15 
+0.0232478 0.0176035 0.0113037 0.0086766 0.0049457 0.0029320 0.0028166 0.0006493 </code></pre>
+<pre class="r"><code>#remotes::install_github(&quot;gavinsimpson/ggvegan&quot;)
+library(ggvegan)
+library(dplyr)
+
+cap.dataframe &lt;- fortify(agg.day.cap) #turns cap into data frame so you can run it in ggplot
+#autoplot(agg.day.cap) #plots cap
+
+
+##generate a plot in ggplot
+agg.Day.ordination = ggplot(bind_cols(filter(cap.dataframe, Score==&quot;sites&quot;),averageaggmetadata), aes(x=CAP1, y= MDS1, color = treatment)) + 
+  geom_point(size=2.6) +
+  theme_classic() + 
+  coord_fixed(xlim=c(-1.5, 2.9), ylim=c(-1, 2.4)) +
+  geom_hline(yintercept = 0, linetype=&quot;dotted&quot;) + 
+  geom_vline(xintercept = 0, linetype=&quot;dotted&quot;) +
+  labs(color = &quot;Treatment&quot;, fill = &quot;Treatment&quot;) +
+ # ggtitle(&quot;I. aggregata Daytime Volatiles&quot;) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  ylab(&quot;MDS1 (33.2% explained)&quot;) + 
+  xlab(&quot;CAP1 (12.5% explained)&quot;) + 
+  scale_color_manual(name=&quot;Nitrogen Level&quot;, labels= c(&quot;High&quot;, &quot;Low&quot;), values=c(&quot;tan2&quot;,&quot;cadetblue3&quot;)) +
+  labs(subtitle=&quot;ANOVA; previously p=0.021&quot;,hjust = 1)+ #adds subtitle at top of figure
+   theme(legend.title = element_text(size=12, color = &quot;black&quot;), legend.text=element_text(size=10),
+           legend.justification=c(0,1), 
+           legend.position=c(0.03, 0.95),
+           legend.background = element_blank(),
+           legend.key = element_blank(),
+            plot.subtitle = element_text(hjust = 1)) #moves subtitle to right side 
+  
+    
+print(agg.Day.ordination)</code></pre>
+<p><img src="plots-nitrogen/unnamed-chunk-10-1.svg" width="960" /></p>
+<pre class="r"><code>ggsave(agg.Day.ordination, file=&#39;agg_Day_ordinationplot.jpg&#39;, width=130, height=105, units= &#39;mm&#39;, dpi=300)
+
+###################################################
+
+#Compound names on ordination plot
+library(ggrepel) #makes it so labels don&#39;t overlap
+
+#TODO: fix ggplot of compound names
+ggplot(filter(cap.dataframe, Score==&quot;species&quot;, sqrt(CAP1^2+MDS1^2)&gt;0.2), aes(x=CAP1, y= MDS1)) + 
+  geom_point()+
+  geom_text_repel(aes(label=Label)) +
+  theme_classic() + 
+  #coord_fixed(xlim=c(-1.25, 1), ylim=c(-1.5, 0.4)) +#coord fixed evenly scales x&amp;y
+  geom_hline(yintercept = 0, linetype=&quot;dotted&quot;) + 
+  geom_vline(xintercept = 0, linetype=&quot;dotted&quot;) +
+  labs(color = &quot;Treatment&quot;, fill = &quot;Treatment&quot;) +
+ # ggtitle(&quot;I. aggregata Daytime Volatiles&quot;) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  ylab(&quot;MDS1&quot;) + 
+  xlab(&quot;CAP1&quot;) </code></pre>
+<p><img src="plots-nitrogen/unnamed-chunk-10-2.svg" width="960" /></p>
+<pre class="r"><code>#text(cap, display = &quot;species&quot;, col=&quot;grey50&quot;)
+#text(cap, display = &quot;cn&quot;, labels= c(&quot;Day&quot;,&quot;Night&quot;,&quot;High Nitrogen&quot;,&quot;Low Nitrogen&quot;), col=&quot;gray&quot;)
+########################################################
+
+anova(agg.day.cap, by=&quot;term&quot;)</code></pre>
+<pre><code>Permutation test for capscale under reduced model
+Terms added sequentially (first to last)
+Permutation: free
+Number of permutations: 999
+
+Model: capscale(formula = sqrt(averageaggtable) ~ treatment, data = averageaggmetadata, distance = &quot;bray&quot;)
+          Df SumOfSqs      F Pr(&gt;F)  
+treatment  1   0.1390 1.8994  0.079 .
+Residual  18   1.3173                
+---
+Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
+<pre class="r"><code>#p=0.021</code></pre>
+</div>
+<div id="greenhouse--i.-agg-night-time-volatiles-average"
+class="section level1">
+<h1>Greenhouse- I. agg Night time volatiles (average)</h1>
+<pre class="r"><code>averageaggmetadataNIGHT&lt;- averagemetadata[averagemetadata$species==&quot;agg&quot;&amp; averagemetadata$time==&quot;N&quot;,]
+averageaggtableNIGHT&lt;-averagetable[averagemetadata$species==&quot;agg&quot;&amp; averagemetadata$time==&quot;N&quot;,]
+
+agg.night.cap &lt;- capscale(sqrt(averageaggtableNIGHT) ~ treatment, data = averageaggmetadataNIGHT, distance = &quot;bray&quot;)
+
+#eig &lt;-eigenvals(agg.day.cap)
+#axis.eig &lt;- eig/ sum(eig)
+anova(agg.night.cap, by=&quot;term&quot;)</code></pre>
+<pre><code>Permutation test for capscale under reduced model
+Terms added sequentially (first to last)
+Permutation: free
+Number of permutations: 999
+
+Model: capscale(formula = sqrt(averageaggtableNIGHT) ~ treatment, data = averageaggmetadataNIGHT, distance = &quot;bray&quot;)
+          Df SumOfSqs     F Pr(&gt;F)
+treatment  1  0.03713 0.769  0.586
+Residual  18  0.86903             </code></pre>
+<pre class="r"><code>#p=0.593</code></pre>
+<p>#Field day and night emission rate</p>
+<p>#hybrid day emission rate</p>
+<pre class="r"><code>averageHYBmetadataDAY.field&lt;- averagemetadata.field[averagemetadata.field$species==&quot;Ihyb&quot;&amp; averagemetadata.field$time==&quot;D&quot;,]
+
+averageHYBtableDAY.field&lt;-averagetable.field[averagemetadata.field$species==&quot;Ihyb&quot;&amp; averagemetadata.field$time==&quot;D&quot;,]
+
+averageHYBday.field &lt;- bind_cols(averageHYBmetadataDAY.field, averageHYBtableDAY.field)# %&gt;%  #combines averaged meta data table and average volatile                                                                           list table together
+#  mutate(timetreatment=paste(time,treatment)) 
+
+
+ihyb.day.cap &lt;- capscale(sqrt(averageHYBtableDAY.field) ~ treatment, data = averageHYBmetadataDAY.field[, c(&quot;treatment&quot;)], distance = &quot;bray&quot;)
+
+#eigen values to get % explained
+#eig.ihyb.day &lt;-eigenvals(ihyb.day.cap)
+#axis.eig.ihyb.day &lt;- eig.ihyb.day/ sum(eig.ihyb.day)
+
+anova(ihyb.day.cap, by=&quot;term&quot;)</code></pre>
+<pre><code>Permutation test for capscale under reduced model
+Terms added sequentially (first to last)
+Permutation: free
+Number of permutations: 999
+
+Model: capscale(formula = sqrt(averageHYBtableDAY.field) ~ treatment, data = averageHYBmetadataDAY.field[, c(&quot;treatment&quot;)], distance = &quot;bray&quot;)
+          Df SumOfSqs      F Pr(&gt;F)
+treatment  2  0.14142 0.9087  0.558
+Residual  17  1.32286              </code></pre>
+<p>#hybrid night emission rate</p>
+<pre class="r"><code>averageHYBmetadataNIGHT.field&lt;- averagemetadata.field[averagemetadata.field$species==&quot;Ihyb&quot;&amp; averagemetadata.field$time==&quot;N&quot;,]
+
+averageHYBtableNIGHT.field&lt;-averagetable.field[averagemetadata.field$species==&quot;Ihyb&quot;&amp; averagemetadata.field$time==&quot;N&quot;,]
+
+averageHYBnight.field &lt;- bind_cols(averageHYBmetadataNIGHT.field, averageHYBtableNIGHT.field)# %&gt;%  #combines averaged meta data table and average volatile                                                                           list table together
+#  mutate(timetreatment=paste(time,treatment)) 
+
+
+ihyb.night.cap &lt;- capscale(sqrt(averageHYBtableNIGHT.field) ~ treatment, data = averageHYBmetadataNIGHT.field, distance = &quot;bray&quot;)
+
+#eigen values to get % explained
+#eig.ihyb.day &lt;-eigenvals(ihyb.day.cap)
+#axis.eig.ihyb.day &lt;- eig.ihyb.day/ sum(eig.ihyb.day)
+
+anova(ihyb.night.cap, by=&quot;term&quot;)</code></pre>
+<pre><code>Permutation test for capscale under reduced model
+Terms added sequentially (first to last)
+Permutation: free
+Number of permutations: 999
+
+Model: capscale(formula = sqrt(averageHYBtableNIGHT.field) ~ treatment, data = averageHYBmetadataNIGHT.field, distance = &quot;bray&quot;)
+          Df SumOfSqs      F Pr(&gt;F)
+treatment  2  0.05561 0.5959  0.887
+Residual  29  1.35334              </code></pre>
+<pre class="r"><code>#p=0.838</code></pre>
+<p>#Field Lagg emission rate day vs night</p>
+<p>#Field Lagg emission rate DAY</p>
+<pre class="r"><code>#Average Lagg for day and night
+averageLaggmetadata.field&lt;- averagemetadata.field[averagemetadata.field$species==&quot;Lagg&quot;,]
+
+averageLaggtable.field&lt;-averagetable.field[averagemetadata.field$species==&quot;Lagg&quot;,]
+
+#Average Lagg for DAY only
+averageLaggmetadataDAY.field&lt;- averagemetadata.field[averagemetadata.field$species==&quot;Lagg&quot;&amp; averagemetadata.field$time==&quot;D&quot;,]
+
+averageLaggtableDAY.field&lt;-averagetable.field[averagemetadata.field$species==&quot;Lagg&quot;&amp; averagemetadata.field$time==&quot;D&quot;,]
+
+averageLaggday.field &lt;- bind_cols(averageLaggmetadataDAY.field, averageLaggtableDAY.field)# %&gt;%  #combines averaged meta data table and average volatile                                                                           list table together
+#  mutate(timetreatment=paste(time,treatment)) 
+
+
+Lagg.day.cap &lt;- capscale(sqrt(averageLaggtableDAY.field) ~ treatment, data = averageLaggmetadataDAY.field[, c(&quot;treatment&quot;)], distance = &quot;bray&quot;)
+
+#eigen values to get % explained
+#eig.ihyb.day &lt;-eigenvals(ihyb.day.cap)
+#axis.eig.ihyb.day &lt;- eig.ihyb.day/ sum(eig.ihyb.day)
+
+anova(Lagg.day.cap, by=&quot;term&quot;)</code></pre>
+<pre><code>Permutation test for capscale under reduced model
+Terms added sequentially (first to last)
+Permutation: free
+Number of permutations: 999
+
+Model: capscale(formula = sqrt(averageLaggtableDAY.field) ~ treatment, data = averageLaggmetadataDAY.field[, c(&quot;treatment&quot;)], distance = &quot;bray&quot;)
+          Df SumOfSqs      F Pr(&gt;F)
+treatment  2  0.18196 0.9959  0.413
+Residual  34  3.10614              </code></pre>
+<pre class="r"><code>#p=0.417</code></pre>
+<p>#Field Lagg emission rate NIGHT</p>
+<pre class="r"><code>#average Lagg metadata and table for Night
+averageLaggmetadataNIGHT.field&lt;- averagemetadata.field[averagemetadata.field$species==&quot;Lagg&quot;&amp; averagemetadata.field$time==&quot;N&quot;,]
+
+averageLaggtableNIGHT.field&lt;-averagetable.field[averagemetadata.field$species==&quot;Lagg&quot;&amp; averagemetadata.field$time==&quot;N&quot;,]
+
+
+averageLaggnight.field &lt;- bind_cols(averageLaggmetadataNIGHT.field, averageLaggtableNIGHT.field)# %&gt;%  #combines averaged meta data table and average volatile                                                                           list table together
+#  mutate(timetreatment=paste(time,treatment)) 
+
+
+Lagg.night.cap &lt;- capscale(sqrt(averageLaggtableNIGHT.field) ~ treatment, data = averageLaggmetadataNIGHT.field, distance = &quot;bray&quot;)
+
+#eigen values to get % explained
+#eig.ihyb.day &lt;-eigenvals(ihyb.day.cap)
+#axis.eig.ihyb.day &lt;- eig.ihyb.day/ sum(eig.ihyb.day)
+
+anova(Lagg.night.cap, by=&quot;term&quot;)</code></pre>
+<pre><code>Permutation test for capscale under reduced model
+Terms added sequentially (first to last)
+Permutation: free
+Number of permutations: 999
+
+Model: capscale(formula = sqrt(averageLaggtableNIGHT.field) ~ treatment, data = averageLaggmetadataNIGHT.field, distance = &quot;bray&quot;)
+          Df SumOfSqs      F Pr(&gt;F)
+treatment  2   0.2457 1.2242  0.268
+Residual  33   3.3118              </code></pre>
+<pre class="r"><code>#p=0.253</code></pre>
+</div>
+<div id="total-emissions" class="section level1">
+<h1>Total emissions</h1>
+</div>
+<div id="greenhouse--total-emissions" class="section level1">
+<h1>Greenhouse- total emissions</h1>
+<pre class="r"><code>#Need average agg and ten for boxplot 
+averageaggmetadata$totalemssions &lt;-rowSums(averageaggtable) #sums rows of volatiles to get total emissions (via adding all peak areas) for each sample
+
+meta$totalemission &lt;- rowSums(vol)  #attatches row sums to metadata 
+
+total.emission.model &lt;-lmer(totalemission~treatment*species*time + (1|plantid), data=meta) #models looks at total emissions as a function of treatment*species*time with plantid as a random effect
+Anova(total.emission.model, type=3) #type 3 anova on the model to get p-value</code></pre>
+<pre><code>Analysis of Deviance Table (Type III Wald chisquare tests)
+
+Response: totalemission
+                         Chisq Df Pr(&gt;Chisq)    
+(Intercept)             8.0722  1  0.0044949 ** 
+treatment               0.0431  1  0.8355384    
+species                 0.4389  1  0.5076353    
+time                   11.1182  1  0.0008548 ***
+treatment:species       0.2822  1  0.5952734    
+treatment:time          0.8751  1  0.3495351    
+species:time            0.1787  1  0.6725150    
+treatment:species:time  0.0947  1  0.7582461    
+---
+Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
+<pre class="r"><code>##############################################
+#boxplot of Total emissions for Agg and Ten day &amp; night
+
+facet.labs &lt;- c(agg=&quot;I. aggregata&quot;, ten=&quot;I. tenuituba&quot;)
+
+plot.total.emissions=
+  ggplot(meta, aes( y= totalemission, x=time, #could do with average metadata instead of all data points in meta
+  color=treatment))+
+  geom_boxplot(position=position_dodge(width=0.9))+
+  geom_point (position=position_dodge(width=0.9))+ #makes it so point don&#39;t overlap
+  scale_y_sqrt()+
+  ylab(&quot;Total Emissions&quot;)+
+  xlab(&quot;&quot;) +
+  facet_wrap(vars(species)) +
+    facet_grid(. ~ species, labeller=labeller(species = facet.labs))+ 
+    theme(panel.border = element_blank(),
+      panel.grid.major = element_line(colour=&quot;white&quot;),
+      #panel.grid.minor = element_blank(),
+      panel.background = element_rect(fill = &quot;gray96&quot;,
+                                #colour = &quot;lightblue&quot;,
+                                  linetype = &quot;solid&quot;),
+      strip.text.x = element_text(size=11),
+      strip.background = element_rect(colour=&quot;white&quot;, fill=&quot;white&quot;))+
+    scale_color_manual(name=&quot;Nitrogen Level&quot;, 
+        labels= c(&quot;High&quot;,  &quot;Low&quot;), 
+        values=c(&quot;tan2&quot;,&quot;cadetblue3&quot;))+
+    theme(legend.title = element_text(size=11, color = &quot;black&quot;),
+        legend.text=element_text(size=9))+
+  scale_x_discrete(labels=c(&#39;Day&#39;, &#39;Night&#39;, &#39;Day&#39;,&#39;Night&#39;))
+
+print(plot.total.emissions)   </code></pre>
+<p><img src="plots-nitrogen/unnamed-chunk-16-1.svg" width="960" /></p>
+<pre class="r"><code>#ggsave(plot.total.emissions, file=&#39;total_emissions_boxplot.jpg&#39;, width=150, height=110, units= &#39;mm&#39;, dpi=300)
+
+#######################################
+meta$S.T.T &lt;- paste0(meta$species, meta$time, meta$treatment) #add column with species, treatment and time to metadata. Need for glht
+
+#finding p-values to compare treatment within each of the four groups
+total.emission.model2 &lt;-lmer(totalemission~S.T.T + (1|plantid), data=meta)
+
+Anova(total.emission.model2, type=3)</code></pre>
+<pre><code>Analysis of Deviance Table (Type III Wald chisquare tests)
+
+Response: totalemission
+              Chisq Df Pr(&gt;Chisq)    
+(Intercept)  8.0722  1   0.004495 ** 
+S.T.T       36.1195  7  6.883e-06 ***
+---
+Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
+<pre class="r"><code>#library(multcomp)
+
+#general linear hypotheses
+  #subtracts means from different groups (like Agg day low - agg day high) c
+      #can specify which group like below or write linfct=mcp(model =&quot;Tukey&quot;))
+  # summary () gives you p-values
+
+
+multcomp:::summary.glht(multcomp::glht(total.emission.model2, linfct=multcomp::mcp(S.T.T= 
+                                           c(&quot;aggDlow - aggDhigh == 0&quot;,
+                                             &quot;aggNlow-aggNhigh==0&quot;, 
+                                             &quot;tenDlow-tenDhigh==0&quot;,
+                                             &quot;tenNlow-tenNhigh==0&quot;))),                                                               test=multcomp::adjusted(type=&quot;fdr&quot;))</code></pre>
+<pre><code>
+     Simultaneous Tests for General Linear Hypotheses
+
+Multiple Comparisons of Means: User-defined Contrasts
+
+
+Fit: lmer(formula = totalemission ~ S.T.T + (1 | plantid), data = meta)
+
+Linear Hypotheses:
+                        Estimate Std. Error z value Pr(&gt;|z|)
+aggDlow - aggDhigh == 0  -201312     969693  -0.208    0.836
+aggNlow - aggNhigh == 0 -1335588     890266  -1.500    0.388
+tenDlow - tenDhigh == 0   538052     998467   0.539    0.787
+tenNlow - tenNhigh == 0 -1123918     865760  -1.298    0.388
+(Adjusted p values reported -- fdr method)</code></pre>
+<pre class="r"><code>#total emissions change at night time between high and low in agg p=0.0349</code></pre>
+</div>
+<div id="field--total-emissions" class="section level1">
+<h1>Field- total emissions</h1>
+<pre class="r"><code>#average Ihyb total emissions = row sums 
+averageHYBmetadata.field$totalemssions &lt;-rowSums(averageHYBtable.field) #sums rows of volatiles to get total emissions (via adding all peak areas) for each sample
+
+#average Lagg total emissions = row sums 
+averageLaggmetadata.field$totalemssions &lt;-rowSums(averageLaggtable.field)
+
+meta.field$totalemission &lt;- rowSums(vol.field)  #attatches row sums to metadata 
+
+total.emission.model.field &lt;-lmer(totalemission~treatment*species*time + (1|plantid), data=meta.field) #models looks at total emissions as a function of treatment*species*time with plantid as a random effect
+Anova(total.emission.model.field, type=3) #type 3 anova on the model to get p-value</code></pre>
+<pre><code>Analysis of Deviance Table (Type III Wald chisquare tests)
+
+Response: totalemission
+                         Chisq Df Pr(&gt;Chisq)    
+(Intercept)             0.9679  1  0.3252107    
+treatment               0.2055  2  0.9023493    
+species                 0.1401  1  0.7081827    
+time                   12.0227  1  0.0005256 ***
+treatment:species       0.0309  2  0.9846778    
+treatment:time          0.7559  2  0.6852486    
+species:time            3.5592  1  0.0592156 .  
+treatment:species:time  1.1075  2  0.5747836    
+---
+Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
+<pre class="r"><code>#time p= 0.00053
+
+##############################################
+#boxplot of Total emissions for Agg and Ten day &amp; night
+
+facet.labs &lt;- c(Lagg=&quot;I. aggregata&quot;, Ihyb=&quot;Hybrids&quot;)
+
+plot.total.emissions.field=
+  ggplot(meta.field, aes( y= totalemission, x=time, #could do with average metadata instead of all data points in meta
+  color=treatment))+
+  geom_boxplot(position=position_dodge(width=0.9))+
+  geom_point (position=position_dodge(width=0.9))+ #makes it so point don&#39;t overlap
+  scale_y_sqrt()+
+  ylab(&quot;Total Emissions&quot;)+
+  xlab(&quot;&quot;) +
+  facet_wrap(vars(species)) +
+    facet_grid(. ~ species, labeller=labeller(species = facet.labs))+ 
+    theme(panel.border = element_blank(),
+      panel.grid.major = element_line(colour=&quot;white&quot;),
+      #panel.grid.minor = element_blank(),
+      panel.background = element_rect(fill = &quot;gray96&quot;,
+                                #colour = &quot;lightblue&quot;,
+                                  linetype = &quot;solid&quot;),
+      strip.text.x = element_text(size=11),
+      strip.background = element_rect(colour=&quot;white&quot;, fill=&quot;white&quot;))+
+    scale_color_manual(name=&quot;Nitrogen Level&quot;, 
+        #labels= c(&quot;High&quot;,  &quot;Low&quot;), #Specifies treatment names in legend
+        values=c(&quot;pink&quot;,&quot;tan2&quot;,&quot;cadetblue3&quot;))+
+    theme(legend.title = element_text(size=11, color = &quot;black&quot;),
+        legend.text=element_text(size=9))+
+  scale_x_discrete(labels=c(&#39;Day&#39;, &#39;Night&#39;, &#39;Day&#39;,&#39;Night&#39;))
+
+print(plot.total.emissions.field)   </code></pre>
+<p><img src="plots-nitrogen/unnamed-chunk-17-1.svg" width="960" /></p>
+<pre class="r"><code>#ggsave(plot.total.emissions, file=&#39;total_emissions_boxplot.jpg&#39;, width=150, height=110, units= &#39;mm&#39;, dpi=300)
+
+#######################################
+
+#glht for field total emissions 
+meta.field$S.T.T &lt;- paste0(meta.field$species, meta.field$time, meta.field$treatment) #add column with species, treatment and time to metadata. Need for glht
+
+#finding p-values to compare treatment within each of the four groups 
+total.emission.model2.field &lt;-lmer(totalemission~S.T.T + (1|plantid), data=meta.field)
+
+Anova(total.emission.model2.field, type=3)</code></pre>
+<pre><code>Analysis of Deviance Table (Type III Wald chisquare tests)
+
+Response: totalemission
+              Chisq Df Pr(&gt;Chisq)    
+(Intercept)  0.9679  1     0.3252    
+S.T.T       50.0577 11  6.112e-07 ***
+---
+Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
+<pre class="r"><code>#library(multcomp)
+
+#general linear hypotheses
+  #subtracts means from different groups (like Agg day low - agg day high) c
+      #can specify which group like below or write linfct=mcp(model =&quot;Tukey&quot;))
+  # summary () gives you p-values
+summary(multcomp::glht(total.emission.model2.field, linfct=multcomp::mcp(S.T.T= &quot;Tukey&quot;)),
+                                          # c(&quot;IhybDnitrogen - IhybDcontrol == 0&quot;, &quot;IhybDnitrogen - IhybDwater control == 0&quot;, &quot;IhybDcontrol - IhybDwater control == 0&quot;, &quot;IhybNnitrogen - IhybNcontrol == 0&quot;, &quot;IhybNnitrogen - IhybNwater control == 0&quot;, &quot;IhybNcontrol - IhybNwater control == 0&quot;,&quot;LaggDnitrogen - LaggDcontrol == 0 &quot;, &quot;LaggDnitrogen - LaggDwater control == 0 &quot;, &quot;LaggDwater control - LaggDcontrol == 0 &quot;,&quot;LaggNnitrogen - LaggNcontrol == 0 &quot;, &quot;LaggNnitrogen - LaggNwater control == 0 &quot;, &quot;LaggNwater control - LaggNcontrol == 0 &quot;))),                                                              
+  test=multcomp::adjusted(type=&quot;fdr&quot;))</code></pre>
+<pre><code>
+     Simultaneous Tests for General Linear Hypotheses
+
+Multiple Comparisons of Means: Tukey Contrasts
+
+
+Fit: lmer(formula = totalemission ~ S.T.T + (1 | plantid), data = meta.field)
+
+Linear Hypotheses:
+                                             Estimate Std. Error z value
+IhybDnitrogen - IhybDcontrol == 0              214454    1047588   0.205
+IhybDwater control - IhybDcontrol == 0        -238115    1199561  -0.199
+IhybNcontrol - IhybDcontrol == 0              3354196     967359   3.467
+IhybNnitrogen - IhybDcontrol == 0             2542854     974428   2.610
+IhybNwater control - IhybDcontrol == 0        2296393     977954   2.348
+LaggDcontrol - IhybDcontrol == 0               372316     994706   0.374
+LaggDnitrogen - IhybDcontrol == 0              453568    1232932   0.368
+LaggDwater control - IhybDcontrol == 0         271032    1160024   0.234
+LaggNcontrol - IhybDcontrol == 0              1513863     990188   1.529
+LaggNnitrogen - IhybDcontrol == 0             2453682    1230008   1.995
+LaggNwater control - IhybDcontrol == 0         990221    1230015   0.805
+IhybDwater control - IhybDnitrogen == 0       -452569    1008621  -0.449
+IhybNcontrol - IhybDnitrogen == 0             3139742     745207   4.213
+IhybNnitrogen - IhybDnitrogen == 0            2328400     701255   3.320
+IhybNwater control - IhybDnitrogen == 0       2081939     730742   2.849
+LaggDcontrol - IhybDnitrogen == 0              157862     753600   0.209
+LaggDnitrogen - IhybDnitrogen == 0             239114    1048138   0.228
+LaggDwater control - IhybDnitrogen == 0         56578     961316   0.059
+LaggNcontrol - IhybDnitrogen == 0             1299409     747626   1.738
+LaggNnitrogen - IhybDnitrogen == 0            2239228    1044697   2.143
+LaggNwater control - IhybDnitrogen == 0        775767    1044705   0.743
+IhybNcontrol - IhybDwater control == 0        3592311     947016   3.793
+IhybNnitrogen - IhybDwater control == 0       2780969     932431   2.982
+IhybNwater control - IhybDwater control == 0  2534508     911306   2.781
+LaggDcontrol - IhybDwater control == 0         610432     953634   0.640
+LaggDnitrogen - IhybDwater control == 0        691683    1200041   0.576
+LaggDwater control - IhybDwater control == 0   509147    1125004   0.453
+LaggNcontrol - IhybDwater control == 0        1751978     948920   1.846
+LaggNnitrogen - IhybDwater control == 0       2691797    1197037   2.249
+LaggNwater control - IhybDwater control == 0  1228336    1197044   1.026
+IhybNnitrogen - IhybNcontrol == 0             -811342     638281  -1.271
+IhybNwater control - IhybNcontrol == 0       -1057803     643651  -1.643
+LaggDcontrol - IhybNcontrol == 0             -2981880     668829  -4.458
+LaggDnitrogen - IhybNcontrol == 0            -2900628     988945  -2.933
+LaggDwater control - IhybNcontrol == 0       -3083164     896408  -3.439
+LaggNcontrol - IhybNcontrol == 0             -1840333     662091  -2.780
+LaggNnitrogen - IhybNcontrol == 0             -900514     985298  -0.914
+LaggNwater control - IhybNcontrol == 0       -2363975     985306  -2.399
+IhybNwater control - IhybNnitrogen == 0       -246461     621626  -0.396
+LaggDcontrol - IhybNnitrogen == 0            -2170537     648060  -3.349
+LaggDnitrogen - IhybNnitrogen == 0           -2089286     975019  -2.143
+LaggDwater control - IhybNnitrogen == 0      -2271821     881021  -2.579
+LaggNcontrol - IhybNnitrogen == 0            -1028991     641103  -1.605
+LaggNnitrogen - IhybNnitrogen == 0             -89172     971319  -0.092
+LaggNwater control - IhybNnitrogen == 0      -1552633     971328  -1.598
+LaggDcontrol - IhybNwater control == 0       -1924076     653349  -2.945
+LaggDnitrogen - IhybNwater control == 0      -1842825     978543  -1.883
+LaggDwater control - IhybNwater control == 0 -2025361     884919  -2.289
+LaggNcontrol - IhybNwater control == 0        -782530     646450  -1.211
+LaggNnitrogen - IhybNwater control == 0        157289     974856   0.161
+LaggNwater control - IhybNwater control == 0 -1306172     974865  -1.340
+LaggDnitrogen - LaggDcontrol == 0               81251     995285   0.082
+LaggDwater control - LaggDcontrol == 0        -101284     903398  -0.112
+LaggNcontrol - LaggDcontrol == 0              1141546     663134   1.721
+LaggNnitrogen - LaggDcontrol == 0             2081365     991660   2.099
+LaggNwater control - LaggDcontrol == 0         617904     991669   0.623
+LaggDwater control - LaggDnitrogen == 0       -182535    1160520  -0.157
+LaggNcontrol - LaggDnitrogen == 0             1060295     990769   1.070
+LaggNnitrogen - LaggDnitrogen == 0            2000114    1218295   1.642
+LaggNwater control - LaggDnitrogen == 0        536653    1230483   0.436
+LaggNcontrol - LaggDwater control == 0        1242830     898420   1.383
+LaggNnitrogen - LaggDwater control == 0       2182650    1157414   1.886
+LaggNwater control - LaggDwater control == 0   719188    1139920   0.631
+LaggNnitrogen - LaggNcontrol == 0              939819     987128   0.952
+LaggNwater control - LaggNcontrol == 0        -523642     987137  -0.530
+LaggNwater control - LaggNnitrogen == 0      -1463461    1227553  -1.192
+                                             Pr(&gt;|z|)    
+IhybDnitrogen - IhybDcontrol == 0            0.926918    
+IhybDwater control - IhybDcontrol == 0       0.926918    
+IhybNcontrol - IhybDcontrol == 0             0.007694 ** 
+IhybNnitrogen - IhybDcontrol == 0            0.042736 *  
+IhybNwater control - IhybDcontrol == 0       0.073246 .  
+LaggDcontrol - IhybDcontrol == 0             0.855558    
+LaggDnitrogen - IhybDcontrol == 0            0.855558    
+LaggDwater control - IhybDcontrol == 0       0.926918    
+LaggNcontrol - IhybDcontrol == 0             0.252596    
+LaggNnitrogen - IhybDcontrol == 0            0.132170    
+LaggNwater control - IhybDcontrol == 0       0.645867    
+IhybDwater control - IhybDnitrogen == 0      0.841171    
+IhybNcontrol - IhybDnitrogen == 0            0.000831 ***
+IhybNnitrogen - IhybDnitrogen == 0           0.008477 ** 
+IhybNwater control - IhybDnitrogen == 0      0.026308 *  
+LaggDcontrol - IhybDnitrogen == 0            0.926918    
+LaggDnitrogen - IhybDnitrogen == 0           0.926918    
+LaggDwater control - IhybDnitrogen == 0      0.953068    
+LaggNcontrol - IhybDnitrogen == 0            0.200760    
+LaggNnitrogen - IhybDnitrogen == 0           0.100973    
+LaggNwater control - IhybDnitrogen == 0      0.686613    
+IhybNcontrol - IhybDwater control == 0       0.003271 ** 
+IhybNnitrogen - IhybDwater control == 0      0.022153 *  
+IhybNwater control - IhybDwater control == 0 0.027633 *  
+LaggDcontrol - IhybDwater control == 0       0.748780    
+LaggDnitrogen - IhybDwater control == 0      0.775990    
+LaggDwater control - IhybDwater control == 0 0.841171    
+LaggNcontrol - IhybDwater control == 0       0.164621    
+LaggNnitrogen - IhybDwater control == 0      0.085211 .  
+LaggNwater control - IhybDwater control == 0 0.502962    
+IhybNnitrogen - IhybNcontrol == 0            0.373413    
+IhybNwater control - IhybNcontrol == 0       0.221420    
+LaggDcontrol - IhybNcontrol == 0             0.000545 ***
+LaggDnitrogen - IhybNcontrol == 0            0.022153 *  
+LaggDwater control - IhybNcontrol == 0       0.007694 ** 
+LaggNcontrol - IhybNcontrol == 0             0.027633 *  
+LaggNnitrogen - IhybNcontrol == 0            0.566881    
+LaggNwater control - IhybNcontrol == 0       0.067772 .  
+IhybNwater control - IhybNnitrogen == 0      0.855558    
+LaggDcontrol - IhybNnitrogen == 0            0.008477 ** 
+LaggDnitrogen - IhybNnitrogen == 0           0.100973    
+LaggDwater control - IhybNnitrogen == 0      0.043646 *  
+LaggNcontrol - IhybNnitrogen == 0            0.226751    
+LaggNnitrogen - IhybNnitrogen == 0           0.949320    
+LaggNwater control - IhybNnitrogen == 0      0.226751    
+LaggDcontrol - IhybNwater control == 0       0.022153 *  
+LaggDnitrogen - IhybNwater control == 0      0.157525    
+LaggDwater control - IhybNwater control == 0 0.081010 .  
+LaggNcontrol - IhybNwater control == 0       0.403288    
+LaggNnitrogen - IhybNwater control == 0      0.931471    
+LaggNwater control - IhybNwater control == 0 0.339984    
+LaggDnitrogen - LaggDcontrol == 0            0.949320    
+LaggDwater control - LaggDcontrol == 0       0.949320    
+LaggNcontrol - LaggDcontrol == 0             0.200760    
+LaggNnitrogen - LaggDcontrol == 0            0.107485    
+LaggNwater control - LaggDcontrol == 0       0.748780    
+LaggDwater control - LaggDnitrogen == 0      0.931471    
+LaggNcontrol - LaggDnitrogen == 0            0.481531    
+LaggNnitrogen - LaggDnitrogen == 0           0.221420    
+LaggNwater control - LaggDnitrogen == 0      0.841171    
+LaggNcontrol - LaggDwater control == 0       0.323317    
+LaggNnitrogen - LaggDwater control == 0      0.157525    
+LaggNwater control - LaggDwater control == 0 0.748780    
+LaggNnitrogen - LaggNcontrol == 0            0.549023    
+LaggNwater control - LaggNcontrol == 0       0.802492    
+LaggNwater control - LaggNnitrogen == 0      0.405017    
+---
+Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+(Adjusted p values reported -- fdr method)</code></pre>
+<pre class="r"><code>#TODO: fix so has both species
+#plot total emissions for each compound present 
+plot.total.emissions.field.pretty=
+  ggplot(meta.field, aes( y= totalemission, x=str_to_title(species), #could do with average metadata instead of all data points in meta
+  color=str_to_title(treatment)))+
+  #annotate(geom=&quot;rect&quot;, ymin = 0, ymax = Inf, xmin=2.5, xmax=6)+
+  geom_boxplot(position=position_dodge(width=0.9))+
+ # geom_point (position=position_dodge(width=0.9))+ #makes it so point don&#39;t overlap
+  scale_y_sqrt()+
+  ylab(&quot;Total Emissions&quot;)+
+  xlab(&quot;Species&quot;) +
+    #theme(panel.border = element_blank(),
+     # panel.grid.major = element_line(colour=&quot;white&quot;),
+      #panel.grid.minor = element_blank(),
+     # panel.background = element_rect(fill = &quot;gray96&quot;,
+                                #colour = &quot;lightblue&quot;,
+      #                            linetype = &quot;solid&quot;),
+     # strip.text.x = element_text(size=11),
+     # strip.background = element_rect(colour=&quot;white&quot;, fill=&quot;white&quot;))+
+    #scale_color_manual(name=&quot;Nitrogen Level&quot;, 
+     #   labels= c(&quot;High&quot;,  &quot;Low&quot;), 
+      #  values=c(&quot;tan2&quot;,&quot;cadetblue3&quot;))+
+    theme_minimal()+
+    theme(legend.title = element_text(size=11, color = &quot;black&quot;), panel.grid.major.x=element_blank(),
+        legend.text=element_text(size=9), legend.position = &quot;bottom&quot;)+
+ # scale_x_discrete(labels=c(&#39;Day&#39;, &#39;Night&#39;, &#39;Day&#39;,&#39;Night&#39;))+
+  labs(color=&quot;Treatment&quot;)+
+   scale_color_manual(values = c(&quot;orange&quot;,&quot;purple&quot;,&quot;magenta&quot;))+
+ # scale_fill_manual(values = c(&quot;white&quot;,&quot;grey90&quot;))+
+  facet_wrap(vars(time), labeller = as_labeller(c(D=&quot;Day&quot;, N=&quot;Night&quot;)))
+
+print(plot.total.emissions.field.pretty)</code></pre>
+<p><img src="plots-nitrogen/unnamed-chunk-17-2.svg" width="960" /></p>
+</div>
+<div
+id="individual-compound-change-for-treatment-based-on-species-and-time"
+class="section level1">
+<h1>Individual compound change for treatment based on species and
+time</h1>
+</div>
+<div id="greenhouse--individual-compound-change-for-treatment"
+class="section level1">
+<h1>Greenhouse- individual compound change for treatment</h1>
+<pre class="r"><code>dominantvocs &lt;-averagePlant%&gt;% pivot_longer(any_of(colnames(vol)))%&gt;%     group_by(species,time,treatment,name)%&gt;% 
+   summarise(value=mean(value))%&gt;%
+   # mutate(value=value/sum(value))%&gt;% #adds up values for each treatment
+  arrange(species, time, treatment, desc(value))
+
+ggplot(dominantvocs, aes(y=fct_reorder(name, value), x=value, color=treatment, shape=time))+
+         geom_point()+ #plots points
+    scale_x_sqrt()+ #scales x axis so you can see small peak area dots
+    facet_wrap(vars(species))+ #makes two pannels, agg and ten
+    scale_color_manual(values=c(&quot;orange&quot;,&quot;lightblue&quot;))+ #manually change colros
+    theme_minimal() #removed grey from background</code></pre>
+<p><img src="plots-nitrogen/unnamed-chunk-18-1.svg" width="960" /></p>
+</div>
+<div id="field--individual-compound-change-for-treatment"
+class="section level1">
+<h1>Field- individual compound change for treatment</h1>
+<pre class="r"><code>dominantvocs.field &lt;-averagePlant.field%&gt;% pivot_longer(any_of(colnames(vol.field)))%&gt;%     group_by(species,time,treatment,name)%&gt;% 
+   summarise(value=mean(value))%&gt;%
+   # mutate(value=value/sum(value))%&gt;% #adds up values for each treatment
+  arrange(species, time, treatment, desc(value))
+
+ggplot(dominantvocs.field, aes(y=fct_reorder(name, value), x=value, color=treatment, shape=time))+
+         geom_point()+ #plots points
+    scale_x_sqrt()+ #scales x axis so you can see small peak area dots
+    facet_wrap(vars(species))+ #makes two pannels, agg and ten
+    scale_color_manual(values=c(&quot;pink&quot;,&quot;orange&quot;,&quot;lightblue&quot;))+ #manually change colros
+    theme_minimal() #removed grey from background</code></pre>
+<p><img src="plots-nitrogen/unnamed-chunk-19-1.svg" width="960" /></p>
+<p>#anova on specific/individual compounds</p>
+</div>
+<div id="greenhouse-anova-on-specificindividual-compounds"
+class="section level1">
+<h1>Greenhouse-anova on specific/individual compounds</h1>
+<pre class="r"><code>#library(broom.mixed)
+#library(dplyr)
+#library(lme4)
+
+#individualcompoundpvalue &lt;- bind_cols(meta, vol) %&gt;% 
+#  pivot_longer(all_of(colnames(vol))) %&gt;%
+#  group_by(species,time, name)%&gt;%
+#  nest() %&gt;% mutate(model=map(data, ~lmer(value~ treatment + (1|plantid), data=.x))) %&gt;%  
+
+# mutate adds column, we are adding model column; map runs a for loop through data column  only once; value = emission rate in ng/hr; ~ says run this function; .x is empty data frame model stores values in
+  
+#  mutate(test=map(model, ~tidy(anova(.x)))) %&gt;% 
+#  dplyr::select(test) %&gt;%   #select(test) makes unnesting happier
+#  unnest()%&gt;% ungroup()%&gt;%                         
+ # mutate(p.adjusted=p.adjust(p.value, method=&quot;fdr&quot;)) #p.adjust adjusts p-value
+
+#View(individualcompoundpvalue)</code></pre>
+</div>
+<div id="relative-amount" class="section level1">
+<h1>Relative Amount</h1>
+</div>
+<div id="greenhouse--relative-amount" class="section level1">
+<h1>Greenhouse- relative amount</h1>
+<pre class="r"><code>library(vegan)
+library(dplyr)
+
+# Total relative amount divide by margin total 
+relativeamount.vol &lt;- decostand(vol, &quot;total&quot;)
+
+relativeamount &lt;- bind_cols(meta, relativeamount.vol) %&gt;% 
+   pivot_longer(all_of(colnames(vol))) %&gt;% 
+  group_by(species,time, name)%&gt;% 
+   dplyr::select(species, time, treatment, plantid, name, value)  
+
+#View(relativeamount)
+
+# Relative amount presents/ absents 0s &amp; 1s 
+relativeamountPA &lt;- decostand(vol, &quot;pa&quot;)
+
+#View(relativeamountPA)
+
+#cap on relative amount (with Square root transform) 
+rel.amount.cap &lt;- capscale(sqrt(relativeamount.vol) ~ treatment, data = meta, distance = &quot;bray&quot;)
+
+rel.amount.dataframe &lt;- fortify(rel.amount.cap)
+rel.amount.ordination = ggplot(bind_cols(filter(rel.amount.dataframe, Score==&quot;sites&quot;),meta), aes(x=CAP1, y= MDS1, color = treatment)) + 
+  geom_point(size=2.6) +
+  theme_classic() + 
+  coord_fixed(xlim=c(-1.5, 2.9), ylim=c(-1, 2.4)) +
+  geom_hline(yintercept = 0, linetype=&quot;dotted&quot;) + 
+  geom_vline(xintercept = 0, linetype=&quot;dotted&quot;) +
+  labs(color = &quot;Treatment&quot;, fill = &quot;Treatment&quot;) +
+ # ggtitle(&quot;I. aggregata Daytime Volatiles&quot;) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  ylab(&quot;MDS1 (% explained)&quot;) + 
+  xlab(&quot;CAP1 (% explained)&quot;) + 
+  scale_color_manual(name=&quot;Nitrogen Level&quot;, labels= c(&quot;High&quot;, &quot;Low&quot;), values=c(&quot;tan2&quot;,&quot;cadetblue3&quot;)) +
+  labs(subtitle=&quot;ANOVA; p=0.264&quot;,hjust = 1)+ #adds subtitle at top of figure
+   theme(legend.title = element_text(size=12, color = &quot;black&quot;), legend.text=element_text(size=10),
+           legend.justification=c(0,1), 
+           legend.position=c(0.03, 0.95),
+           legend.background = element_blank(),
+           legend.key = element_blank(),
+            plot.subtitle = element_text(hjust = 1)) #moves subtitle to right side 
+  
+    
+print(rel.amount.ordination)</code></pre>
+<p><img src="plots-nitrogen/unnamed-chunk-21-1.svg" width="960" /></p>
+<pre class="r"><code>anova(rel.amount.cap, by=&quot;term&quot;)</code></pre>
+<pre><code>Permutation test for capscale under reduced model
+Terms added sequentially (first to last)
+Permutation: free
+Number of permutations: 999
+
+Model: capscale(formula = sqrt(relativeamount.vol) ~ treatment, data = meta, distance = &quot;bray&quot;)
+           Df SumOfSqs     F Pr(&gt;F)
+treatment   1   0.1897 1.409  0.155
+Residual  215  28.9530             </code></pre>
+<pre class="r"><code>#p= 0.152</code></pre>
+</div>
+<div id="field--relative-amount" class="section level1">
+<h1>Field- relative amount</h1>
+<pre class="r"><code>library(vegan)
+library(dplyr)
+
+# Total relative amount divide by margin total 
+relativeamount.vol.field &lt;- decostand(vol.field, &quot;total&quot;)
+
+relativeamount.field &lt;- bind_cols(meta.field, relativeamount.vol.field) %&gt;% 
+   pivot_longer(all_of(colnames(vol.field))) %&gt;% 
+  group_by(species,time, name)%&gt;% 
+   dplyr::select(species, time, treatment, plantid, name, value)  
+
+#View(relativeamount.field)
+
+# Relative amount presents/ absents 0s &amp; 1s 
+relativeamountPA.field &lt;- decostand(vol.field, &quot;pa&quot;)
+
+#View(relativeamountPA.field)
+
+#cap on relative amount (with Square root transform) 
+rel.amount.cap.field &lt;- capscale(sqrt(relativeamount.vol.field) ~ treatment, data = meta.field, distance = &quot;bray&quot;)
+
+rel.amount.dataframe.field &lt;- fortify(rel.amount.cap.field)
+rel.amount.ordination.field = ggplot(bind_cols(filter(rel.amount.dataframe.field, Score==&quot;sites&quot;),meta.field), aes(x=CAP1, y= MDS1, color = treatment)) + 
+  geom_point(size=2.6) +
+  theme_classic() + 
+  coord_fixed(xlim=c(-1.5, 2.9), ylim=c(-1, 2.4)) +
+  geom_hline(yintercept = 0, linetype=&quot;dotted&quot;) + 
+  geom_vline(xintercept = 0, linetype=&quot;dotted&quot;) +
+  labs(color = &quot;Treatment&quot;, fill = &quot;Treatment&quot;) +
+ # ggtitle(&quot;I. aggregata Daytime Volatiles&quot;) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  ylab(&quot;MDS1 (% explained)&quot;) + 
+  xlab(&quot;CAP1 (% explained)&quot;) + 
+  scale_color_manual(name=&quot;Nitrogen Level&quot;, labels= c(&quot;Control&quot;, &quot;Nitrogen&quot;, &quot;Water Control&quot;), values=c(&quot;pink&quot;,&quot;tan2&quot;,&quot;cadetblue3&quot;)) + 
+  labs(subtitle=&quot;ANOVA; p=0.451&quot;,hjust = 1)+ #adds subtitle at top of figure
+   theme(legend.title = element_text(size=12, color = &quot;black&quot;), legend.text=element_text(size=10),
+           legend.justification=c(0,1), 
+           legend.position=c(0.03, 1),
+           legend.background = element_blank(),
+           legend.key = element_blank(),
+            plot.subtitle = element_text(hjust = 1)) #moves subtitle to right side 
+  
+    
+print(rel.amount.ordination.field)</code></pre>
+<p><img src="plots-nitrogen/unnamed-chunk-22-1.svg" width="960" /></p>
+<pre class="r"><code>anova(rel.amount.cap.field, by=&quot;term&quot;)</code></pre>
+<pre><code>Permutation test for capscale under reduced model
+Terms added sequentially (first to last)
+Permutation: free
+Number of permutations: 999
+
+Model: capscale(formula = sqrt(relativeamount.vol.field) ~ treatment, data = meta.field, distance = &quot;bray&quot;)
+           Df SumOfSqs      F Pr(&gt;F)
+treatment   2   0.2529 0.9854  0.393
+Residual  190  24.3813              </code></pre>
+<pre class="r"><code>#p= 0.451</code></pre>
+</div>
+<div
+id="percent-change-of-individual-compounds-for-each-species-nightday-with-p-values"
+class="section level1">
+<h1>Percent change of individual compounds for each species Night/Day
+with p-values</h1>
+<p>#Percent change Night/Day- field</p>
+<pre class="r"><code>#compound % change 
+compoundratios.field &lt;- averagePlant.field %&gt;% group_by(time, species) %&gt;% 
+  summarise(across(colnames(vol.field),mean)) %&gt;%  #takes mean of each compound for each species and time
+  pivot_longer(colnames(vol.field)) %&gt;% #dplr can&#39;t divide rows but can divide columns so need to make compounds into columns
+  pivot_wider(names_from = time, values_from = value) %&gt;%  #name day column and night column
+  mutate(NighttoDayRatio= N/D * 100)
+library(broom)
+compoundchangemodel.field &lt;- averagePlant.field %&gt;% pivot_longer(colnames(vol.field)) %&gt;%
+    group_by(species, name) %&gt;% nest() %&gt;% 
+    mutate(model=map(data,~lm(value~time, data=.x))) %&gt;% 
+    mutate(test=map(model, ~tidy(anova(.x)))) %&gt;% 
+    select(-data, - model) %&gt;% unnest(test) %&gt;% 
+    filter(term!=&quot;Residuals&quot;) %&gt;% 
+    mutate(significant= p.value&lt; 0.05)
+
+View(compoundchangemodel.field)
+
+compoundpercentchange.field &lt;- left_join(compoundratios.field,compoundchangemodel.field)
+View(compoundpercentchange.field)
+
+write_csv(compoundpercentchange.field, file = &quot;Nexp1_Compound%change_DN.field.csv&quot;)</code></pre>
+<p>#Percent change Night/Day- greenhouse</p>
+<pre class="r"><code>#compound % change 
+compoundratios &lt;- averagePlant %&gt;% group_by(time, species) %&gt;% 
+  summarise(across(colnames(vol),mean)) %&gt;%  #takes mean of each compound for each species and time
+  pivot_longer(colnames(vol)) %&gt;% #dplr can&#39;t divide rows but can divide columns so need to make compounds into columns
+  pivot_wider(names_from = time, values_from = value) %&gt;%  #name day column and night column
+  mutate(NighttoDayRatio= N/D * 100)
+#library(broom)
+compoundchangemodel &lt;- averagePlant %&gt;% pivot_longer(colnames(vol)) %&gt;%
+    group_by(species, name) %&gt;% nest() %&gt;% 
+    mutate(model=map(data,~lm(value~time, data=.x))) %&gt;% 
+    mutate(test=map(model, ~tidy(anova(.x)))) %&gt;% 
+    select(-data, - model) %&gt;% unnest(test) %&gt;% 
+    filter(term!=&quot;Residuals&quot;) %&gt;% 
+    mutate(significant= p.value&lt; 0.05)
+
+View(compoundchangemodel)
+
+compoundpercentchange &lt;- left_join(compoundratios,compoundchangemodel)
+View(compoundpercentchange)
+
+write_csv(compoundpercentchange, file = &quot;Nexp1_Compound%change_DN.csv&quot;)</code></pre>
+<pre class="r"><code>#compound % change Treatment low/high
+compoundratios.lowhigh &lt;- averagePlant %&gt;% group_by(time, species, treatment) %&gt;% 
+  summarise(across(colnames(vol),mean)) %&gt;%  #takes mean of each compound for each species and time
+  pivot_longer(colnames(vol)) %&gt;% #dplr can&#39;t divide rows but can divide columns so need to make compounds into columns
+  pivot_wider(names_from = treatment, values_from = value) %&gt;%  #name day column and night column
+  mutate(HighLowRatio= low/high * 100)
+#library(broom)
+compoundchangemodel.lowhigh &lt;- averagePlant %&gt;% pivot_longer(colnames(vol)) %&gt;%
+    group_by(species, name) %&gt;% nest() %&gt;% 
+    mutate(model=map(data,~lm(value~time, data=.x))) %&gt;% 
+    mutate(test=map(model, ~tidy(anova(.x)))) %&gt;% 
+    select(-data, - model) %&gt;% unnest(test) %&gt;% 
+    filter(term!=&quot;Residuals&quot;) %&gt;% 
+    mutate(significant= p.value&lt; 0.05)
+
+View(compoundchangemodel.lowhigh)
+
+compoundpercentchange.lowhigh &lt;- left_join(compoundratios.lowhigh,compoundchangemodel.lowhigh)
+View(compoundpercentchange.lowhigh)
+
+write_csv(compoundpercentchange.lowhigh, file = &quot;Nexp1_Compound%change_lowhigh.csv&quot;)</code></pre>
 </div>
 
 

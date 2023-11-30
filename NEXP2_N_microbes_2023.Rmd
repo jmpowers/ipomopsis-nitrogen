@@ -46,8 +46,6 @@ exp2_meta <- exp2_meta %>% group_by(date,time, vial,color) %>% filter(n()<2) %>%
 
 exp2_meta_leaf <- read_sheet("1EwPMsBAxqrRtuqH4uUBtthUOZlQluQICSvNr9u87h0E", sheet="metadata", guess_max=200) %>%
   mutate(plant = as.character(plant))
-
-
 ```
 
 #GC Verdicts & Load Shimadzu 
@@ -61,7 +59,7 @@ exp2_filenames <- gc_verdicts %>% filter(str_detect(sample2, "EXP2")) %>% mutate
   #creates a csv file and saves it under the data folder in ipo-nitrogen
   write_csv("data/EXP2_filenames.csv")
 
-#manually edited filenames, this reads in the new google sheet
+#manually edited filenames in googlesheets, this reads in the new google sheet
 exp2_filenames <- read_sheet("1iVD1FIBoWd5iXsxmLf9BO140ZeHM5eUfGSSTx8oYdvU", na="NA") %>% filter(verdict %in% c("skip-rename","no-skip","mismatch", "wrongmatch" ))
 #gc_verdicts only with data from this experiment; separate sample2 into each component of the name
 
@@ -292,49 +290,6 @@ text(cap_treat, display="cn", cex=0.5)
 kable(arrange(as.data.frame(cap_treat$CCA$v), CAP1)) 
 ```
 
-#glht on every volatile
-```{r}
-#set up dataframe and each row has a different model 
-mega.glht <- bind_cols(meta,vol.qual) %>%  #combines meta and vol.qual
-  pivot_longer(all_of(colnames(vol.qual))) %>% #this makes the name and value column 
-  group_by(name) %>% #group by and nest divides data frame into smaller sets 1 for each compound
-  nest() %>% #for each volatile you have a dataframe with 40 columns and 359 rows which are your samples
-  mutate(model=map(data,~lmer(value~T.N.M + (1|plant), data=.x))) %>%  #for each data run a lmer of value as a factor of TNM; value = peak area of specific volatile
-  mutate(glht.every.vol = map(model,~multcomp::glht(.x, linfct=multcomp::mcp(T.N.M="Tukey")))) %>% 
-  mutate(summary.glht= map(glht.every.vol, ~multcomp::summary(.x, test=adjusted(type="fdr"))))   #summary.glht has all pvalues
-  
-bind_cols(meta,vol.qual) %>%  
-  pivot_longer(all_of(colnames(vol.qual))) %>% 
-  ggplot(aes(color=paste(nitrogen, microbe), x=time, y=value))+geom_boxplot()+scale_y_sqrt()+
-  facet_wrap(vars(name),scales = "free_y")+
-  ylab("Peak Area") 
-
-#mega.glht$summary.glht[1]
-#multcomp::cld(mega.glht$summary.glht[[1]])
-
-
-
-meta$T.N.M <- paste0(meta$time, meta$nitrogen, meta$microbe) #add column with species, treatment and time to metadata. Need for glht
-
-#finding p-values to compare treatment within each of the four groups
-total.emission.model2 <-lmer(totalemission~T.N.M + (1|plant), data=meta)
-
-Anova(total.emission.model2, type=3) #significant bc it includes time :(
-
-#library(multcomp)
-
-#general linear hypotheses
-  #subtracts means from different groups (like Agg day low - agg day high) c
-      #can specify which group like below or write linfct=mcp(model ="Tukey"))
-  # summary () gives you p-values
-glht.T.N.M <- multcomp::glht(total.emission.model2, linfct=multcomp::mcp(T.N.M="Tukey"))
-multcomp::cld(glht.T.N.M)
-multcomp::plot(glht.T.N.M)
-
-multcomp::summary(glht.T.N.M, test=adjusted(type="none"))
-
-```
-
 #NMDS
 ```{r}
 (NMDS <- metaMDS(sqrt(vol.qual), autotransform = FALSE))
@@ -374,47 +329,6 @@ anova(AverageVOCcapM.N.T, by="term")
 ```{r}
 #TODO: quant integration for indole 
 
-ggplot(averagePlant, aes(color=paste(microbe, nitrogen), x=time, y=indole))+geom_boxplot()+scale_y_sqrt() #box plot for average plant indole 
-
-# agg and ten indole boxplot
-facet.labs <- c(agg="I. aggregata", ten="I. tenuituba")
-
-plot.indole.aggten=
-  ggplot(averagePlant, aes(color=treatment, x=time,y=indole))+
-  #geom_boxplot(position=position_dodge(width=0.9))+
-  #geom_point (position=position_dodge(width=0.9))+
-  geom_boxplot()+
-  scale_y_sqrt()+
-  ylab("Indole Emissions")+
-  #ylim(0,25000) + #scales y-axis 
-  facet_wrap(vars(species))+ #makes two columns for species
-    facet_grid(. ~ species, labeller=labeller(species = facet.labs))+ 
-    theme(panel.border = element_blank(),
-      panel.grid.major = element_line(colour="white"),
-      #panel.grid.minor = element_blank(),
-      panel.background = element_rect(fill = "gray96",
-                                #colour = "lightblue",
-                                  linetype = "solid"),
-      strip.text.x = element_text(size=11),
-      strip.background = element_rect(colour="white", fill="white"))+
-    scale_color_manual(name="Nitrogen Level", 
-        labels= c("High",  "Low"), 
-        values=c("tan2","cadetblue3"))+
-    theme(legend.title = element_text(size=11, color = "black"),
-        legend.text=element_text(size=9))
-print(plot.indole.aggten)    
-ggsave(plot.indole.aggten, file='Indole_boxplot.jpg', width=150, height=110, units= 'mm', dpi=300)
-
-library(car)
-library(lmerTest)
-library(lme4)
-
-#Only indole lmer with plantid as random effect
-
-noaverage$S.T.T <- factor(paste0(noaverage$species, noaverage$time, noaverage$treatment))
-(indolelmer<-lmer(sqrt(indole)~S.T.T + (1|plantid), data=noaverage)) #use not averaged data! d
-summary(multcomp::glht(indolelmer, linfct= multcomp::mcp(S.T.T = c("aggDhigh-aggDlow == 0","aggNhigh - aggNlow == 0", "tenNhigh - tenNlow == 0", "tenDhigh-tenDlow==0"))))
-
 ```
 
 # Greenhouse- I. aggregata Daytime Volatiles
@@ -435,7 +349,7 @@ anova(average.day.cap, by="term")
 
 ```
 
-# Greenhouse- I. agg Night time volatiles (average)
+# I. agg Night time volatiles (average) emission rate
 ```{r}
 averagenightmetadata<- averagemetadata[averagemetadata$time=="N",] %>% 
         mutate(microbe= str_to_title(microbe), nitrogen= str_to_title(nitrogen)) #mutate to capitalize microbe and nitrogen
@@ -461,32 +375,33 @@ greekify <- function(names) {
 
 library(ggvegan)
 library(ggrepel)
-cap.night.dataframe <- fortify(average.night.cap)
+cap.night.dataframe <- fortify(average.night.cap) #makes a dataframe for ggplot to use
 average.night.ordination = ggplot(bind_cols(filter(cap.night.dataframe, Score=="sites"),averagenightmetadata), 
         aes(x=CAP1, y= CAP2, label=Label)) + 
-  geom_point(size=2.6, aes(color = microbe, shape= nitrogen)) +
+  geom_point(size=2.6, aes(color = microbe, shape= nitrogen)) + 
   theme_classic() + 
-  coord_fixed() +
+  coord_fixed() + #automatically scales x and y-axes so they are similar
   geom_hline(yintercept = 0, linetype="dotted") + 
   geom_vline(xintercept = 0, linetype="dotted") +
   labs(color = "Soil", shape = "Nitrogen") +
  # ggtitle("I. aggregata Nighttime Volatiles") +
   theme(plot.title = element_text(hjust = 0.5))+
   ylab(paste0("CAP2 (", round(100*axis.eig.night[2]), "% explained)")) + 
+  #custom CAP axes: rounds and multiplies the eigenvalue above for % explained
   xlab(paste0("CAP1 (", round(100*axis.eig.night[1]), "% explained)")) + 
  # scale_color_manual(name="Nitrogen Level", labels= c("High", "Low"), values=c("tan2","cadetblue3")) +
   #labs(subtitle="ANOVA; p=0.264",hjust = 1)+ #adds subtitle at top of figure
    theme(legend.title = element_text(size=12, color = "black"), legend.text=element_text(size=10),
            legend.justification=c(0,1), 
-           legend.position=c(0.8, 0.4),
+           legend.position=c(0.77, 0.62),
            legend.background = element_blank(),
            legend.key = element_blank(),
             plot.subtitle = element_text(hjust = 1))+ #moves subtitle to right side 
     geom_segment(data=cap.night.dataframe %>% filter(Score=="biplot", str_detect(Label, ":")), #adds arrows 
              aes(x=0,y=0,xend=CAP1*1.8, yend=CAP2*1.8), 
-              arrow=arrow(length=unit(0.5, "lines")))+
+              arrow=arrow(length=unit(0.5, "lines")))+ #scales arrow length
     geom_text(data=cap.night.dataframe %>% filter(Score=="biplot", str_detect(Label, ":")) %>% #labels text to arrows
-            mutate(Label=c("Low Normal", "Low Sterile")),
+            mutate(Label=c("Low Normal", "Low Sterile")), #edits arrow labels
             aes(x=CAP1*2, y=CAP2*2, angle=atan(CAP2/CAP1)*180/pi), hjust=c(0,1), fontface="bold", size=3) +
     geom_text_repel(data=cap.night.dataframe %>% left_join(ipochems, by=c("Label"="name")) %>% #adds compound name to arrows
               filter(Score=="species", Label%in%names(top.6.vocs)) %>%  #gets rid of compounds clusterd in middle of cap
@@ -495,11 +410,12 @@ average.night.ordination = ggplot(bind_cols(filter(cap.night.dataframe, Score=="
     geom_label(data=cap.night.dataframe %>% filter(Score =="centroids",
                 Label%in%c("microbeSterile","microbeNormal", "microbeEarly")) %>% 
                  mutate(Label= c("Early","Normal", "Sterile")), color="blue")+
+                #can add high/low N here but they were essentially the same
     scale_color_manual(values = c("orange","purple","magenta"))
     
 print(average.night.ordination)
 
-ggsave(average.night.ordination, file="plots-microbe/night.cap.svg", width= 7, height=8)
+ggsave(average.night.ordination, file="plots-microbe/night.cap.png", width= 5, height=6)
 
 ```
 
@@ -515,36 +431,49 @@ library(car)
 total.emission.model <-lmer(totalemission~nitrogen*microbe*time + (1|plant), data=meta) #models looks at total emissions as a function of treatment*species*time with plantid as a random effect
 Anova(total.emission.model, type=3) #type 3 anova on the model to get p-value
 
+#total emission night time
+total.emission.night <-lmer(totalemission~nitrogen*microbe + (1|plant), data=meta[meta$time=="N",])
+Anova(total.emission.night, type=3)
+
+#total emission Day time
+total.emission.day <-lmer(totalemission~nitrogen*microbe + (1|plant), data=meta[meta$time=="D",])
+Anova(total.emission.day, type=3)
 ##############################################
 #boxplot of Total emissions day and night
 
 plot.total.emissions=
-  ggplot(meta, aes( y= totalemission, x=time, #could do with average metadata instead of all data points in meta
-  color=paste(nitrogen, microbe)))+
+  ggplot(meta, aes( y= totalemission, x=str_to_title(nitrogen), #could do with average metadata instead of all data points in meta
+  color=str_to_title(microbe)))+
+  #annotate(geom="rect", ymin = 0, ymax = Inf, xmin=2.5, xmax=6)+
   geom_boxplot(position=position_dodge(width=0.9))+
-  geom_point (position=position_dodge(width=0.9))+ #makes it so point don't overlap
+ # geom_point (position=position_dodge(width=0.9))+ #makes it so point don't overlap
   scale_y_sqrt()+
   ylab("Total Emissions")+
-  xlab("") +
-    theme(panel.border = element_blank(),
-      panel.grid.major = element_line(colour="white"),
+  xlab("Nitrogen") +
+    #theme(panel.border = element_blank(),
+     # panel.grid.major = element_line(colour="white"),
       #panel.grid.minor = element_blank(),
-      panel.background = element_rect(fill = "gray96",
+     # panel.background = element_rect(fill = "gray96",
                                 #colour = "lightblue",
-                                  linetype = "solid"),
-      strip.text.x = element_text(size=11),
-      strip.background = element_rect(colour="white", fill="white"))+
+      #                            linetype = "solid"),
+     # strip.text.x = element_text(size=11),
+     # strip.background = element_rect(colour="white", fill="white"))+
     #scale_color_manual(name="Nitrogen Level", 
      #   labels= c("High",  "Low"), 
       #  values=c("tan2","cadetblue3"))+
-    theme(legend.title = element_text(size=11, color = "black"),
-        legend.text=element_text(size=9))+
-  scale_x_discrete(labels=c('Day', 'Night', 'Day','Night'))
+    theme_minimal()+
+    theme(legend.title = element_text(size=11, color = "black"), panel.grid.major.x=element_blank(),
+        legend.text=element_text(size=9), legend.position = "bottom")+
+ # scale_x_discrete(labels=c('Day', 'Night', 'Day','Night'))+
+  labs(color="Soil")+
+   scale_color_manual(values = c("orange","purple","magenta"))+
+ # scale_fill_manual(values = c("white","grey90"))+
+  facet_wrap(vars(time), labeller = as_labeller(c(D="Day", N="Night")))
+                                                          
 
 print(plot.total.emissions)   
+ggsave(plot.total.emissions, file="plots-microbe/total.emissions.png", width= 4.5, height=5.5)
 #ggsave(plot.total.emissions, file='total_emissions_boxplot.jpg', width=150, height=110, units= 'mm', dpi=300)
-
-#######################################
 ```
 
 #glht for total emissions
@@ -566,10 +495,7 @@ glht.T.N.M <- glht(total.emission.model2, linfct=mcp(T.N.M="Tukey"))
 cld(glht.T.N.M)
 plot(glht.T.N.M)
 
-summary(glht.T.N.M, test=adjusted(type="none"))
-
-#total emissions change at night time between high and low in agg p=0.0349
-  
+summary(glht.T.N.M, test=adjusted(type="fdr"))
 ```
 
 #glht for total emissions - night!
@@ -596,10 +522,53 @@ cld(glht.N.M.night)
 plot(glht.N.M.night)
 
 summary(glht.N.M.night, test=adjusted(type="none"))
-
-#total emissions change at night time between high and low in agg p=0.0349
   
 ```
+
+#glht on every volatile
+```{r}
+#set up dataframe and each row has a different model 
+
+mega.glht <- bind_cols(meta,vol.qual) %>%  #combines meta and vol.qual
+  pivot_longer(all_of(colnames(vol.qual))) %>% #this makes the name and value column 
+  group_by(name) %>% #group by and nest divides data frame into smaller sets 1 for each compound
+  nest() %>% #for each volatile you have a dataframe with 40 columns and 359 rows which are your samples
+  mutate(model=map(data,~lmer(value~T.N.M + (1|plant), data=.x))) %>%  #for each data run a lmer of value as a factor of TNM; value = peak area of specific volatile
+  mutate(glht.every.vol = map(model,~multcomp::glht(.x, linfct=multcomp::mcp(T.N.M="Tukey")))) %>% 
+  mutate(summary.glht= map(glht.every.vol, ~summary(.x, test=multcomp::adjusted(type="fdr"))))   #summary.glht has all pvalues
+  
+bind_cols(meta,vol.qual) %>%  
+  pivot_longer(all_of(colnames(vol.qual))) %>% 
+  ggplot(aes(color=paste(nitrogen, microbe), x=time, y=value))+geom_boxplot()+scale_y_sqrt()+
+  facet_wrap(vars(name),scales = "free_y")+
+  ylab("Peak Area") 
+
+#mega.glht$summary.glht[1]
+#multcomp::cld(mega.glht$summary.glht[[1]])
+
+
+
+meta$T.N.M <- paste0(meta$time, meta$nitrogen, meta$microbe) #add column with species, treatment and time to metadata. Need for glht
+
+#finding p-values to compare treatment within each of the four groups
+total.emission.model2 <-lmer(totalemission~T.N.M + (1|plant), data=meta)
+
+Anova(total.emission.model2, type=3) #significant bc it includes time :(
+
+#library(multcomp)
+
+#general linear hypotheses
+  #subtracts means from different groups (like Agg day low - agg day high) c
+      #can specify which group like below or write linfct=mcp(model ="Tukey"))
+  # summary () gives you p-values
+glht.T.N.M <- multcomp::glht(total.emission.model2, linfct=multcomp::mcp(T.N.M="Tukey"))
+multcomp::cld(glht.T.N.M)
+#multcomp::plot(glht.T.N.M)
+
+summary(glht.T.N.M, test=adjusted(type="fdr"))
+
+```
+
 
 # Relative Amount
 ```{r}
@@ -650,24 +619,5 @@ rel.amount.ordination = ggplot(bind_cols(filter(rel.amount.dataframe, Score=="si
 print(rel.amount.ordination)
 
 anova(rel.amount.cap, by="term")
-#p= 0.264
-
-```
-
-# Individual compound change for treatment based on species and time
-
-```{r}
-dominantvocs <-averagePlant%>% pivot_longer(any_of(colnames(vol)))%>%     group_by(species,time,treatment,name)%>% 
-   summarise(value=mean(value))%>%
-   # mutate(value=value/sum(value))%>% #adds up values for each treatment
-  arrange(species, time, treatment, desc(value))
-
-ggplot(dominantvocs, aes(y=fct_reorder(name, value), x=value, color=treatment, shape=time))+
-         geom_point()+
-    scale_x_sqrt()+ #scales x axis so you can see small peak area dots
-    facet_wrap(vars(species))+ #makes two pannels, agg and ten
-    scale_color_manual(values=c("orange","lightblue"))+ #manually change colros
-    theme_minimal() #removed grey from background
-    
 
 ```

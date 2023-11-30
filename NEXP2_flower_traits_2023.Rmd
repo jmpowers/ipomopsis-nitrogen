@@ -1,0 +1,277 @@
+---
+title: "NEXP2_flower_traits_2023"
+author: "Janelle Bohey"
+date: "2023-10-12"
+output: 
+    html_document:
+    self_contained: no
+    lib_dir: libs
+    code_folding: hide
+    toc: yes
+    toc_float: TRUE 
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+setwd("~/Desktop/ipomopsis-nitrogen")
+
+library(car)
+library(vegan)
+library(dplyr)
+library(lsmeans)
+library(lmerTest) 
+library(lsmeans) 
+library(ggplot2) 
+library(tidyr)
+library(tidyverse)#ggplot
+library(vegan) 
+library(ggpubr)
+library(ggrepel)
+library(googlesheets4)
+#library(multcomp) #reads lsmeans cld don't load just ::
+```
+
+# read in morphology metadata & find plant averags for morph traits
+```{r}
+exp2.treatments <-read_sheet("1EwRYUB0hUWUOdgVNRM6B0soUlUg8yP6LdXGyXBM2aFc") %>% 
+  mutate(site = as.character(site))
+
+morphdata <- read_sheet("1Jw9XkjSVKy1ajPhcYH2qajfzk2QgLbGQkHFASIfn6yw", sheet="Floral Morphology") %>% 
+  mutate(site = tolower(as.character(site))) %>% #makes MAX lowercase and makes character
+  left_join(exp2.treatments)
+
+#Making new vector with means of each trait for each individual plant
+morphdata1<- morphdata %>%
+    group_by(plant, nitrogen, microbe, site) %>% #takes mean for each plant (i.e. agg 1)
+    summarise(across(c(corolla_length, corolla_width, style_length, max_anther, min_anther,sepal_width),
+              ~mean(.x, na.rm=TRUE))) 
+     
+
+#setting nitrogen and microbe as a factor
+nitrogen<- as.factor(morphdata$nitrogen)
+microbe <- as.factor(morphdata$microbe)
+
+
+
+```
+
+#Model for All the traits
+```{r}
+library(broom)
+all.morph.traits <- c("corolla_length", "corolla_width", "style_length", "max_anther", "min_anther","sepal_width")
+
+morph.models <- morphdata %>% pivot_longer(all_of(all.morph.traits), names_to = "trait") %>% group_by(trait) %>% nest() %>% 
+      mutate(morph.trait.lmer=map(data, ~lmer(value~nitrogen*microbe+ (1|plant), data=.x))) %>% 
+      mutate(morph.Anova= map(morph.trait.lmer, ~tidy(Anova(.x, type=3)))) %>%  unnest(morph.Anova) %>%
+      dplyr::select(-data,-morph.trait.lmer) %>% 
+      mutate(significant = ifelse(p.value<0.05, "*","") )
+
+#boxplot for averages of all traits
+corollalength.maxstamen <- morphdata1 %>% pivot_longer(all_of(all.morph.traits), names_to = "trait") %>% 
+    filter(trait%in% c("corolla_length", "max_anther")) %>% 
+    ggplot(aes(color= str_to_title(microbe), x=str_to_title(nitrogen), y=value))+geom_boxplot()+
+    facet_wrap(vars(trait),scales = "fixed", labeller=as_labeller(c(corolla_length="Corolla Length", max_anther= "Longest Stamen")))+
+    labs(y="Length (mm)", x="Nitrogen", color="Soil") +
+  scale_color_manual(values = c("orange","purple","magenta"))+
+  theme_minimal()+
+  theme(panel.grid.major.x = element_blank(), legend.position = "bottom")
+  #scale_y_continuous(limits=c(0, NA))
+
+print(corollalength.maxstamen)
+
+ggsave(corollalength.maxstamen, file="plots-microbe/corollalength.maxstamen.png", width= 4.5, height=5.5)
+
+```
+
+
+Corolla width 
+```{r}
+corwidth.lmer=lmer(corolla_width~nitrogen*microbe+ (1|plant), data=morphdata) 
+Anova(corwidth.lmer, type=3)#Type 3
+
+#make data frame with ls means
+corwidth.N.M= as.data.frame(lsmeans(corwidth.lm, pairwise~ nitrogen|microbe, adjustSigma = TRUE, adjust = "tukey")$lsmeans)
+
+#contrast of treatment (high vs low N) in each species (TEN vs AGG), groups a, b
+multcomp::cld(lsmeans(corwidth.lm, pairwise~ nitrogen|microbe, adjustSigma = TRUE, adjust = "tukey")$lsmeans ,
+alpha=0.05,
+Letters=letters,
+adjust="tukey")
+
+#TODO: glht.morphdata3 below not found
+######### glht ###########
+#model to put into glht bc glht doesn't like spaces
+corwidth.lm.glht=lm(corolla_width~nitrogenmicrobe, data=glht.morphdata3) 
+
+summary(multcomp::glht(corwidth.lm.glht, linfct=multcomp::mcp(speciestreatment="Tukey")), test=multcomp::adjusted(type="none"))
+
+##plot with species on x-axis, bars show N treatment, y axis is lsmean
+Fig1.corwidth = ggplot(corwidth.SP.T, aes(x=Species, y=lsmean, fill=Treatment)) +
+  geom_bar(color="black",position=position_dodge(), stat="identity", width = 0.5,  linewidth=0.5)+
+  geom_errorbar(aes(ymin=lsmean-SE, ymax=lsmean+SE),
+                width=.2, # Width of the error bars
+                position=position_dodge(.5))  +
+scale_fill_manual(values=c("orange", "lightblue3"), name = "", labels = c("High", "Low")) + 
+  labs(y="Mean Corolla Width") +
+  annotate("text", x = 1.5, y = 5, label = "***", size = 4)
+
+Fig1.corwidth
+ggsave(Fig1.corwidth, file="plots-morph-nectar/corolla-width.png", width= 7, height=8)
+```
+
+#Corolla length
+```{r}
+corlength.lmer=lmer(corolla_length~nitrogen*microbe+ (1|plant), data=morphdata) 
+Anova(corlength.lmer, type=3)#Type 3
+
+#TODO: glht????
+
+##plot with species on x-axis, bars show N treatment, y axis is lsmean
+Fig.corlength = ggplot(corwidth.SP.T, aes(x=Species, y=lsmean, fill=Treatment)) +
+  geom_bar(color="black",position=position_dodge(), stat="identity", width = 0.5,  linewidth=0.5)+
+  geom_errorbar(aes(ymin=lsmean-SE, ymax=lsmean+SE),
+                width=.2, # Width of the error bars
+                position=position_dodge(.5))  +
+scale_fill_manual(values=c("orange", "lightblue3"), name = "", labels = c("High", "Low")) + 
+  labs(y="Mean Corolla Width") +
+  annotate("text", x = 1.5, y = 5, label = "***", size = 4)
+
+Fig.corlength
+ggsave(Fig.corlength, file="plots-morph-nectar/corolla-length.png", width= 7, height=8)
+```
+
+#Style length
+```{r}
+stylelength.lm=lm(style_length~nitrogen*microbe, data=morphdata3) 
+Anova(stylelength.lm, type=3)#Type 3
+```
+
+#max anther
+```{r}
+maxanther.lm=lm(max_anther~nitrogen*microbe, data=morphdata3) 
+Anova(maxanther.lm, type=3)#Type 3
+```
+
+# min anther (stamen
+```{r}
+minanther.lm=lm(min_anther~nitrogen*microbe, data=morphdata3) 
+Anova(minanther.lm, type=3)#Type 3
+```
+
+# sepal width
+```{r}
+sepalwidth.lm=lm(sepal_width~nitrogen*microbe, data=morphdata3) 
+Anova(sepalwidth.lm, type=3)#Type 3
+```
+
+# read in nectar data and find averages 
+```{r}
+exp2.treatments <-read_sheet("1EwRYUB0hUWUOdgVNRM6B0soUlUg8yP6LdXGyXBM2aFc") %>% 
+  mutate(site = as.character(site))
+
+nectardata <- read_sheet("1Jw9XkjSVKy1ajPhcYH2qajfzk2QgLbGQkHFASIfn6yw", sheet="Nectar") %>% 
+  mutate(plant = as.numeric(plant)) %>% 
+  mutate(nectar.production = nectar_48_h_mm * 5 /(2 * 32)) %>%    #5-uL microcapillary tube 32 mm in length, 2 days
+  left_join(exp2.treatments) 
+
+nectar.traits <- c('nectar.production', "concentration") 
+
+library(broom)
+
+nectar.models <- nectardata %>% pivot_longer(all_of(nectar.traits), names_to = "trait") %>% group_by(trait) %>% nest() %>% 
+      mutate(nectar.trait.lmer=map(data, ~lmer(value~nitrogen*microbe+ (1|plant), data=.x))) %>% 
+      mutate(nectar.Anova= map(nectar.trait.lmer, ~tidy(Anova(.x, type=3)))) %>%  unnest(nectar.Anova) %>%
+      dplyr::select(-data,-nectar.trait.lmer) %>% 
+      mutate(significant = ifelse(p.value<0.05, "*","") )
+
+#average nectar data
+ nectardata1<- nectardata %>%
+    group_by(plant, microbe, nitrogen, site) %>% 
+    summarise(across(all_of(nectar.traits), ~mean(.x, na.rm=TRUE))) 
+ 
+#boxplot for averages of all traits
+nectardata1 %>% pivot_longer(all_of(nectar.traits), names_to = "trait") %>% #need to pivot longer for facets
+    ggplot(aes(color= microbe, x=nitrogen, y=value))+geom_boxplot()+
+    facet_wrap(vars(trait),scales = "free_y")+
+    ylab("") 
+
+#
+nectardata %>% ggplot(aes(x=concentration  , y=nectar.production))+geom_point()+geom_smooth()
+
+```
+
+Total Flower number
+```{r}
+total.flower<-read_sheet("1Jw9XkjSVKy1ajPhcYH2qajfzk2QgLbGQkHFASIfn6yw", sheet="Total Flower Number") %>% mutate(site = as.character(site)) %>% 
+   left_join(exp2.treatments) 
+
+#TODO: figure out eaten plants & get rid of eaten ones 
+flower.nub.lm=lm(total_flower_number~nitrogen*microbe, data=total.flower)
+  
+Anova(flower.nub.lm, type=3)#Type 3
+
+ggplot(total.flower, aes(y=total_flower_number, x=nitrogen, color=microbe))+geom_boxplot()
+
+#nitrogen only p= 0.0074
+
+#make data frame with ls means
+flower.num.N= as.data.frame(lsmeans(flower.nub.lmer, pairwise~ nitrogen|microbe, adjustSigma = TRUE, adjust = "tukey")$lsmeans)
+
+#contrast of treatment (high vs low N) in each species (TEN vs AGG), groups a, b
+multcomp::cld(lsmeans(flower.nub.lmer, pairwise~ nitrogen|microbe, adjustSigma = TRUE, adjust = "tukey")$lsmeans ,
+alpha=0.05, Letters=letters,adjust="tukey")
+
+###### glht #########
+
+#library (tibble)
+
+#need treatmentspecies so paste0 
+flowerdatamutate <- as_tibble(total.flower)%>%mutate(nitrogenmicrobe=paste0(nitrogen,microbe))%>% 
+  mutate(nitrogenmicrobe=factor(nitrogenmicrobe))#paste0 because glht doesn't like spaces in data sets
+
+#model to put into glht bc glht doesn't like spaces
+flower.nub.lmer.glht=lmer(total_flower_number~nitrogenmicrobe + (1|plant), data=flowerdatamutate)
+
+summary(multcomp::glht(flower.nub.lmer.glht, linfct=multcomp::mcp(nitrogenmicrobe="Tukey")), test=multcomp::adjusted(type="none"))
+
+##plot with species on x-axis, bars show N treatment, y axis is lsmean
+
+Fig.flower.number = ggplot(flower.num.N, aes(x=nitrogen, y=lsmean, fill=microbe)) +
+  geom_bar(position=position_dodge(), stat="identity", width = 0.5,  linewidth=0.5)+
+  geom_errorbar(aes(ymin=lsmean-SE, ymax=lsmean+SE),
+                width=.2, # Width of the error bars
+                position=position_dodge(.5))  +
+scale_fill_manual(values=c("orange", "lightblue3"), name = "Nitrogen Level", labels = c("High", "Low")) + 
+  labs(y="Total Flower Number", x="") +
+  annotate("text", x = 1.6, y = 300, label = "*", size = 4)+
+  annotate("text", x = 1, y = 280, label = "**", size = 4)+
+  theme(panel.border = element_blank(),
+      panel.grid.major = element_blank(),
+      #panel.grid.minor = element_blank(),
+      panel.background = element_blank())+
+  theme(legend.title = element_text(size=11, color = "black"),
+        legend.text=element_text(size=9),
+        #axis.text.x = element_text(size=9),
+        axis.ticks = element_blank())#+
+  #scale_x_discrete(labels=c('I. aggregata', 'I. tenuituba'))
+
+Fig.flower.number
+ggsave(Fig.flower.number, file='plot_flower_number.jpg', width=110, height=110, units= 'mm', dpi=300)
+
+
+```
+
+#Biomass
+```{r}
+biomass<-read_sheet("1Jw9XkjSVKy1ajPhcYH2qajfzk2QgLbGQkHFASIfn6yw", sheet="Total Wet Biomass") %>% mutate(site = as.character(site)) %>% 
+   left_join(exp2.treatments) 
+
+ 
+biomass.lm=lm(total~nitrogen*microbe, data=biomass)
+  
+Anova(biomass.lm, type=3)#Type 3
+
+ggplot(biomass, aes(y=total, x=nitrogen, color=microbe))+geom_boxplot()
+```
+

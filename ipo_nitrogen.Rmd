@@ -38,7 +38,8 @@ knitr::opts_chunk$set(comment="", cache=T, warning=F, message=F,
 ```
 
 ```{r read_scents}
-library(googlesheets4)
+setwd("~/Desktop/ipomopsis-nitrogen") #set working directory
+library(googlesheets4) #need for read_sheets 
 exp1_meta <- read_sheet("1k2XJUsRyTsQEeEoZE24yTvsl7kSyf2Gg6gehs8pUvOo", sheet="metadata", guess_max=200) %>% #sheet selects "metadata" sheet on Google Sheets, guess_max reads 200 lines before program guesses the type of each column (string vs integer vs date)
   mutate(plant = as.character(plant))
 
@@ -61,6 +62,8 @@ exp1_field_meta <- left_join(exp1_field_link, exp1_field_nofilename)
 filter(exp1_field_meta, is.na(type)) %>% pull(Filename)
 # filters to list only filenames with NAs
 filter(exp1_field_link, !Filename %in% exp1_field_meta$Filename) %>% pull(Filename)
+
+#setdiff finds differences in dataframes to identify missing samples
 setdiff(exp1_field_link$Filename, drop_na(exp1_field_meta, type)$Filename) 
 #setdiff shows the difference between links and meta, 
 #trying to find if there are filenames and metadata that don't match up but we didn't find any
@@ -167,13 +170,15 @@ metadata %>% count(date-treatment_date) %>% kable(caption=paste("days since trea
 
 # Read Arturo's field metadata 
 
-```{r metadata, fig.height=5, fig.width=5}
+```{r metadata.field, fig.height=5, fig.width=5}
 metadata.field <- exp1_field_meta %>% #Filename already accounted for skips
   rename(time=d_n, species=site, sample2=Filename) %>% #to do the join
   mutate(plantid = paste(species, plant), 
          speciestime = paste(species, time, sep="."),
          plant = as.character(plant)) %>% 
-  left_join(exp1.field.verdicts) %>% rename(filename=sample2) %>% 
+  mutate(treatmentx2=fct_recode(treatment, control="water control")) %>%  #combine water control and control 
+  left_join(exp1.field.verdicts) %>% rename(filename=sample2) %>%
+  
   drop_na(filename) %>% #TODO need to rescue some of these rows that might be good?
   mutate(type=replace_na(type,"floral"))
 rownames(metadata.field) <- metadata.field$filename #adds row names (makes row name the filename)
@@ -305,7 +310,7 @@ print("field, not weatherport:")
 setdiff(colnames(vol.qual.field), colnames(vol.qual))
 ```
 
-# Quantitative integrations
+# Quantitative integrations greenhouse & field
 
 ```{r quant}
 #read in the large 2022 quant integration output and cut it down to NEXP chromatograms
@@ -313,7 +318,7 @@ source("read_shimadzu.R") #loads the function that reads the shimadzu output tex
 # quantpath <- "~/MyDocs/MEGA/UCI/Schiedea/Analysis/scent/rmbl/RMBL Batches/quant_round3/"
 # bfiles <-  list.files(quantpath)
 # quant.full <- map_dfr(set_names(paste0(quantpath, bfiles), bfiles), read.shimadzu.quant, .id="batch") %>%
-quant.full <- read.shimadzu.quant("data/NEXP1_field_greenhouse_quant.txt") %>% #reads in shimadzu text file with quant integrations
+quant.full <- read.shimadzu.quant("data/quant_Ipo2022part1_5.txt") %>% #reads in shimadzu text file with quant integrations
   mutate(Name = trimws(Name), Area=replace_na(Area, 0)) %>%
    distinct(Filename, Name, .keep_all=T) 
 quant.full %>% select(Dirname, Filename, Name, Area) %>%
@@ -357,9 +362,41 @@ vol.field <- vol.field / (as.numeric(meta.field$equil + meta.field$pumping)/3600
 Find out how much variation there is between samples from same plant
 
 ```{r}
-#TODO: Fix code lol 
-#betadisper(vegdist(vol), meta$plantid)
-#count(plantid)
+
+bd <- betadisper(vegdist(vol), meta$plantid) #gives bray curtis distance
+plot(bd)
+bdday <- betadisper(vegdist(vol[meta$time=="D",]), meta$plantid[meta$time=="D"])
+plot(bdday)
+count(meta,species,plant) #number of samples per plant
+##variation within one plant is similar to variation among all plants
+##Do the plants have different levels of variation in their scents? 
+##anova(bdday)
+anova(bdday) #for day only
+
+##are the plants different from one another
+anova(capscale(vol~time+plantid, data=meta), by="term")
+##yes the plants are unique when you throw out the variation due to time (or at least 1 plant is different than the rest)
+
+#do day and night have different variances? 
+#moth pollinated less variation at night? 
+bdten <- betadisper(vegdist(vol[meta$species=="ten",]), meta$time[meta$species=="ten"])
+plot(bdten)
+anova(bdten) #no difference in spread of night vs day volatiles
+
+
+bdagg <- betadisper(vegdist(vol[meta$species=="agg",]), meta$time[meta$species=="agg"])
+plot(bdagg)
+anova(bdagg)
+
+bdihyb <- betadisper(vegdist(vol.field[meta.field$species=="Ihyb",]), meta.field$time[meta.field$species=="Ihyb"])
+plot(bdihyb)
+boxplot(bdihyb)
+anova(bdihyb)
+
+bdLagg <- betadisper(vegdist(vol.field[meta.field$species=="Lagg",]), meta.field$time[meta.field$species=="Lagg"])
+plot(bdLagg)
+anova(bdLagg)
+#TODO: check metadata to make sure samples correctly listed as D vs N
 ```
 
 #To find chromatogram with most diverse set compounds (for quantitative integrations)
@@ -430,7 +467,7 @@ ph  <- pheatmap(as.matrix(t(vol))^(1/4),
 ```
 
 
-##field 
+##field heatmap
 
 ```{r heatmap field, dev='png', dev.args=list()}
 library(pheatmap)
@@ -452,27 +489,30 @@ ph  <- pheatmap(as.matrix(t(vol.field))^(1/4),
 
 # Ordination
 
-##weatherport
+##weatherport - 
 ```{r cap}
 (cap_treat <- vegan::capscale(sqrt(vol) ~ species + time + treatment, data=meta))
 anova.cca(cap_treat, by="margin") # samples should be averaged by plant first
+#species (p= 0.03 and time (p=0.001) effect
 
 plot(cap_treat, type="n")
 points(cap_treat, display="sites", 
-       pch=c(1,19)[as.integer(meta$time)],
-       col=c("darkred","magenta")[as.integer(meta$species)])
-legend("topleft", levels(meta$species), title="Species", fill=c("darkred","magenta"))
-legend("topright", levels(meta$time), title="Time", pch=c(1,19))
+       pch=c(1,19)[as.integer(factor(meta$time))],
+       col=c("darkred","magenta")[as.integer(factor(meta$species))])
+legend("topleft", legend=levels(factor((meta$species))), title="Species", fill=c("darkred","magenta"))
+legend("topright", levels(factor((meta$time))), title="Time", pch=c(1,19))
 text(cap_treat, display="species", cex=0.5, col=3)
 text(cap_treat, display="cn", cex=0.5)
-kable(arrange(as.data.frame(cap_treat$CCA$v), CAP1)) 
+#kable(arrange(as.data.frame(cap_treat$CCA$v), CAP1)) 
 
 ```
 
 ##field
-```{r cap}
+```{r cap.field}
+
 (cap_treat_field <- vegan::capscale(sqrt(vol.field) ~ species + time + treatment, data=meta.field))
 anova.cca(cap_treat_field, by="margin") # samples should be averaged by plant first
+#species (p= 0.063), time (p=0.001)
 
 plot(cap_treat_field, type="n")
 points(cap_treat_field, display="sites", 
@@ -490,7 +530,7 @@ kable(arrange(as.data.frame(cap_treat_field$CCA$v), CAP1))
 
 # Greenhouse Average VOCs
 ```{r}
-#make average volailte table: 
+#make average volatile table: 
 noaverage <- bind_cols(meta,vol)%>%   #want to make table with metadata and volatile list that is not averaged to run Anova on
   group_by(time, treatment, species)%>%
   mutate(timetreatment=paste0(time,treatment)) #paste0 because glht doesn't like spaces in data sets
@@ -504,58 +544,38 @@ averagemetadata<- averagePlant[,1:12]
 #cap species * treatment * time p=0.001
 AverageVOCcapS.T.T <- capscale(sqrt(averagetable) ~ species * treatment * time, data = averagemetadata, distance = "bray")
 
-anova(AverageVOCcapS.T.T)
+anova(AverageVOCcapS.T.T, by="term")
 
-#cap Treatment*Time p=0.001
-AverageVOCcapT.T <- capscale(sqrt(averagetable) ~ treatment * time, data = averagemetadata, distance = "bray")
-
-anova(AverageVOCcapT.T)
-
-#cap Treatment p=0.143
-AverageVOCcapTreatment <- capscale(sqrt(averagetable) ~ treatment, data = averagemetadata, distance = "bray")
-
-anova(AverageVOCcapTreatment)
-
-#cap Time p=0.001***
-AverageVOCcapTime <- capscale(sqrt(averagetable) ~ time, data = averagemetadata, distance = "bray")
-
-anova(AverageVOCcapTime)
 ```
 
 # Field Average VOCs
 ```{r}
-#make average volailte table: 
+
+#TODO: noaverage.field lots of NAs and no compounds, bind_cols not work
+
+#make average volatile table: 
 noaverage.field <- bind_cols(meta.field,vol.field)%>%   #want to make table with metadata and volatile list that is not averaged to run Anova on
   group_by(time, treatment, species)%>%
   mutate(timetreatment=paste0(time,treatment)) #paste0 because glht doesn't like spaces in data sets
 
 averagePlant.field<-bind_cols(meta.field,vol.field) %>% group_by(plantid, time, treatment, species) %>% 
-  summarize(across(where(is.numeric),mean))       
+  summarize(across(where(is.numeric),mean)) %>% ungroup()    
 #takes average of each sample for dayand night
 
-#TODO: change column numbers below!!!!
+#TODO: change column numbers below???
 averagetable.field<- averagePlant.field[,12:ncol(averagePlant.field)] #seperates table into meta data and volatile list table (not necesaary)
 averagemetadata.field<- averagePlant.field[,1:12]
 
-#cap species * treatment * time p=
+#Number of plants sampled for time, species and treatment
+count(averagemetadata.field, species, time, treatment)
+
+#cap species * treatment * time 
 Field.AverageVOCcapS.T.T <- capscale(sqrt(averagetable.field) ~ species * treatment * time, data = averagemetadata.field, distance = "bray")
 
-anova(Field.AverageVOCcapS.T.T)
+anova(Field.AverageVOCcapS.T.T, by="term")
+#species p= 0.002, time p=0.001, species:time p=0.008
 
-#cap Treatment*Time p=
-Field.AverageVOCcapT.T <- capscale(sqrt(averagetable.field) ~ treatment * time, data = averagemetadata.field, distance = "bray")
 
-anova(Field.AverageVOCcapT.T)
-
-#cap Treatment p=
-Field.AverageVOCcapTreatment <- capscale(sqrt(averagetable.field) ~ treatment, data = averagemetadata.field, distance = "bray")
-
-anova(Field.AverageVOCcapTreatment)
-
-#cap Time p=0.001***
-Field.AverageVOCcapTime <- capscale(sqrt(averagetable.field) ~ time, data = averagemetadata.field, distance = "bray")
-
-anova(Field.AverageVOCcapTime)
 ```
 
 
@@ -620,21 +640,22 @@ averageHYBmetadata.field<- averagemetadata.field[averagemetadata.field$species==
 averageHYBtable.field<-averagetable.field[averagemetadata.field$species=="Ihyb",]
 averageHYB.field <- bind_cols(averageHYBmetadata.field, averageHYBtable.field) %>%  #combines averaged meta data table and average volatile                                                                           list table together
   mutate(timetreatment=paste(time,treatment))           #want to combine time and treatment into the same colum bc glht                                                                   needs that
-#only ten indole boxplot
+#only hybrid indole boxplot
 ggplot(averageHYB.field, aes(color=treatment, x=time, y=indole))+geom_boxplot()+scale_y_sqrt() #box plot for HYB indole 
 
 # agg and ten indole boxplot
 facet.labs <- c(Lagg="I. aggregata", Ihyb="Hybrids")
 
-plot.indole.agghyb.field=
-  ggplot(averageHYB.field, aes(color=treatment, x=time,y=indole))+
+
+plot.indole.Lagghyb.field=
+  ggplot(averagePlant.field, aes(color=treatment, x=time,y=indole))+
   #geom_boxplot(position=position_dodge(width=0.9))+
   #geom_point (position=position_dodge(width=0.9))+
   geom_boxplot()+
   scale_y_sqrt()+
-  ylab("Indole Emissions Hybrids")+
+  ylab("Indole Emissions")+
   #ylim(0,25000) + #scales y-axis 
-  facet_wrap(vars(species))+ #makes two columns for species
+ # facet_wrap(vars(species))+ #makes two columns for species
     facet_grid(. ~ species, labeller=labeller(species = facet.labs))+ 
     theme(panel.border = element_blank(),
       panel.grid.major = element_line(colour="white"),
@@ -645,28 +666,31 @@ plot.indole.agghyb.field=
       strip.text.x = element_text(size=11),
       strip.background = element_rect(colour="white", fill="white"))+
     scale_color_manual(name="Nitrogen Level", 
-        labels= c("High",  "Low"), 
-        values=c("tan2","cadetblue3"))+
+       # labels= c("High",  "Low", "Control"), #rename legend treatment names
+        values=c("tan2","cadetblue3","purple"))+
     theme(legend.title = element_text(size=11, color = "black"),
         legend.text=element_text(size=9))
-print(plot.indole.agghyb.field)    
-ggsave(plot.indole.agghyb.field, file='Indole_boxplot.jpg', width=150, height=110, units= 'mm', dpi=300)
+print(plot.indole.Lagghyb.field)    
+ggsave(plot.indole.Lagghyb.field, file='Indole_field_agghyb_boxplot.jpg', width=150, height=110, units= 'mm', dpi=300)
 
 library(car)
 library(lmerTest)
 library(lme4)
 
+#Only indole lmer with plantid as random effect for field
 
-#TODO: change for field exp
-#Only indole lmer with plantid as random effect
+noaverage.field$S.T.T <- factor(paste0(noaverage.field$species, noaverage.field$time, noaverage.field$treatment))
+(indolelmer.field<-lmer(sqrt(indole)~S.T.T + (1|plantid), data=noaverage.field)) #use not averaged data! d
+summary(multcomp::glht(indolelmer.field, linfct= multcomp::mcp(S.T.T = "Tukey")))
+#no significant p values :(
+  
+  #"LaggDhigh - LaggDlow == 0","LaggNhigh - LaggNlow == 0", "IhybNhigh - IhybNlow == 0", "IhybDhigh - IhybDlow==0"))))
 
-# noaverage$S.T.T.field <- factor(paste0(noaverage.field$species, noaverage$time, noaverage.field$treatment))
-# (indolelmer.field<-lmer(sqrt(indole)~S.T.T.field + (1|plantid), data=noaverage.field)) #use not averaged data! d
-# summary(multcomp::glht(indolelmer.field, linfct= multcomp::mcp(S.T.T.field =TukeyHSD(idkwhat to put here)))
+
 
 ```
 
-### START HERE (fix indole)
+### (fix indole)
 
 ```{r}
 #SD - because indole model above not working, says SD=0 but not true
@@ -722,7 +746,7 @@ anova(TENcapday, by="term")
 TENnighttable<-averageTENtable[averageTENmetadata$time=="N",]
 TENnightmetadata<-averageTENmetadata[averageTENmetadata$time=="N",]
 
-TENcapnight <- capscale(sqrt(TENnighttable) ~  treatment, data = TENnightmetadata, distance = "bray")
+TENcapnight <- capscale(sqrt(TENnighttable) ~  treatment, data = TENnightmetadata, distance = "bray") #no interaction terms bc only looking at tenuituba at night
 
 anova(TENcapnight, by="term")
 #p=0.229
@@ -763,7 +787,7 @@ agg.Day.ordination = ggplot(bind_cols(filter(cap.dataframe, Score=="sites"),aver
   ylab("MDS1 (33.2% explained)") + 
   xlab("CAP1 (12.5% explained)") + 
   scale_color_manual(name="Nitrogen Level", labels= c("High", "Low"), values=c("tan2","cadetblue3")) +
-  labs(subtitle="ANOVA; p=0.021",hjust = 1)+ #adds subtitle at top of figure
+  labs(subtitle="ANOVA; previously p=0.021",hjust = 1)+ #adds subtitle at top of figure
    theme(legend.title = element_text(size=12, color = "black"), legend.text=element_text(size=10),
            legend.justification=c(0,1), 
            legend.position=c(0.03, 0.95),
@@ -780,11 +804,12 @@ ggsave(agg.Day.ordination, file='agg_Day_ordinationplot.jpg', width=130, height=
 #Compound names on ordination plot
 library(ggrepel) #makes it so labels don't overlap
 
+#TODO: fix ggplot of compound names
 ggplot(filter(cap.dataframe, Score=="species", sqrt(CAP1^2+MDS1^2)>0.2), aes(x=CAP1, y= MDS1)) + 
   geom_point()+
   geom_text_repel(aes(label=Label)) +
   theme_classic() + 
-  coord_fixed(xlim=c(-1.25, 1), ylim=c(-1.5, 0.4)) +#coord fixed evenly scales x&y
+  #coord_fixed(xlim=c(-1.25, 1), ylim=c(-1.5, 0.4)) +#coord fixed evenly scales x&y
   geom_hline(yintercept = 0, linetype="dotted") + 
   geom_vline(xintercept = 0, linetype="dotted") +
   labs(color = "Treatment", fill = "Treatment") +
@@ -816,11 +841,104 @@ anova(agg.night.cap, by="term")
 #p=0.593
 ```
 
+#Field day and night emission rate
+
+#hybrid day emission rate 
+```{r}
+averageHYBmetadataDAY.field<- averagemetadata.field[averagemetadata.field$species=="Ihyb"& averagemetadata.field$time=="D",]
+
+averageHYBtableDAY.field<-averagetable.field[averagemetadata.field$species=="Ihyb"& averagemetadata.field$time=="D",]
+
+averageHYBday.field <- bind_cols(averageHYBmetadataDAY.field, averageHYBtableDAY.field)# %>%  #combines averaged meta data table and average volatile                                                                           list table together
+#  mutate(timetreatment=paste(time,treatment)) 
+
+
+ihyb.day.cap <- capscale(sqrt(averageHYBtableDAY.field) ~ treatment, data = averageHYBmetadataDAY.field[, c("treatment")], distance = "bray")
+
+#eigen values to get % explained
+#eig.ihyb.day <-eigenvals(ihyb.day.cap)
+#axis.eig.ihyb.day <- eig.ihyb.day/ sum(eig.ihyb.day)
+
+anova(ihyb.day.cap, by="term")
+
+```
+
+#hybrid night emission rate 
+```{r}
+averageHYBmetadataNIGHT.field<- averagemetadata.field[averagemetadata.field$species=="Ihyb"& averagemetadata.field$time=="N",]
+
+averageHYBtableNIGHT.field<-averagetable.field[averagemetadata.field$species=="Ihyb"& averagemetadata.field$time=="N",]
+
+averageHYBnight.field <- bind_cols(averageHYBmetadataNIGHT.field, averageHYBtableNIGHT.field)# %>%  #combines averaged meta data table and average volatile                                                                           list table together
+#  mutate(timetreatment=paste(time,treatment)) 
+
+
+ihyb.night.cap <- capscale(sqrt(averageHYBtableNIGHT.field) ~ treatment, data = averageHYBmetadataNIGHT.field, distance = "bray")
+
+#eigen values to get % explained
+#eig.ihyb.day <-eigenvals(ihyb.day.cap)
+#axis.eig.ihyb.day <- eig.ihyb.day/ sum(eig.ihyb.day)
+
+anova(ihyb.night.cap, by="term")
+#p=0.838
+```
+
+#Field Lagg emission rate day vs night
+
+#Field Lagg emission rate DAY
+```{r}
+#Average Lagg for day and night
+averageLaggmetadata.field<- averagemetadata.field[averagemetadata.field$species=="Lagg",]
+
+averageLaggtable.field<-averagetable.field[averagemetadata.field$species=="Lagg",]
+
+#Average Lagg for DAY only
+averageLaggmetadataDAY.field<- averagemetadata.field[averagemetadata.field$species=="Lagg"& averagemetadata.field$time=="D",]
+
+averageLaggtableDAY.field<-averagetable.field[averagemetadata.field$species=="Lagg"& averagemetadata.field$time=="D",]
+
+averageLaggday.field <- bind_cols(averageLaggmetadataDAY.field, averageLaggtableDAY.field)# %>%  #combines averaged meta data table and average volatile                                                                           list table together
+#  mutate(timetreatment=paste(time,treatment)) 
+
+
+Lagg.day.cap <- capscale(sqrt(averageLaggtableDAY.field) ~ treatment, data = averageLaggmetadataDAY.field[, c("treatment")], distance = "bray")
+
+#eigen values to get % explained
+#eig.ihyb.day <-eigenvals(ihyb.day.cap)
+#axis.eig.ihyb.day <- eig.ihyb.day/ sum(eig.ihyb.day)
+
+anova(Lagg.day.cap, by="term")
+#p=0.417
+```
+
+#Field Lagg emission rate NIGHT
+```{r}
+
+#average Lagg metadata and table for Night
+averageLaggmetadataNIGHT.field<- averagemetadata.field[averagemetadata.field$species=="Lagg"& averagemetadata.field$time=="N",]
+
+averageLaggtableNIGHT.field<-averagetable.field[averagemetadata.field$species=="Lagg"& averagemetadata.field$time=="N",]
+
+
+averageLaggnight.field <- bind_cols(averageLaggmetadataNIGHT.field, averageLaggtableNIGHT.field)# %>%  #combines averaged meta data table and average volatile                                                                           list table together
+#  mutate(timetreatment=paste(time,treatment)) 
+
+
+Lagg.night.cap <- capscale(sqrt(averageLaggtableNIGHT.field) ~ treatment, data = averageLaggmetadataNIGHT.field, distance = "bray")
+
+#eigen values to get % explained
+#eig.ihyb.day <-eigenvals(ihyb.day.cap)
+#axis.eig.ihyb.day <- eig.ihyb.day/ sum(eig.ihyb.day)
+
+anova(Lagg.night.cap, by="term")
+#p=0.253
+```
 
 # Total emissions 
 
 # Greenhouse- total emissions
 ```{r}
+#Need average agg and ten for boxplot 
 averageaggmetadata$totalemssions <-rowSums(averageaggtable) #sums rows of volatiles to get total emissions (via adding all peak areas) for each sample
 
 meta$totalemission <- rowSums(vol)  #attatches row sums to metadata 
@@ -869,21 +987,129 @@ total.emission.model2 <-lmer(totalemission~S.T.T + (1|plantid), data=meta)
 
 Anova(total.emission.model2, type=3)
 
-library(multcomp)
+#library(multcomp)
 
 #general linear hypotheses
   #subtracts means from different groups (like Agg day low - agg day high) c
       #can specify which group like below or write linfct=mcp(model ="Tukey"))
   # summary () gives you p-values
-summary(glht(total.emission.model2, linfct=mcp(S.T.T= 
+
+
+multcomp:::summary.glht(multcomp::glht(total.emission.model2, linfct=multcomp::mcp(S.T.T= 
                                            c("aggDlow - aggDhigh == 0",
                                              "aggNlow-aggNhigh==0", 
                                              "tenDlow-tenDhigh==0",
-                                             "tenNlow-tenNhigh==0"))),                                                               test=adjusted(type="none"))
+                                             "tenNlow-tenNhigh==0"))),                                                               test=multcomp::adjusted(type="fdr"))
 
 #total emissions change at night time between high and low in agg p=0.0349
   
 ```
+
+
+
+# Field- total emissions
+```{r}
+#average Ihyb total emissions = row sums 
+averageHYBmetadata.field$totalemssions <-rowSums(averageHYBtable.field) #sums rows of volatiles to get total emissions (via adding all peak areas) for each sample
+
+#average Lagg total emissions = row sums 
+averageLaggmetadata.field$totalemssions <-rowSums(averageLaggtable.field)
+
+meta.field$totalemission <- rowSums(vol.field)  #attatches row sums to metadata 
+
+total.emission.model.field <-lmer(totalemission~treatment*species*time + (1|plantid), data=meta.field) #models looks at total emissions as a function of treatment*species*time with plantid as a random effect
+Anova(total.emission.model.field, type=3) #type 3 anova on the model to get p-value
+#time p= 0.00053
+
+##############################################
+#boxplot of Total emissions for Agg and Ten day & night
+
+facet.labs <- c(Lagg="I. aggregata", Ihyb="Hybrids")
+
+plot.total.emissions.field=
+  ggplot(meta.field, aes( y= totalemission, x=time, #could do with average metadata instead of all data points in meta
+  color=treatment))+
+  geom_boxplot(position=position_dodge(width=0.9))+
+  geom_point (position=position_dodge(width=0.9))+ #makes it so point don't overlap
+  scale_y_sqrt()+
+  ylab("Total Emissions")+
+  xlab("") +
+  facet_wrap(vars(species)) +
+    facet_grid(. ~ species, labeller=labeller(species = facet.labs))+ 
+    theme(panel.border = element_blank(),
+      panel.grid.major = element_line(colour="white"),
+      #panel.grid.minor = element_blank(),
+      panel.background = element_rect(fill = "gray96",
+                                #colour = "lightblue",
+                                  linetype = "solid"),
+      strip.text.x = element_text(size=11),
+      strip.background = element_rect(colour="white", fill="white"))+
+    scale_color_manual(name="Nitrogen Level", 
+        #labels= c("High",  "Low"), #Specifies treatment names in legend
+        values=c("pink","tan2","cadetblue3"))+
+    theme(legend.title = element_text(size=11, color = "black"),
+        legend.text=element_text(size=9))+
+  scale_x_discrete(labels=c('Day', 'Night', 'Day','Night'))
+
+print(plot.total.emissions.field)   
+#ggsave(plot.total.emissions, file='total_emissions_boxplot.jpg', width=150, height=110, units= 'mm', dpi=300)
+
+#######################################
+
+#glht for field total emissions 
+meta.field$S.T.T <- paste0(meta.field$species, meta.field$time, meta.field$treatment) #add column with species, treatment and time to metadata. Need for glht
+
+#finding p-values to compare treatment within each of the four groups 
+total.emission.model2.field <-lmer(totalemission~S.T.T + (1|plantid), data=meta.field)
+
+Anova(total.emission.model2.field, type=3)
+
+
+#library(multcomp)
+
+#general linear hypotheses
+  #subtracts means from different groups (like Agg day low - agg day high) c
+      #can specify which group like below or write linfct=mcp(model ="Tukey"))
+  # summary () gives you p-values
+summary(multcomp::glht(total.emission.model2.field, linfct=multcomp::mcp(S.T.T= "Tukey")),
+                                          # c("IhybDnitrogen - IhybDcontrol == 0", "IhybDnitrogen - IhybDwater control == 0", "IhybDcontrol - IhybDwater control == 0", "IhybNnitrogen - IhybNcontrol == 0", "IhybNnitrogen - IhybNwater control == 0", "IhybNcontrol - IhybNwater control == 0","LaggDnitrogen - LaggDcontrol == 0 ", "LaggDnitrogen - LaggDwater control == 0 ", "LaggDwater control - LaggDcontrol == 0 ","LaggNnitrogen - LaggNcontrol == 0 ", "LaggNnitrogen - LaggNwater control == 0 ", "LaggNwater control - LaggNcontrol == 0 "))),                                                              
+  test=multcomp::adjusted(type="fdr"))
+
+
+#TODO: fix so has both species
+#plot total emissions for each compound present 
+plot.total.emissions.field.pretty=
+  ggplot(meta.field, aes( y= totalemission, x=str_to_title(species), #could do with average metadata instead of all data points in meta
+  color=str_to_title(treatment)))+
+  #annotate(geom="rect", ymin = 0, ymax = Inf, xmin=2.5, xmax=6)+
+  geom_boxplot(position=position_dodge(width=0.9))+
+ # geom_point (position=position_dodge(width=0.9))+ #makes it so point don't overlap
+  scale_y_sqrt()+
+  ylab("Total Emissions")+
+  xlab("Species") +
+    #theme(panel.border = element_blank(),
+     # panel.grid.major = element_line(colour="white"),
+      #panel.grid.minor = element_blank(),
+     # panel.background = element_rect(fill = "gray96",
+                                #colour = "lightblue",
+      #                            linetype = "solid"),
+     # strip.text.x = element_text(size=11),
+     # strip.background = element_rect(colour="white", fill="white"))+
+    #scale_color_manual(name="Nitrogen Level", 
+     #   labels= c("High",  "Low"), 
+      #  values=c("tan2","cadetblue3"))+
+    theme_minimal()+
+    theme(legend.title = element_text(size=11, color = "black"), panel.grid.major.x=element_blank(),
+        legend.text=element_text(size=9), legend.position = "bottom")+
+ # scale_x_discrete(labels=c('Day', 'Night', 'Day','Night'))+
+  labs(color="Treatment")+
+   scale_color_manual(values = c("orange","purple","magenta"))+
+ # scale_fill_manual(values = c("white","grey90"))+
+  facet_wrap(vars(time), labeller = as_labeller(c(D="Day", N="Night")))
+
+print(plot.total.emissions.field.pretty)
+```
+
 
 # Individual compound change for treatment based on species and time
 
@@ -895,10 +1121,27 @@ dominantvocs <-averagePlant%>% pivot_longer(any_of(colnames(vol)))%>%     group_
   arrange(species, time, treatment, desc(value))
 
 ggplot(dominantvocs, aes(y=fct_reorder(name, value), x=value, color=treatment, shape=time))+
-         geom_point()+
+         geom_point()+ #plots points
     scale_x_sqrt()+ #scales x axis so you can see small peak area dots
     facet_wrap(vars(species))+ #makes two pannels, agg and ten
     scale_color_manual(values=c("orange","lightblue"))+ #manually change colros
+    theme_minimal() #removed grey from background
+    
+
+```
+
+# Field- individual compound change for treatment 
+```{r}
+dominantvocs.field <-averagePlant.field%>% pivot_longer(any_of(colnames(vol.field)))%>%     group_by(species,time,treatment,name)%>% 
+   summarise(value=mean(value))%>%
+   # mutate(value=value/sum(value))%>% #adds up values for each treatment
+  arrange(species, time, treatment, desc(value))
+
+ggplot(dominantvocs.field, aes(y=fct_reorder(name, value), x=value, color=treatment, shape=time))+
+         geom_point()+ #plots points
+    scale_x_sqrt()+ #scales x axis so you can see small peak area dots
+    facet_wrap(vars(species))+ #makes two pannels, agg and ten
+    scale_color_manual(values=c("pink","orange","lightblue"))+ #manually change colros
     theme_minimal() #removed grey from background
     
 
@@ -908,21 +1151,21 @@ ggplot(dominantvocs, aes(y=fct_reorder(name, value), x=value, color=treatment, s
 
 # Greenhouse-anova on specific/individual compounds
 ```{r}
-library(broom.mixed)
-library(dplyr)
-library(lme4)
+#library(broom.mixed)
+#library(dplyr)
+#library(lme4)
 
-individualcompoundpvalue <- bind_cols(meta, vol) %>% 
-  pivot_longer(all_of(colnames(vol))) %>%
-  group_by(species,time, name)%>%
-  nest() %>% mutate(model=map(data, ~lmer(value~ treatment + (1|plantid), data=.x))) %>%  
+#individualcompoundpvalue <- bind_cols(meta, vol) %>% 
+#  pivot_longer(all_of(colnames(vol))) %>%
+#  group_by(species,time, name)%>%
+#  nest() %>% mutate(model=map(data, ~lmer(value~ treatment + (1|plantid), data=.x))) %>%  
 
 # mutate adds column, we are adding model column; map runs a for loop through data column  only once; value = emission rate in ng/hr; ~ says run this function; .x is empty data frame model stores values in
   
-  mutate(test=map(model, ~tidy(anova(.x)))) %>% 
-  dplyr::select(test) %>%   #select(test) makes unnesting happier
-  unnest()%>% ungroup()%>%                         
-  mutate(p.adjusted=p.adjust(p.value, method="fdr")) #p.adjust adjusts p-value
+#  mutate(test=map(model, ~tidy(anova(.x)))) %>% 
+#  dplyr::select(test) %>%   #select(test) makes unnesting happier
+#  unnest()%>% ungroup()%>%                         
+ # mutate(p.adjusted=p.adjust(p.value, method="fdr")) #p.adjust adjusts p-value
 
 #View(individualcompoundpvalue)
 
@@ -978,13 +1221,138 @@ rel.amount.ordination = ggplot(bind_cols(filter(rel.amount.dataframe, Score=="si
 print(rel.amount.ordination)
 
 anova(rel.amount.cap, by="term")
-#p= 0.264
+#p= 0.152
 
 ```
 
-#per flower emission 
+
+# Field- relative amount
 ```{r}
-# left_join( emission per sample and total flower number
+library(vegan)
+library(dplyr)
+
+# Total relative amount divide by margin total 
+relativeamount.vol.field <- decostand(vol.field, "total")
+
+relativeamount.field <- bind_cols(meta.field, relativeamount.vol.field) %>% 
+   pivot_longer(all_of(colnames(vol.field))) %>% 
+  group_by(species,time, name)%>% 
+   dplyr::select(species, time, treatment, plantid, name, value)  
+
+#View(relativeamount.field)
+
+# Relative amount presents/ absents 0s & 1s 
+relativeamountPA.field <- decostand(vol.field, "pa")
+
+#View(relativeamountPA.field)
+
+#cap on relative amount (with Square root transform) 
+rel.amount.cap.field <- capscale(sqrt(relativeamount.vol.field) ~ treatment, data = meta.field, distance = "bray")
+
+rel.amount.dataframe.field <- fortify(rel.amount.cap.field)
+rel.amount.ordination.field = ggplot(bind_cols(filter(rel.amount.dataframe.field, Score=="sites"),meta.field), aes(x=CAP1, y= MDS1, color = treatment)) + 
+  geom_point(size=2.6) +
+  theme_classic() + 
+  coord_fixed(xlim=c(-1.5, 2.9), ylim=c(-1, 2.4)) +
+  geom_hline(yintercept = 0, linetype="dotted") + 
+  geom_vline(xintercept = 0, linetype="dotted") +
+  labs(color = "Treatment", fill = "Treatment") +
+ # ggtitle("I. aggregata Daytime Volatiles") +
+  theme(plot.title = element_text(hjust = 0.5))+
+  ylab("MDS1 (% explained)") + 
+  xlab("CAP1 (% explained)") + 
+  scale_color_manual(name="Nitrogen Level", labels= c("Control", "Nitrogen", "Water Control"), values=c("pink","tan2","cadetblue3")) + 
+  labs(subtitle="ANOVA; p=0.451",hjust = 1)+ #adds subtitle at top of figure
+   theme(legend.title = element_text(size=12, color = "black"), legend.text=element_text(size=10),
+           legend.justification=c(0,1), 
+           legend.position=c(0.03, 1),
+           legend.background = element_blank(),
+           legend.key = element_blank(),
+            plot.subtitle = element_text(hjust = 1)) #moves subtitle to right side 
+  
+    
+print(rel.amount.ordination.field)
+
+anova(rel.amount.cap.field, by="term")
+#p= 0.451
 
 ```
+
+# Percent change of individual compounds for each species Night/Day with p-values
+
+#Percent change Night/Day- field
+```{r}
+#compound % change 
+compoundratios.field <- averagePlant.field %>% group_by(time, species) %>% 
+  summarise(across(colnames(vol.field),mean)) %>%  #takes mean of each compound for each species and time
+  pivot_longer(colnames(vol.field)) %>% #dplr can't divide rows but can divide columns so need to make compounds into columns
+  pivot_wider(names_from = time, values_from = value) %>%  #name day column and night column
+  mutate(NighttoDayRatio= N/D * 100)
+library(broom)
+compoundchangemodel.field <- averagePlant.field %>% pivot_longer(colnames(vol.field)) %>%
+    group_by(species, name) %>% nest() %>% 
+    mutate(model=map(data,~lm(value~time, data=.x))) %>% 
+    mutate(test=map(model, ~tidy(anova(.x)))) %>% 
+    select(-data, - model) %>% unnest(test) %>% 
+    filter(term!="Residuals") %>% 
+    mutate(significant= p.value< 0.05)
+
+View(compoundchangemodel.field)
+
+compoundpercentchange.field <- left_join(compoundratios.field,compoundchangemodel.field)
+View(compoundpercentchange.field)
+
+write_csv(compoundpercentchange.field, file = "Nexp1_Compound%change_DN.field.csv")
+```
+
+#Percent change Night/Day- greenhouse
+```{r}
+#compound % change 
+compoundratios <- averagePlant %>% group_by(time, species) %>% 
+  summarise(across(colnames(vol),mean)) %>%  #takes mean of each compound for each species and time
+  pivot_longer(colnames(vol)) %>% #dplr can't divide rows but can divide columns so need to make compounds into columns
+  pivot_wider(names_from = time, values_from = value) %>%  #name day column and night column
+  mutate(NighttoDayRatio= N/D * 100)
+#library(broom)
+compoundchangemodel <- averagePlant %>% pivot_longer(colnames(vol)) %>%
+    group_by(species, name) %>% nest() %>% 
+    mutate(model=map(data,~lm(value~time, data=.x))) %>% 
+    mutate(test=map(model, ~tidy(anova(.x)))) %>% 
+    select(-data, - model) %>% unnest(test) %>% 
+    filter(term!="Residuals") %>% 
+    mutate(significant= p.value< 0.05)
+
+View(compoundchangemodel)
+
+compoundpercentchange <- left_join(compoundratios,compoundchangemodel)
+View(compoundpercentchange)
+
+write_csv(compoundpercentchange, file = "Nexp1_Compound%change_DN.csv")
+
+```
+
+```{r}
+#compound % change Treatment low/high
+compoundratios.lowhigh <- averagePlant %>% group_by(time, species, treatment) %>% 
+  summarise(across(colnames(vol),mean)) %>%  #takes mean of each compound for each species and time
+  pivot_longer(colnames(vol)) %>% #dplr can't divide rows but can divide columns so need to make compounds into columns
+  pivot_wider(names_from = treatment, values_from = value) %>%  #name day column and night column
+  mutate(HighLowRatio= low/high * 100)
+#library(broom)
+compoundchangemodel.lowhigh <- averagePlant %>% pivot_longer(colnames(vol)) %>%
+    group_by(species, name) %>% nest() %>% 
+    mutate(model=map(data,~lm(value~time, data=.x))) %>% 
+    mutate(test=map(model, ~tidy(anova(.x)))) %>% 
+    select(-data, - model) %>% unnest(test) %>% 
+    filter(term!="Residuals") %>% 
+    mutate(significant= p.value< 0.05)
+
+View(compoundchangemodel.lowhigh)
+
+compoundpercentchange.lowhigh <- left_join(compoundratios.lowhigh,compoundchangemodel.lowhigh)
+View(compoundpercentchange.lowhigh)
+
+write_csv(compoundpercentchange.lowhigh, file = "Nexp1_Compound%change_lowhigh.csv")
+```
+
 
