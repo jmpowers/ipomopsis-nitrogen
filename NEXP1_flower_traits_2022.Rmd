@@ -133,6 +133,7 @@ ggplot(total.flower, aes(y=flower_num, x=species, color=treatment))+geom_boxplot
 
 #nitrogen only p= 0.0074
 
+#######old way#############################
 #make data frame with ls means
 flower.num.N= as.data.frame(lsmeans(flower.nub.lmer, pairwise~ nitrogen|microbe, adjustSigma = TRUE, adjust = "tukey")$lsmeans)
 
