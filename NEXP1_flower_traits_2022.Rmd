@@ -29,6 +29,7 @@ library(vegan)
 library(ggpubr)
 library(ggrepel)
 library(googlesheets4)
+library(knitr)
 #library(multcomp) #reads lsmeans cld don't load just ::
 ```
 
@@ -36,7 +37,8 @@ library(googlesheets4)
 ```{r}
 exp1.treatments <-read_sheet("1nyUqE-4dVr-81-MFMuAi5-dU4BIYZfuzF8xDEoFyJIk", sheet="Treatments") 
 
-morphdata <- read_sheet("1nyUqE-4dVr-81-MFMuAi5-dU4BIYZfuzF8xDEoFyJIk", sheet="Flower Morphology") %>% left_join(exp1.treatments)
+morphdata <- read_sheet("1nyUqE-4dVr-81-MFMuAi5-dU4BIYZfuzF8xDEoFyJIk", sheet="Flower Morphology", na=c("","NA")) %>% 
+  mutate(corolla_length=as.numeric(corolla_length))%>% left_join(exp1.treatments)
 
 #Making new vector with means of each trait for each individual plant
 morphdata1<- morphdata %>%
@@ -53,17 +55,19 @@ library(broom)
 all.morph.traits <- c("corolla_length", "corolla_width", "style_length", "max_anther", "min_anther","sepal_width", "inflo_height_cm")
 
 morph.models <- morphdata %>% pivot_longer(all_of(all.morph.traits), names_to = "trait") %>% group_by(trait) %>% nest() %>% 
-      mutate(morph.trait.lmer=map(data, ~lmer(value~treatment+ (1|plant), data=.x))) %>% 
+      mutate(morph.trait.lmer=map(data, ~lmer(value~treatment+ (1|plantid), data=.x))) %>% 
       mutate(morph.Anova= map(morph.trait.lmer, ~tidy(Anova(.x, type=3)))) %>%  unnest(morph.Anova) %>%
       dplyr::select(-data,-morph.trait.lmer) %>% 
       mutate(significant = ifelse(p.value<0.05, "*","") )
 
+kable(morph.models, digits=3) #spits out model into table
+
 #boxplot for averages of all traits
 allmorphtraits <- morphdata1 %>% pivot_longer(all_of(all.morph.traits), names_to = "trait") %>% 
     #filter(trait%in% c("corolla_length", "max_anther")) %>% 
-    ggplot(aes(color= str_to_title(microbe), x=str_to_title(nitrogen), y=value))+geom_boxplot()+
-    facet_wrap(vars(trait),scales = "fixed", labeller=as_labeller(c(corolla_length="Corolla Length", max_anther= "Longest Stamen", corolla_width= "Corolla Width", style_length="Style Length", max_anther="Max Stamen", min_anther= "Min Stamen",sepal_width="Sepal Width", inflo_height_cm="Inforecence Height (cm)")))+
-    labs(y="Length (mm)", x="Nitrogen", color="Soil") +
+    ggplot(aes(color= str_to_title(treatment), x=str_to_title(treatment), y=value))+geom_boxplot()+
+    facet_wrap(vars(trait),scales = "free_y", labeller=as_labeller(c(corolla_length="Corolla Length", corolla_width= "Corolla Width", style_length="Style Length", max_anther="Max Stamen", min_anther= "Min Stamen",sepal_width="Sepal Width", inflo_height_cm="Inforecence Height (cm)")))+
+    labs(y="Length (mm)", x="Nitrogen", color="Nitrogen") +
   scale_color_manual(values = c("orange","purple"))+
   theme_minimal()+
   theme(panel.grid.major.x = element_blank(), legend.position = "bottom")
@@ -82,17 +86,19 @@ exp1.treatments <-read_sheet("1nyUqE-4dVr-81-MFMuAi5-dU4BIYZfuzF8xDEoFyJIk", she
 nectardata <- read_sheet("1nyUqE-4dVr-81-MFMuAi5-dU4BIYZfuzF8xDEoFyJIk", sheet="Nectar") %>% 
   #mutate(plant = as.numeric(plant)) %>% 
   mutate(nectar.production = nectar_48_h_mm * 5 /(2 * 32)) %>%    #5-uL microcapillary tube 32 mm in length, 2 days
-  left_join(exp1.treatments) 
+  left_join(exp1.treatments) %>% mutate(treatment=factor(treatment, levels=c("LOW","HIGH")))
 
 nectar.traits <- c('nectar.production', "concentration") 
 
 library(broom)
 
-nectar.models <- nectardata %>% pivot_longer(all_of(nectar.traits), names_to = "trait") %>% group_by(trait) %>% nest() %>% 
+nectar.models <- nectardata %>% pivot_longer(all_of(nectar.traits), names_to = "trait") %>% group_by(trait,species) %>% nest() %>% 
       mutate(nectar.trait.lmer=map(data, ~lmer(value~treatment+ (1|plantid), data=.x))) %>% 
       mutate(nectar.Anova= map(nectar.trait.lmer, ~tidy(Anova(.x, type=3)))) %>%  unnest(nectar.Anova) %>%
       dplyr::select(-data,-nectar.trait.lmer) %>% 
-      mutate(significant = ifelse(p.value<0.05, "*","") )
+      mutate(significant = ifelse(p.value<0.05, "*","") ) %>% filter(term!="(Intercept)")
+
+kable(nectar.models, digits=3) #spits out model into table
 
 #average nectar data
  nectardata1<- nectardata %>%
@@ -100,10 +106,12 @@ nectar.models <- nectardata %>% pivot_longer(all_of(nectar.traits), names_to = "
     summarise(across(all_of(nectar.traits), ~mean(.x, na.rm=TRUE))) 
 
 #boxplot for averages of all traits
+ 
 nectardata1 %>% pivot_longer(all_of(nectar.traits), names_to = "trait") %>% #need to pivot longer for facets
-    ggplot(aes(color= treatment, x=treatment, y=value))+geom_boxplot()+
+    ggplot(aes(color= treatment, x=species, y=value))+geom_boxplot()+
     facet_wrap(vars(trait),scales = "free_y")+
-    ylab("") 
+    ylab("") +
+   scale_color_manual(values = c("purple", "orange"))
 
 #
 nectardata %>% ggplot(aes(x=concentration  , y=nectar.production))+geom_point()+geom_smooth()
@@ -112,15 +120,16 @@ nectardata %>% ggplot(aes(x=concentration  , y=nectar.production))+geom_point()+
 
 Total Flower number
 ```{r}
-total.flower<-read_sheet("1nyUqE-4dVr-81-MFMuAi5-dU4BIYZfuzF8xDEoFyJIk", sheet=" Flower Number") %>% 
-   left_join(exp1.treatments) 
+total.flower<-read_sheet("1nyUqE-4dVr-81-MFMuAi5-dU4BIYZfuzF8xDEoFyJIk", sheet="Flower Number") %>% 
+   left_join(exp1.treatments) %>% mutate(treatment=factor(treatment, levels=c("LOW","HIGH")))
 
 
-flower.nub.lm=lm(flower_num~treatment, data=total.flower)
+flower.nub.lm=lm(flower_num~treatment*species, data=total.flower)
   
 Anova(flower.nub.lm, type=3)#Type 3
 
-ggplot(total.flower, aes(y=total_flower_number, x=nitrogen, color=microbe))+geom_boxplot()
+ggplot(total.flower, aes(y=flower_num, x=species, color=treatment))+geom_boxplot()+
+  scale_color_manual(values = c("purple", "orange"))
 
 #nitrogen only p= 0.0074
 

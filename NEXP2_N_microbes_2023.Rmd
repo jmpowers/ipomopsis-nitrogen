@@ -270,7 +270,7 @@ setdiff(colnames(vol.qual),shortnames)
 
 # qual cap
 ```{r}
-(cap_treat <- vegan::capscale(sqrt(vol.qual) ~ nitrogen * time * microbe, data=meta))
+(cap_treat <- vegan::capscale(sqrt(vol.qual) ~ time*nitrogen * microbe, data=meta))
 
 anova.cca(cap_treat, by="term") # samples should be averaged by plant first
 plot(cap_treat)
@@ -319,7 +319,7 @@ averagetable<- averagePlant[,14:ncol(averagePlant)] #seperates table into meta d
 averagemetadata<- averagePlant[,1:13]
 
 #cap microbe * nitrogen * time 
-AverageVOCcapM.N.T <- capscale(sqrt(averagetable) ~ microbe * nitrogen * time, data = averagemetadata, distance = "bray")
+AverageVOCcapM.N.T <- capscale(sqrt(averagetable) ~ time*nitrogen*microbe, data = averagemetadata, distance = "bray")
 
 anova(AverageVOCcapM.N.T, by="term")
 

@@ -84,87 +84,6 @@ ggsave(corollalength.maxstamen, file="plots-microbe/corollalength.maxstamen.png"
 
 ```
 
-
-Corolla width 
-```{r}
-corwidth.lmer=lmer(corolla_width~nitrogen*microbe+ (1|plant), data=morphdata) 
-Anova(corwidth.lmer, type=3)#Type 3
-
-#make data frame with ls means
-corwidth.N.M= as.data.frame(lsmeans(corwidth.lm, pairwise~ nitrogen|microbe, adjustSigma = TRUE, adjust = "tukey")$lsmeans)
-
-#contrast of treatment (high vs low N) in each species (TEN vs AGG), groups a, b
-multcomp::cld(lsmeans(corwidth.lm, pairwise~ nitrogen|microbe, adjustSigma = TRUE, adjust = "tukey")$lsmeans ,
-alpha=0.05,
-Letters=letters,
-adjust="tukey")
-
-#TODO: glht.morphdata3 below not found
-######### glht ###########
-#model to put into glht bc glht doesn't like spaces
-corwidth.lm.glht=lm(corolla_width~nitrogenmicrobe, data=glht.morphdata3) 
-
-summary(multcomp::glht(corwidth.lm.glht, linfct=multcomp::mcp(speciestreatment="Tukey")), test=multcomp::adjusted(type="none"))
-
-##plot with species on x-axis, bars show N treatment, y axis is lsmean
-Fig1.corwidth = ggplot(corwidth.SP.T, aes(x=Species, y=lsmean, fill=Treatment)) +
-  geom_bar(color="black",position=position_dodge(), stat="identity", width = 0.5,  linewidth=0.5)+
-  geom_errorbar(aes(ymin=lsmean-SE, ymax=lsmean+SE),
-                width=.2, # Width of the error bars
-                position=position_dodge(.5))  +
-scale_fill_manual(values=c("orange", "lightblue3"), name = "", labels = c("High", "Low")) + 
-  labs(y="Mean Corolla Width") +
-  annotate("text", x = 1.5, y = 5, label = "***", size = 4)
-
-Fig1.corwidth
-ggsave(Fig1.corwidth, file="plots-morph-nectar/corolla-width.png", width= 7, height=8)
-```
-
-#Corolla length
-```{r}
-corlength.lmer=lmer(corolla_length~nitrogen*microbe+ (1|plant), data=morphdata) 
-Anova(corlength.lmer, type=3)#Type 3
-
-#TODO: glht????
-
-##plot with species on x-axis, bars show N treatment, y axis is lsmean
-Fig.corlength = ggplot(corwidth.SP.T, aes(x=Species, y=lsmean, fill=Treatment)) +
-  geom_bar(color="black",position=position_dodge(), stat="identity", width = 0.5,  linewidth=0.5)+
-  geom_errorbar(aes(ymin=lsmean-SE, ymax=lsmean+SE),
-                width=.2, # Width of the error bars
-                position=position_dodge(.5))  +
-scale_fill_manual(values=c("orange", "lightblue3"), name = "", labels = c("High", "Low")) + 
-  labs(y="Mean Corolla Width") +
-  annotate("text", x = 1.5, y = 5, label = "***", size = 4)
-
-Fig.corlength
-ggsave(Fig.corlength, file="plots-morph-nectar/corolla-length.png", width= 7, height=8)
-```
-
-#Style length
-```{r}
-stylelength.lm=lm(style_length~nitrogen*microbe, data=morphdata3) 
-Anova(stylelength.lm, type=3)#Type 3
-```
-
-#max anther
-```{r}
-maxanther.lm=lm(max_anther~nitrogen*microbe, data=morphdata3) 
-Anova(maxanther.lm, type=3)#Type 3
-```
-
-# min anther (stamen
-```{r}
-minanther.lm=lm(min_anther~nitrogen*microbe, data=morphdata3) 
-Anova(minanther.lm, type=3)#Type 3
-```
-
-# sepal width
-```{r}
-sepalwidth.lm=lm(sepal_width~nitrogen*microbe, data=morphdata3) 
-Anova(sepalwidth.lm, type=3)#Type 3
-```
-
 # read in nectar data and find averages 
 ```{r}
 exp2.treatments <-read_sheet("1EwRYUB0hUWUOdgVNRM6B0soUlUg8yP6LdXGyXBM2aFc") %>% 
@@ -271,7 +190,41 @@ biomass<-read_sheet("1Jw9XkjSVKy1ajPhcYH2qajfzk2QgLbGQkHFASIfn6yw", sheet="Total
 biomass.lm=lm(total~nitrogen*microbe, data=biomass)
   
 Anova(biomass.lm, type=3)#Type 3
+#effect of nitrogen on biomass p=0.04025
 
-ggplot(biomass, aes(y=total, x=nitrogen, color=microbe))+geom_boxplot()
+ggplot(biomass, aes(y=total, x=nitrogen, color=microbe))+geom_boxplot()+
+  scale_color_manual(values = c("orange","purple","magenta"))
+
+
+#percent water= wet-dry/ wet
 ```
+
+# Inflorecence height
+```{r}
+infloheight<-read_sheet("1Jw9XkjSVKy1ajPhcYH2qajfzk2QgLbGQkHFASIfn6yw", sheet="Height") %>% mutate(site = as.character(site)) %>% 
+   left_join(exp2.treatments) 
+
+#microbe+nitrogen model
+height.lm=lm(height~nitrogen+microbe, data=infloheight)
+Anova(height.lm, type=3) #effect of nitrogen p=0.03551
+
+ggplot(infloheight, aes(y=height, x=nitrogen, color=microbe))+geom_boxplot()+
+  scale_color_manual(values = c("orange","purple","magenta"))
+
+```
+
+# Total Flower number
+```{r}
+flowernum<-read_sheet("1Jw9XkjSVKy1ajPhcYH2qajfzk2QgLbGQkHFASIfn6yw", sheet="Total Flower Number") %>% mutate(site = as.character(site)) %>% 
+   left_join(exp2.treatments) 
+
+#microbe+nitrogen model
+flowernum.lm=lm(total_flower_number~nitrogen+microbe, data=flowernum)
+Anova(flowernum.lm, type=3) #effect of nitrogen p=0.003352
+
+ggplot(flowernum, aes(y=total_flower_number, x=nitrogen, color=microbe))+geom_boxplot()+
+  scale_color_manual(values = c("orange","purple","magenta"))
+
+```
+
 

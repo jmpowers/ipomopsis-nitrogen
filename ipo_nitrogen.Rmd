@@ -230,7 +230,7 @@ chemtable <- make_chemtable(longdata, metadata) %>%
   filter_RT(2, 17) %>% 
   filter_match(0.8) %>% 
   filter_freq(0.2, group = TRUE) %>% 
-  filter_contaminant(cont.list = c("13-Methyltetradecanal","Cyclohexane, 1,1-dimethyl-2-propyl-","2-hexyldecan-1-ol","Tridecane, 3-methylene-")) %>% 
+  filter_contaminant(cont.list = c("Caprolactam","13-Methyltetradecanal","Cyclohexane, 1,1-dimethyl-2-propyl-","2-hexyldecan-1-ol","Tridecane, 3-methylene-")) %>% 
   filter_area(min_maximum = 1e5) %>%
   filter_ambient_ratio(sampletable, metadata, ratio = 3) %>% 
   filter_ambient_ttest(sampletable, metadata, 
@@ -275,7 +275,7 @@ chemtable.field <- make_chemtable(longdata.field, metadata.field) %>%
   filter_RT(2, 17) %>% 
   filter_match(0.8) %>% 
   filter_freq(0.2, group = TRUE) %>% 
-  filter_contaminant(cont.list = c("Caprolactam")) %>% 
+  filter_contaminant(cont.list = c("Caprolactam", "13-Methyltetradecanal","Cyclohexane, 1,1-dimethyl-2-propyl-","2-hexyldecan-1-ol","Tridecane, 3-methylene-")) %>% 
   filter_area(min_maximum = 1e5) %>%
   filter_ambient_ratio(sampletable.field, metadata.field, ratio = 3) %>% 
   filter_ambient_ttest(sampletable.field, metadata.field, 
@@ -336,7 +336,7 @@ vol <- vol.exp1.exp1field %>% #takes origional file names and left joins it with
   left_join(select(exp1.verdicts, Filename = FileName, sample2)) %>% drop_na(sample2) %>% #grabs two columns from verdicts - Filename (which is the origional filename on hard drive) and sample2 (which is the sample that is in that file name)
   select(-Filename) %>% rename(Filename = sample2) %>%  #replace FileName with the sample2 it holds (accounts for skips)
   column_to_rownames("Filename")
-contams <- c("methyl salicylate", "benzaldehyde","trans-Geranylgeraniol","Decanal", "D-limonene", "Nonanoic acid", "caprolactam",
+contams <- c("methyl salicylate", "benzaldehyde","trans-Geranylgeraniol","Decanal", "D-limonene", "Nonanoic acid", "Caprolactam",
              "(2E)-2,7-dimethylocta-2,6-dien-1-ol", #same peak as b-myrcene
              "3-methylbutanal oxime")#passed bouquet in OTC experiment but rare here
 
@@ -358,6 +358,38 @@ vol.field <- vol.field / (as.numeric(meta.field$equil + meta.field$pumping)/3600
 (need_quant <- setdiff(colnames(vol.qual), colnames(vol))) # filtered volatiles that need quant integration. 
 #vol <- bind_cols(vol, vol.qual[,need_quant]) #temporary, add a couple volatiles that don't have quant integrations yet (currently not on same scale!)
 ```
+
+#Convert to ng/flower/hour
+#TODO
+```{r}
+
+```
+
+
+#combine field and greenhouse
+```{r}
+#combine greenhouse and field experiment data Ihyp -> ten, Lagg -> agg
+megameta <- bind_rows(greenhouse=meta, .id = "experiment", field=meta.field %>% mutate(treatment=as.character(recode(treatment,`water control` = "low",control="low", nitrogen="high")), time=as.character(time), species= as.character(recode(species, Ihyb="ten", Lagg="agg")))) 
+
+mega.vol <- bind_rows(vol, vol.field)
+
+```
+
+#mega cap 
+```{r}
+(cap_treat <- vegan::capscale(sqrt(mega.vol) ~ time +experiment +species+ treatment+species*treatment+ time*species+time*treatment+ species*treatment*time, data=megameta))
+anova.cca(cap_treat, by="term")
+
+plot(cap_treat, type="n")
+points(cap_treat, display="sites", 
+       pch=c(1,19)[as.integer(factor(meta$time))],
+       col=c("darkred","magenta")[as.integer(factor(meta$species))])
+legend("topleft", legend=levels(factor((meta$species))), title="Species", fill=c("darkred","magenta"))
+legend("topright", levels(factor((meta$time))), title="Time", pch=c(1,19))
+text(cap_treat, display="species", cex=0.5, col=3)
+text(cap_treat, display="cn", cex=0.5)
+```
+
 
 Find out how much variation there is between samples from same plant
 
@@ -419,6 +451,7 @@ anova(bdLagg)
 # Retention times
 The puzzel - the 4 peaks we are not sure about compound identifications
 prints out graphs
+#terpenes 1-4
 
 ```{r retention, fig.width=12}
 # longdata.RT <- longdata %>% filter(name %in% c(colnames(vol.qual), colnames(vol))) %>% 
@@ -629,6 +662,7 @@ library(lme4)
 noaverage$S.T.T <- factor(paste0(noaverage$species, noaverage$time, noaverage$treatment))
 (indolelmer<-lmer(sqrt(indole)~S.T.T + (1|plantid), data=noaverage)) #use not averaged data! d
 summary(multcomp::glht(indolelmer, linfct= multcomp::mcp(S.T.T = c("aggDhigh-aggDlow == 0","aggNhigh - aggNlow == 0", "tenNhigh - tenNlow == 0", "tenDhigh-tenDlow==0"))))
+#
 
 ```
 
@@ -678,24 +712,16 @@ library(lmerTest)
 library(lme4)
 
 #Only indole lmer with plantid as random effect for field
-
-noaverage.field$S.T.T <- factor(paste0(noaverage.field$species, noaverage.field$time, noaverage.field$treatment))
+#treatment has water control and contorl; treatment2 combines water control + control = low
+noaverage.field$S.T.T <- factor(paste0(noaverage.field$species, noaverage.field$time, noaverage.field$treatment2))
 (indolelmer.field<-lmer(sqrt(indole)~S.T.T + (1|plantid), data=noaverage.field)) #use not averaged data! d
 summary(multcomp::glht(indolelmer.field, linfct= multcomp::mcp(S.T.T = "Tukey")))
 #no significant p values :(
   
-  #"LaggDhigh - LaggDlow == 0","LaggNhigh - LaggNlow == 0", "IhybNhigh - IhybNlow == 0", "IhybDhigh - IhybDlow==0"))))
+  #c("LaggDhigh - LaggDlow == 0","LaggNhigh - LaggNlow == 0", "IhybNhigh - IhybNlow == 0", "IhybDhigh - IhybDlow==0"))))
 
 
 
-```
-
-### (fix indole)
-
-```{r}
-#SD - because indole model above not working, says SD=0 but not true
-#noaverage%>% group_by(plantid,S.T.T) %>% 
-  #summarise(SD=sd(indole), mean=mean(indole))
 ```
 
 #compound changes (see below -> individual compound changes)
@@ -1331,8 +1357,10 @@ write_csv(compoundpercentchange, file = "Nexp1_Compound%change_DN.csv")
 
 ```
 
+#Greenhouse compound % change high/low nitrogen
 ```{r}
 #compound % change Treatment low/high
+
 compoundratios.lowhigh <- averagePlant %>% group_by(time, species, treatment) %>% 
   summarise(across(colnames(vol),mean)) %>%  #takes mean of each compound for each species and time
   pivot_longer(colnames(vol)) %>% #dplr can't divide rows but can divide columns so need to make compounds into columns
@@ -1340,8 +1368,8 @@ compoundratios.lowhigh <- averagePlant %>% group_by(time, species, treatment) %>
   mutate(HighLowRatio= low/high * 100)
 #library(broom)
 compoundchangemodel.lowhigh <- averagePlant %>% pivot_longer(colnames(vol)) %>%
-    group_by(species, name) %>% nest() %>% 
-    mutate(model=map(data,~lm(value~time, data=.x))) %>% 
+    group_by(species, name,time) %>% nest() %>% 
+    mutate(model=map(data,~lm(value~treatment, data=.x))) %>% 
     mutate(test=map(model, ~tidy(anova(.x)))) %>% 
     select(-data, - model) %>% unnest(test) %>% 
     filter(term!="Residuals") %>% 
@@ -1352,7 +1380,35 @@ View(compoundchangemodel.lowhigh)
 compoundpercentchange.lowhigh <- left_join(compoundratios.lowhigh,compoundchangemodel.lowhigh)
 View(compoundpercentchange.lowhigh)
 
-write_csv(compoundpercentchange.lowhigh, file = "Nexp1_Compound%change_lowhigh.csv")
+write_csv(compoundpercentchange.lowhigh, file = "Nexp1_Compound%change_lowhigh_greenhouse.csv")
+```
+
+#Field compound % change high/low nitrogen
+#doesn't work bc 3 treatments, water control two words
+```{r}
+#make treatment2 = water control + control 
+
+#compound % change Treatment low/high
+compoundratios.lowhigh.field <- averagePlant.field %>% group_by(time, species, treatment) %>% 
+  summarise(across(colnames(vol.field),mean)) %>%  #takes mean of each compound for each species and time
+  pivot_longer(colnames(vol.field)) %>% #dplr can't divide rows but can divide columns so need to make compounds into columns
+  pivot_wider(names_from = treatment, values_from = value) %>%  #name day column and night column
+  mutate(HighLowRatio= `water control`/nitrogen * 100)
+#library(broom)
+compoundchangemodel.lowhigh.field <- averagePlant.field %>% pivot_longer(colnames(vol.field)) %>%
+    group_by(species, name) %>% nest() %>% 
+    mutate(model=map(data,~lm(value~treatment, data=.x))) %>% 
+    mutate(test=map(model, ~tidy(anova(.x)))) %>% 
+    select(-data, - model) %>% unnest(test) %>% 
+    filter(term!="Residuals") %>% 
+    mutate(significant= p.value< 0.05)
+
+View(compoundchangemodel.lowhigh.field)
+
+compoundpercentchange.lowhigh.field <- left_join(compoundratios.lowhigh.field,compoundchangemodel.lowhigh.field)
+View(compoundpercentchange.lowhigh.field)
+
+write_csv(compoundpercentchange.lowhigh.field, file = "Nexp1_Compound%change_lowhigh_field.csv")
 ```
 
 
