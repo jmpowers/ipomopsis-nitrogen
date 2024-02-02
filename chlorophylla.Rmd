@@ -1,0 +1,65 @@
+---
+title: "Leaf_reflectance"
+author: "Janelle and John"
+date: "2024-02-02"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+```{r}
+#Read in data
+
+library(tidyverse)
+
+#git commit --amend --reset-author
+#git config --global --edit
+field.raw <- read_csv("data/Leafspec_AA_20220804.csv", 
+      skip = 1) %>% as.data.frame() %>% column_to_rownames("...1") #makes first column the row names; first col named ...1 lol 
+
+greenhouse.raw <- read_csv("data/Leafspec_EXP1N_JB_20220801.csv", 
+      skip = 1) %>%  as.data.frame() %>% column_to_rownames("...1")
+
+#Read in CSVs with species, plantid and treatment
+greenhouse.treatment <- read_csv("data/exp1_treatments.csv")
+field.treatment <- read_csv("data/NEXP1_field_treatments - 2022.csv")   
+
+
+wavelengths <- field.raw[,1]
+
+#selects columns with reflectance values which are only cols with plant number (alternate from column 2 to the end of dataset)
+field.wavelength <- field.raw[,seq(1,ncol(field.raw), by=2)] 
+
+greenhouse.wavelength <- greenhouse.raw[,seq(1,ncol(greenhouse.raw), by=2)] %>% t() %>% as.data.frame() %>% #t transposes data frame (cols to rows, rows to cols), t gets rid of data frame so gotta bring it back
+          rownames_to_column("plantleaf") %>% 
+        separate("plantleaf", into = c("plant", "leaf"), sep= "\\.\\.\\.") %>%  #separates plant and leaf number into two diff columns
+        separate("plant", into = c("species", "plant")) %>% 
+        mutate(chlorophylla= (`750`-`705`)/(`750`+`705`), .after="leaf" ) %>%  #equation to find leaf reflectance; .after is name of column you want column to appear after
+        mutate(species=tolower(species), plant=as.integer(plant), plantid=paste0(species, plant)) %>% 
+          left_join(greenhouse.treatment) 
+      
+ggplot(greenhouse.wavelength, aes(x= species, y= chlorophylla, color=treatment)) + 
+    geom_boxplot()
+
+# install.packages("lme4", type="source") # to fix issue with Matrix 
+ library(lme4) 
+# install.packages("Matrix")
+# library(Matrix)
+install.packages("car")
+library(car)
+
+greenhouse.model <- lmer(data=greenhouse.wavelength, chlorophylla ~ species*treatment + (1|plantid)) #lmer fits the model to the data, anova tests whether the coefficients at bottom of lmer are different than zero
+
+#the intercept in the lmer is the chlorophyll a for aggregata high nitrogen bc the intercept categorizes your data alphabetically so A is before T and High is before Low
+
+Anova(greenhouse.model, type=3) 
+#species interaction bc agg has more chlorophyll a in high N compared to high N tenuitubas 
+
+#mean chlorophyll 
+install.packages("emmeans")
+library(emmeans)
+
+greenhouse.means <- summary(emmeans(greenhouse.model, specs=c("species","treatment")))
+
+
+```
+
