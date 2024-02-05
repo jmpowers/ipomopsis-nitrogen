@@ -53,7 +53,6 @@ nitrogen<- as.factor(morphdata$nitrogen)
 microbe <- as.factor(morphdata$microbe)
 
 
-
 ```
 
 #Model for All the traits

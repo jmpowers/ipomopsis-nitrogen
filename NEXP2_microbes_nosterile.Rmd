@@ -1,0 +1,627 @@
+---
+title: "NEXP2_microbes_nosterile"
+author: "Janelle Bohey"
+date: "2023-08-22"
+output: 
+    html_document:
+    self_contained: no
+    lib_dir: libs
+    code_folding: hide
+    toc: yes
+    toc_float: TRUE 
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+library(reshape2)
+library(tidyverse)
+library(lubridate)
+library(vegan)
+library(knitr)
+#install.packages("remotes")
+#remotes::install_github("jmpowers/bouquet", build_vignettes = TRUE)
+library(bouquet)
+knitr::opts_chunk$set(comment="", cache=T, warning=F, message=F, 
+                      fig.path = "plots-microbe-nosterile/", dev="svglite", dev.args=list(fix_text_size=FALSE), fig.height=8, fig.width=10)
+
+setwd("~/Desktop/ipomopsis-nitrogen") 
+```
+
+#read in metadata 
+```{r read_scents}
+library(googlesheets4)
+exp2_meta <- read_sheet("1Jw9XkjSVKy1ajPhcYH2qajfzk2QgLbGQkHFASIfn6yw", sheet="Volatiles", guess_max=200) %>% #sheet selects "Volatiles" sheet on Google Sheets, guess_max reads 200 lines before program guesses the type of each column (string vs integer vs date)
+  mutate(plant = as.character(plant), vial=as.character(vial), time=recode(time,"AM"="D", "PM"="N"), date=as.Date(date), plant=tolower(plant), 
+         type=ifelse(str_detect(plant,"amb"), "ambient", "floral"), #creates new column with amb and                                                                                       floral
+          equil=pump-bag, pumping=end-pump) %>% 
+            #duration of equilibriated and pumping
+  left_join(read_csv("data/exp2_treatments.csv")) %>%  #joins csv with plantid and treatment to metadata
+      filter(microbe %in% c("early", "normal", NA))
+
+#TODO: Fix pumping time in metadata =0 
+
+#count(exp2_meta, date, time, vial, color) %>% arrange(desc(n)) %>% View() #looking how many are duplicated within one day
+
+exp2_meta <- exp2_meta %>% group_by(date,time, vial,color) %>% filter(n()<2) %>% ungroup() #filters out the 5 duplicates 
+
+exp2_meta_leaf <- read_sheet("1EwPMsBAxqrRtuqH4uUBtthUOZlQluQICSvNr9u87h0E", sheet="metadata", guess_max=200) %>%
+  mutate(plant = as.character(plant))
+```
+
+#GC Verdicts & Load Shimadzu 
+
+```{r}
+gc_verdicts <- read_sheet("1X8oo7qZlo1p6MVl_CBeBe6CUTHEAcd-FWQzfHud3Qws", sheet = "gc2023") %>% #verdicts = the truth of the skips, renames all skips in R 
+  mutate(sample2 = ifelse(is.na(sample), FileName, sample))
+
+exp2_filenames <- gc_verdicts %>% filter(str_detect(sample2, "EXP2")) %>% mutate(sample2=str_replace(str_replace(sample2, "N116", "N_116"), "_redo", "redo"), verdict=fct_explicit_na(verdict,"no-skip")) %>% select(FileName,sample2, sequence.start,verdict, index) %>% separate(sample2, remove= F, into = c("experiment", "time","vial", "sample_date", "run_date", "gc_sequence_number",".qgd")) %>% filter(!str_detect(vial, "mystery")) %>%  
+  mutate(color2=NA, date=ymd(sample_date))  %>%
+  #creates a csv file and saves it under the data folder in ipo-nitrogen
+  write_csv("data/EXP2_filenames.csv")
+
+#manually edited filenames in googlesheets, this reads in the new google sheet
+exp2_filenames <- read_sheet("1iVD1FIBoWd5iXsxmLf9BO140ZeHM5eUfGSSTx8oYdvU", na="NA") %>% filter(verdict %in% c("skip-rename","no-skip","mismatch", "wrongmatch" ))
+#gc_verdicts only with data from this experiment; separate sample2 into each component of the name
+
+#, verdict %in% c(NA, "skip-rename") ; verdict %in% c("skip-rename", "no-skip", "mismatch", "wrongmatch")
+
+
+#Add vial color to duplicated sample2 names
+    #(did this manually instead)
+#exp2_filenames$color2[exp2_filenames$sample2== "NEXP2_N_55_230724_7312023_12.qgd"]<- "W"
+#exp2_filenames$color2[exp2_filenames$sample2== "NEXP2_N_66_230724_7312023_15.qgd"]<- "R"
+#exp2_filenames$color2[exp2_filenames$sample2== "NEXP2_N_66_230724_7302023_10.qgd"]<- "W"
+
+#manual edit of incorrect dates: 
+    #fixed these manually in google spreadsheet of EXP2_filenames
+#exp2_filenames$sample_date[exp2_filenames$sample_date== "230732"] <- "230731" 
+#exp2_filenames$sample_date[exp2_filenames$sample_date== "230731redo3"] <- "230731"
+
+#changing the sample date from a string w/ no dashes to a real date
+exp2_filenames$date <- as.Date(ymd(exp2_filenames$sample_date))
+
+#same as above but for metadata
+exp2_meta$date <- ymd(exp2_meta$date)
+ 
+#change vial number into a character in filenames bc
+  #metadata vial number is a character 
+exp2_filenames$vial<- as.character(exp2_filenames$vial)
+
+#check metadata for duplicates 
+#count(exp2_meta, date, time, vial) %>% View()
+
+  #55: NEXP2_N_55_230724_7312023_12.qgd = white
+  #NEXP2_N_66_230724_7312023_15.qgd = red 
+  #	NEXP2_N_66_230724_7302023_10.qgd = white
+  #no duplicate for 76 - only have 476 and 376??
+
+#Looking for the mismatches in Filename and metadata
+#Create "Filename" column in metadata 
+ #left join in both directions
+
+#TODO: try to match missing meta and filenames 
+ #Output is metadata that doesn't have a filename
+missingfilename <- left_join(exp2_meta, exp2_filenames) %>% filter(is.na(sample2)) %>% select(time,date, vial,color2 ) #pull(vial)) #View() #write_csv("data/metadatawithoutfilename.csv")
+
+
+#Output is filename with no metadata 
+missingmeta<-left_join(exp2_filenames, exp2_meta) %>% filter(is.na(plant)) %>% pull(sample2) # View() #pull(vial) #View() #write_csv("data/filenamewithoutmetadata.csv") 
+
+#76 W was a skip no run and was not rerun (no redo)
+#5 leaked 2 times and not run
+#10 pumping time only 4min so we think not real sample?
+
+#Tells you similarities between the two
+#intersect(missingfilename, missingmeta)
+
+
+
+count(exp2_meta,date, time, vial, color2) #%>% View()
+count(exp2_filenames,date, time, vial, color2) #%>% View()
+count(exp2_filenames, verdict) #%>% View()
+
+
+#Left join for real to add filename to the metadata 
+exp2_metafile <- left_join(exp2_meta, exp2_filenames) %>% drop_na(sample2)
+    #exp2_metafile is metadata combined with filename spreadsheet/data frame
+
+#verdicts only for exp2 (filters down gc verdicts)
+exp2_verdicts <- gc_verdicts %>% filter(sample2 %in% exp2_metafile$sample2) #sample2= if sample is blank on metadata then its the filename no renaming necessary but if sample has a filename then something before it skipped and your re lining up/ accounting for skip (translating between the filename you want and the filename you have) 
+
+#exp2leaf_verdicts <- gc_verdicts %>% filter(sample2 %in% exp2_meta$filename)
+
+#New meta matching file name in meta with sample file name on GC
+
+#write_csv(exp2leaf_verdicts, file = "data/exp2leaf_verdicts.csv")
+
+load("data/shimadzu_data_2023.rda") #loading qualitative integrations all of them from 2022
+
+#exp1.data = greenhouse N experiment data only
+#pg.data= field N experiment at Poverty Gulch data only 
+
+exp2.data <- shimadzu.data %>% filter(Filename %in% exp2_verdicts$FileName) %>% droplevels() #
+#exp2leaf.data <- shimadzu.data.22 %>% filter(Filename %in% exp2_verdicts$FileName)
+
+save(exp2.data, file = "data/exp2_data.rda")
+#save(exp2leaf.data, file = "data/exp2leaf_data.rda")
+
+library(dplyr)
+# load short names
+ipochems <- read_csv("data/Ipo volatile compounds - chemsf_ipo.csv") %>% 
+  dplyr::select(name, shortname, standard, verdict) %>%  filter(verdict != "")
+            
+#shorten chemical names and merge compounds with multiple names
+  #loads in short names
+shortnames <- ipochems %>% dplyr::select(name, shortname) %>% filter(shortname!="") %>% deframe()
+
+#renames all the long shimadzu name to short names
+  #renames all long compound names with short version
+exp2.data$Name <- recode(exp2.data$Name, !!!shortnames)
+
+#Takes data in long format and converts it to wide format
+  #table where row names are filenames 
+  #column names are the chemicals
+  #the table is all the peak areas
+exp2.all <- dcast(exp2.data, Filename~Name, sum, value.var="Area") #all means all VOCs unfiltered
+rownames(exp2.all) <- exp2.all[,1]
+exp2.all[,1] <- NULL
+```
+
+
+# Metadata graphs 
+
+```{r metadata, fig.height=5, fig.width=5}
+
+metadata<- exp2_metafile #renames exp2_meta to metadata
+  metadata %>% count(time, nitrogen, microbe) %>% kable() #kable makes pretty table                                                       for markdown
+metadata %>% filter(type !="ambient") %>% count(plant, time) %>% 
+  ggplot(aes(x=n, fill=time))+ geom_histogram(binwidth=1) + facet_wrap(vars(time), ncol=1)+
+  labs(x="Samples per plant") 
+
+#TODO: figuring out pumping times
+
+metadata %>% filter(type !="ambient") %>% group_by(time) %>% 
+  summarize(min=min(bag), max=max(end))  %>% kable(caption="first bag time, last ending time, in hr", digits=2)
+
+#Tells us how long each flower equilibriates for
+ggplot(metadata, aes(y=equil, x=1)) + geom_boxplot() + labs(y="Equilibration duration")
+ggplot(metadata, aes(y=pumping, x=1)) + geom_boxplot() + labs(y="Pumping duration")
+
+metadata %>% count(type) %>% kable(caption="total volatile samples by species")
+
+
+ggplot(metadata, aes(x=date, fill=type))+geom_histogram(binwidth=1)
+
+```
+
+
+# Filtering (Qualitative Integrations) 
+
+```{r filtering}
+metadata <- metadata %>% as.data.frame() %>% 
+  load_metadata(date = "date", sample = "FileName", group = "time", type = "type") #combine species and time (previously separate)
+
+longdata <- load_longdata(exp2.data, sample = "Filename", RT = "Ret.Time", 
+                          name = "Name", area = "Area", match = "SI", maxmatch=100)
+#to see which metadata date is missing from longdata 
+#missinglongdata<-setdiff(unique(metadata$sample), longdata$sample)
+
+sampletable <- make_sampletable(longdata, metadata)
+
+chemtable <- make_chemtable(longdata, metadata) %>% 
+  filter_RT(2, 17) %>% 
+  filter_match(0.8) %>% 
+  filter_freq(0.2, group = TRUE) %>% 
+  filter_contaminant(cont.list = c("Caprolactam", "Heptadecane, 2,6,10,15-tetramethyl-", "2,4-Hexadiene", "Phenol", "Undecane, 2,5-dimethyl-", "4,6-dimethyldodecane", "Cyclobutane, 1,2-bis(1-methylethenyl)-, trans-", "Decane, 3,3,6-trimethyl-", "Dodecyl nonyl ether", "Ethanol, 2-(hexyloxy)-", "Hexadecane, 1,1-bis(dodecyloxy)-", "Tetrahydrofuran", "oxan-2-one")) %>% 
+  filter_area(min_maximum = 1e5) %>%
+  filter_ambient_ratio(sampletable, metadata, ratio = 3) %>% 
+  filter_ambient_ttest(sampletable, metadata, 
+                       alpha = 0.05, adjust = "fdr") 
+
+chemtable$filter_final <- with(chemtable, 
+                            filter_RT == "OK" & filter_match =="OK" & 
+                            (filter_freq.N == "OK" |filter_freq.D == "OK") & 
+                            filter_area == "OK" &
+                            filter_ambient_ratio == "OK" &
+                            filter_contaminant == "OK")
+
+#Plots!!
+#plot_filters(chemtable, option="ambient")
+#plot_filters(chemtable, option="volcano")
+#plot_filters(chemtable, option="prop")
+
+vol.qual <- prune_sampletable(sampletable, chemtable, metadata)
+files_exclude <- c("NEXP2_N_206_230724_842023_07.qgd", "NEXP2_D_315_230731_8192023_02.qgd", "NEXP2_D_463_230728_8102023_12.qgd","NEXP2_D_342_230731_8192023_07.qgd") # flower fell off
+vol.qual <- vol.qual[!(rownames(vol.qual) %in% files_exclude) ,]
+meta <- metadata[metadata$type == "floral" & !(metadata$sample %in% files_exclude),] %>% droplevels()
+
+#TODO: run when you fix pumping times
+#vol.qual <- vol.qual / as.numeric(meta$equil + meta$pumping)/3600 / meta$flowers #0.5 hr of equilibration plus 0.25 hr pumping, one flower
+```
+
+# Heatmap
+
+```{r heatmap, dev='png', dev.args=list()}
+library(pheatmap)
+library(dendsort)
+library(viridis)
+library(dplyr)
+ph  <- pheatmap(as.matrix(t(vol.qual))^(1/4), #change vol.qual to vol when you do quant integrations
+         cluster_cols=T, show_colnames=F,
+         clustering_method="mcquitty", clustering_distance_rows="correlation",
+         clustering_distance_cols=vegdist(vol.qual, method = "bray"),
+         clustering_callback = function(hc, ...){dendsort(hc, type="average")},
+         scale="none", color=magma(512),
+         annotation_col = data.frame(meta %>% dplyr::select("microbe","nitrogen","time"), row.names=rownames(vol.qual)),
+         #only for quant integrations! We are only doing qual rn
+         #annotation_row = data.frame(added = as.integer(colnames(vol) %in% added_quant), 
+          #                           new = as.integer(colnames(vol) %in% new_quant),
+          #                           row.names=colnames(vol)),
+   fontsize = 10, border_color = NA, legend=F, annotation_legend=T, cutree_rows=6
+)
+
+#VOCs in vol.qual but not in shortnames - find shortnames for these
+setdiff(colnames(vol.qual),shortnames)
+
+#TODO: add: block 3, 5,6 to contaminate list
+#TODO: go into ipo chems file that makes short names and give the remaining compounds nice names (IUPAC name) ; add short names to the short names column. And add which standard it should line up with
+
+```
+
+# qual cap
+```{r}
+(cap_treat <- vegan::capscale(sqrt(vol.qual) ~ time*nitrogen * microbe, data=meta))
+
+anova.cca(cap_treat, by="term") # samples should be averaged by plant first
+plot(cap_treat)
+meta$time <- as.factor(meta$time)
+meta$microbe<- as.factor(meta$microbe)
+meta$nitrogen <- as.factor(meta$nitrogen)
+
+#TODO: fix error in legend
+plot(cap_treat, type="n")
+points(cap_treat, display="sites", 
+       pch=c(1,19)[as.integer(meta$time)],
+       col=c("darkred","magenta","purple")[as.integer(meta$microbe)])
+legend("topleft", levels(meta$microbe), title="Microbe", fill=c("darkred","magenta", "purple"))
+legend("topright", levels(meta$time), title="Time", pch=c(1,19))
+text(cap_treat, display="species", cex=0.5, col=3)
+text(cap_treat, display="cn", cex=0.5)
+kable(arrange(as.data.frame(cap_treat$CCA$v), CAP1)) 
+```
+
+#NMDS
+```{r}
+(NMDS <- metaMDS(sqrt(vol.qual), autotransform = FALSE))
+
+plot(NMDS, type="n")
+points(NMDS, display="sites", 
+       pch=c(1,19)[as.integer(meta$time)],
+       col=c("darkred","magenta","purple")[as.integer(meta$microbe)])
+legend("topleft", levels(meta$microbe), title="Microbe", fill=c("darkred","magenta", "purple"))
+legend("topright", levels(meta$time), title="Time", pch=c(1,19))
+text(NMDS, display="species", cex=0.5, col=3)
+text(NMDS, display="sites", cex=0.5, col=3)
+
+```
+
+#Average volatiles
+```{r}
+#make average volailte table: 
+noaverage <- bind_cols(meta,vol.qual)%>%   #want to make table with metadata and volatile list that is not averaged to run Anova on
+  group_by(time, microbe, nitrogen)%>%
+  mutate(timetreatment=paste0(time,microbe, nitrogen)) #paste0 because glht doesn't like spaces in data sets
+
+averagePlant<-bind_cols(meta,vol.qual) %>% group_by(plant, time, microbe, nitrogen) %>% 
+  summarize(across(where(is.numeric),mean))       #takes average of each sample for day                                                                                             and night
+
+averagetable<- averagePlant[,14:ncol(averagePlant)] #seperates table into meta data and volatile list table (not necesaary)
+averagemetadata<- averagePlant[,1:13]
+
+#cap microbe * nitrogen * time 
+AverageVOCcapM.N.T <- capscale(sqrt(averagetable) ~ time*nitrogen*microbe, data = averagemetadata, distance = "bray")
+
+anova(AverageVOCcapM.N.T, by="term")
+
+```
+
+# Indole 
+```{r}
+#TODO: quant integration for indole 
+
+```
+
+# Greenhouse- I. aggregata Daytime Volatiles
+
+```{r}
+averagedaymetadata<- averagemetadata[averagemetadata$time=="D",]
+averagedaytable<-averagetable[ averagemetadata$time=="D",]
+
+average.day.cap <- capscale(sqrt(averagedaytable) ~ nitrogen*microbe, data = averagedaymetadata, distance = "bray")
+
+#To get % explained (= eigenvalues) for each cap axis
+eig <-eigenvals(average.day.cap)
+axis.eig <- eig/ sum(eig)
+print(axis.eig)
+
+anova(average.day.cap, by="term")
+
+
+```
+
+# I. agg Night time volatiles (average) emission rate
+```{r}
+#remotes::install_github("gavinsimpson/ggvegan")
+#library(ggvegan)
+
+averagenightmetadata<- averagemetadata[averagemetadata$time=="N",] %>% 
+        mutate(microbe= str_to_title(microbe), nitrogen= str_to_title(nitrogen)) #mutate to capitalize microbe and nitrogen
+averagenighttable<-averagetable[averagemetadata$time=="N",]
+
+average.night.cap <- capscale(sqrt(averagenighttable) ~ nitrogen*microbe, data = averagenightmetadata, distance = "bray")
+
+#Get eigenvalues for % explained
+eig.night <-eigenvals(average.night.cap)
+axis.eig.night <- eig.night/ sum(eig.night)
+anova(average.night.cap, by="term")
+
+#most common compounds
+top.6.vocs<-tail(sort(colSums(decostand(averagenighttable, method= "pa")))) 
+
+#makes greek letters 
+greekify <- function(names) {
+    names %>% 
+    str_replace("^a-","\U03B1-") %>% str_replace("-a-","-\U03B1-") %>% 
+    str_replace("^b-","\U03B2-") %>% str_replace("-b-","-\U03B2-") %>% 
+    str_replace("^g-","\U03B3-") %>% str_replace("-g-","-\U03B3-")
+}
+
+library(ggvegan)
+library(ggrepel)
+cap.night.dataframe <- fortify(average.night.cap) #makes a dataframe for ggplot to use
+average.night.ordination = ggplot(bind_cols(filter(cap.night.dataframe, score=="sites"),averagenightmetadata), 
+        aes(x=CAP1, y= CAP2, label=label)) + 
+  geom_point(size=2.6, aes(color = microbe, shape= nitrogen)) + 
+  theme_classic() + 
+  coord_fixed() + #automatically scales x and y-axes so they are similar
+  geom_hline(yintercept = 0, linetype="dotted") + 
+  geom_vline(xintercept = 0, linetype="dotted") +
+  labs(color = "Soil", shape = "Nitrogen") +
+ # ggtitle("I. aggregata Nighttime Volatiles") +
+  theme(plot.title = element_text(hjust = 0.5))+
+  ylab(paste0("CAP2 (", round(100*axis.eig.night[2]), "% explained)")) + 
+  #custom CAP axes: rounds and multiplies the eigenvalue above for % explained
+  xlab(paste0("CAP1 (", round(100*axis.eig.night[1]), "% explained)")) + 
+ # scale_color_manual(name="Nitrogen Level", labels= c("High", "Low"), values=c("tan2","cadetblue3")) +
+  #labs(subtitle="ANOVA; p=0.264",hjust = 1)+ #adds subtitle at top of figure
+   theme(legend.title = element_text(size=12, color = "black"), legend.text=element_text(size=10),
+           legend.justification=c(0,1), 
+           legend.position=c(0.77, 0.62),
+           legend.background = element_blank(),
+           legend.key = element_blank(),
+            plot.subtitle = element_text(hjust = 1))+ #moves subtitle to right side 
+    geom_segment(data=cap.night.dataframe %>% filter(score=="biplot", str_detect(label, ":")), #adds arrows 
+             aes(x=0,y=0,xend=CAP1*1.8, yend=CAP2*1.8), 
+              arrow=arrow(length=unit(0.5, "lines")))+ #scales arrow length
+    geom_text(data=cap.night.dataframe %>% filter(score=="biplot", str_detect(label, ":")) %>% #labels text to arrows
+            mutate(label=c("Low Normal")), #edits arrow labels
+            aes(x=CAP1*2, y=CAP2*2, angle=atan(CAP2/CAP1)*180/pi), hjust=c(0), fontface="bold", size=3) +
+    geom_text_repel(data=cap.night.dataframe %>% left_join(ipochems, by=c("label"="name")) %>% #adds compound name to arrows
+              filter(score=="species", label%in%names(top.6.vocs)) %>%  #gets rid of compounds clusterd in middle of cap
+              mutate(label=greekify(label)),
+              aes(x=CAP1*6, y=CAP2*6), size=3) +
+    geom_label(data=cap.night.dataframe %>% filter(score =="centroids",
+                label%in%c("microbeNormal", "microbeEarly")) %>% 
+                 mutate(label= c("Early","Normal")), color="blue")+
+                #can add high/low N here but they were essentially the same
+    scale_color_manual(values = c("orange","purple","magenta"))
+    
+print(average.night.ordination)
+
+ggsave(average.night.ordination, file="plots-microbe-nosterile/night.cap.png", width= 5, height=6)
+
+```
+
+
+# Total emissions 
+```{r}
+averagemetadata$totalemssions <-rowSums(averagetable) #sums rows of volatiles to get total emissions (via adding all peak areas) for each sample
+
+meta$totalemission <- rowSums(vol.qual)  #attatches row sums to metadata 
+
+library(lme4)
+library(car)
+total.emission.model <-lmer(totalemission~nitrogen*microbe*time + (1|plant), data=meta) #models looks at total emissions as a function of treatment*species*time with plantid as a random effect
+Anova(total.emission.model, type=3) #type 3 anova on the model to get p-value
+
+#total emission night time
+total.emission.night <-lmer(totalemission~nitrogen*microbe + (1|plant), data=meta[meta$time=="N",])
+Anova(total.emission.night, type=3)
+
+#total emission Day time
+total.emission.day <-lmer(totalemission~nitrogen*microbe + (1|plant), data=meta[meta$time=="D",])
+Anova(total.emission.day, type=3)
+##############################################
+#boxplot of Total emissions day and night
+
+plot.total.emissions=
+  ggplot(meta, aes( y= totalemission, x=str_to_title(nitrogen), #could do with average metadata instead of all data points in meta
+  color=str_to_title(microbe)))+
+  #annotate(geom="rect", ymin = 0, ymax = Inf, xmin=2.5, xmax=6)+
+  geom_boxplot(position=position_dodge(width=0.9))+
+ # geom_point (position=position_dodge(width=0.9))+ #makes it so point don't overlap
+  scale_y_sqrt()+
+  ylab("Total Emissions")+
+  xlab("Nitrogen") +
+    #theme(panel.border = element_blank(),
+     # panel.grid.major = element_line(colour="white"),
+      #panel.grid.minor = element_blank(),
+     # panel.background = element_rect(fill = "gray96",
+                                #colour = "lightblue",
+      #                            linetype = "solid"),
+     # strip.text.x = element_text(size=11),
+     # strip.background = element_rect(colour="white", fill="white"))+
+    #scale_color_manual(name="Nitrogen Level", 
+     #   labels= c("High",  "Low"), 
+      #  values=c("tan2","cadetblue3"))+
+    theme_minimal()+
+    theme(legend.title = element_text(size=11, color = "black"), panel.grid.major.x=element_blank(),
+        legend.text=element_text(size=9), legend.position = "bottom")+
+ # scale_x_discrete(labels=c('Day', 'Night', 'Day','Night'))+
+  labs(color="Soil")+
+   scale_color_manual(values = c("orange","purple","magenta"))+
+ # scale_fill_manual(values = c("white","grey90"))+
+  facet_wrap(vars(time), labeller = as_labeller(c(D="Day", N="Night")))
+                                                          
+
+print(plot.total.emissions)   
+ggsave(plot.total.emissions, file="plots-microbe-nosterile/total.emissions.png", width= 4.5, height=5.5)
+#ggsave(plot.total.emissions, file='total_emissions_boxplot.jpg', width=150, height=110, units= 'mm', dpi=300)
+```
+
+#glht for total emissions
+```{r}
+meta$T.N.M <- paste0(meta$time, meta$nitrogen, meta$microbe) #add column with species, treatment and time to metadata. Need for glht
+
+#finding p-values to compare treatment within each of the four groups
+total.emission.model2 <-lmer(totalemission~T.N.M + (1|plant), data=meta)
+
+Anova(total.emission.model2, type=3) #significant bc it includes time :(
+
+library(multcomp)
+
+#general linear hypotheses
+  #subtracts means from different groups (like Agg day low - agg day high) c
+      #can specify which group like below or write linfct=mcp(model ="Tukey"))
+  # summary () gives you p-values
+glht.T.N.M <- glht(total.emission.model2, linfct=mcp(T.N.M="Tukey"))
+cld(glht.T.N.M)
+plot(glht.T.N.M)
+
+summary(glht.T.N.M, test=adjusted(type="fdr"))
+```
+
+#glht for total emissions - night!
+```{r}
+#make a table with only night time samples
+nightmetadata<- meta[meta$time=="N",]
+nighttable<-vol.qual[meta$time=="N",]
+
+#meta$T.N.M <- paste0(meta$time, meta$nitrogen, meta$microbe) #add column with species, treatment and time to metadata. Need for glht
+
+#finding p-values to compare treatment within each of the four groups
+total.emission.model3.night <-lmer(totalemission~T.N.M + (1|plant), data=nightmetadata)
+
+Anova(total.emission.model3.night, type=3) #significant bc it includes time :(
+
+library(multcomp)
+
+#general linear hypotheses
+  #subtracts means from different groups (like Agg day low - agg day high) c
+      #can specify which group like below or write linfct=mcp(model ="Tukey"))
+  # summary () gives you p-values
+glht.N.M.night <- glht(total.emission.model3.night, linfct=mcp(T.N.M="Tukey"))
+cld(glht.N.M.night)
+plot(glht.N.M.night)
+
+summary(glht.N.M.night, test=adjusted(type="none"))
+  
+```
+
+#glht on every volatile
+```{r}
+#set up dataframe and each row has a different model 
+
+mega.glht <- bind_cols(meta,vol.qual) %>%  #combines meta and vol.qual
+  pivot_longer(all_of(colnames(vol.qual))) %>% #this makes the name and value column 
+  group_by(name) %>% #group by and nest divides data frame into smaller sets 1 for each compound
+  nest() %>% #for each volatile you have a dataframe with 40 columns and 359 rows which are your samples
+  mutate(model=map(data,~lmer(value~T.N.M + (1|plant), data=.x))) %>%  #for each data run a lmer of value as a factor of TNM; value = peak area of specific volatile
+  mutate(glht.every.vol = map(model,~multcomp::glht(.x, linfct=multcomp::mcp(T.N.M="Tukey")))) %>% 
+  mutate(summary.glht= map(glht.every.vol, ~summary(.x, test=multcomp::adjusted(type="fdr"))))   #summary.glht has all pvalues
+  
+bind_cols(meta,vol.qual) %>%  
+  pivot_longer(all_of(colnames(vol.qual))) %>% 
+  ggplot(aes(color=paste(nitrogen, microbe), x=time, y=value))+geom_boxplot()+scale_y_sqrt()+
+  facet_wrap(vars(name),scales = "free_y")+
+  ylab("Peak Area") 
+
+#mega.glht$summary.glht[1]
+#multcomp::cld(mega.glht$summary.glht[[1]])
+
+
+
+meta$T.N.M <- paste0(meta$time, meta$nitrogen, meta$microbe) #add column with species, treatment and time to metadata. Need for glht
+
+#finding p-values to compare treatment within each of the four groups
+total.emission.model2 <-lmer(totalemission~T.N.M + (1|plant), data=meta)
+
+Anova(total.emission.model2, type=3) #significant bc it includes time :(
+
+#library(multcomp)
+
+#general linear hypotheses
+  #subtracts means from different groups (like Agg day low - agg day high) c
+      #can specify which group like below or write linfct=mcp(model ="Tukey"))
+  # summary () gives you p-values
+glht.T.N.M <- multcomp::glht(total.emission.model2, linfct=multcomp::mcp(T.N.M="Tukey"))
+multcomp::cld(glht.T.N.M)
+#multcomp::plot(glht.T.N.M)
+
+summary(glht.T.N.M, test=adjusted(type="fdr"))
+
+```
+
+
+# Relative Amount
+```{r}
+library(vegan)
+library(dplyr)
+
+# Total relative amount divide by margin total 
+relativeamount.vol <- decostand(vol.qual, "total")
+
+relativeamount <- bind_cols(meta, relativeamount.vol) %>% 
+   pivot_longer(all_of(colnames(vol.qual))) %>% 
+  group_by(nitrogen, microbe,time, name)%>% # name = name of compound
+   dplyr::select(nitrogen, time, microbe, plant, name, value)  
+
+#View(relativeamount)
+
+# Relative amount presents/ absents 0s & 1s 
+relativeamountPA <- decostand(vol.qual, "pa")
+
+#View(relativeamountPA)
+
+#cap on relative amount (with Square root transform) 
+rel.amount.cap <- capscale(sqrt(relativeamount.vol) ~ nitrogen+microbe+time, data = meta, distance = "bray")
+
+library(ggvegan)
+rel.amount.dataframe <- fortify(rel.amount.cap)
+rel.amount.ordination = ggplot(bind_cols(filter(rel.amount.dataframe, score=="sites"),meta), aes(x=CAP1, y= CAP2, color = paste(nitrogen, microbe), shape=time)) + 
+  geom_point(size=2.6) +
+  theme_classic() + 
+ # coord_fixed(xlim=c(-1.5, 2.9), ylim=c(-1, 2.4)) +
+  geom_hline(yintercept = 0, linetype="dotted") + 
+  geom_vline(xintercept = 0, linetype="dotted") +
+  labs(color = "Treatment", fill = "Treatment") +
+ # ggtitle("I. aggregata Daytime Volatiles") +
+  theme(plot.title = element_text(hjust = 0.5))+
+  ylab("CAP2 (% explained)") + 
+  xlab("CAP1 (% explained)") + 
+ # scale_color_manual(name="Nitrogen Level", labels= c("High", "Low"), values=c("tan2","cadetblue3")) +
+  #labs(subtitle="ANOVA; p=0.264",hjust = 1)+ #adds subtitle at top of figure
+   theme(legend.title = element_text(size=12, color = "black"), legend.text=element_text(size=10),
+           legend.justification=c(0,1), 
+           legend.position=c(0.03, 0.95),
+           legend.background = element_blank(),
+           legend.key = element_blank(),
+            plot.subtitle = element_text(hjust = 1)) #moves subtitle to right side 
+  
+    
+print(rel.amount.ordination)
+
+anova(rel.amount.cap, by="term")
+
+```

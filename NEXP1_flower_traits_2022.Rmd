@@ -19,9 +19,8 @@ setwd("~/Desktop/ipomopsis-nitrogen")
 library(car)
 library(vegan)
 library(dplyr)
-library(lsmeans)
+library(emmeans)
 library(lmerTest) 
-library(lsmeans) 
 library(ggplot2) 
 library(tidyr)
 library(tidyverse)#ggplot
@@ -30,12 +29,15 @@ library(ggpubr)
 library(ggrepel)
 library(googlesheets4)
 library(knitr)
+library(broom)
+library(broom.mixed)
+
 #library(multcomp) #reads lsmeans cld don't load just ::
 ```
 
-# read in morphology metadata & find plant averags for morph traits
+# Greenhouse - read in morphology metadata & find plant averags for morph traits
 ```{r}
-exp1.treatments <-read_sheet("1nyUqE-4dVr-81-MFMuAi5-dU4BIYZfuzF8xDEoFyJIk", sheet="Treatments") 
+exp1.treatments.greenhouse <-read_sheet("1nyUqE-4dVr-81-MFMuAi5-dU4BIYZfuzF8xDEoFyJIk", sheet="Treatments") 
 
 morphdata <- read_sheet("1nyUqE-4dVr-81-MFMuAi5-dU4BIYZfuzF8xDEoFyJIk", sheet="Flower Morphology", na=c("","NA")) %>% 
   mutate(corolla_length=as.numeric(corolla_length))%>% left_join(exp1.treatments)
@@ -49,7 +51,27 @@ morphdata1<- morphdata %>%
 
 ```
 
-#Model for All the traits
+#Field - read in morph data & find averages
+```{r}
+exp1.treatments.field <-read_sheet("1-da-LVmcsivkvo8MHfHbBa_LnMxGA64Ob9qCtySYANA", sheet="2022") 
+
+morphdata.field <- read_sheet("1NNWmlf8Ts8JXoCbynnFB3l56fnt6tTup4X3ffrzN71E", sheet="2022") %>% 
+   select(-treatment) %>% left_join(exp1.treatments.field) %>% mutate(treatment=replace_na(treatment, "ambient")) %>%  # get rid of this last part when you get real treatments for all plants from arturo
+    drop_na(corolla_length) %>%  #drops plants with no data based on nothing recorded for corolla length
+    mutate(plantid=paste0(site, plant))
+
+#TODO ask arturo for plant treatment list and inflo height?
+
+#Making new vector with means of each trait for each individual plant
+morphdata1.field<- morphdata.field %>%
+    group_by(plantid, treatment, site) %>% #takes mean for each plant (i.e. agg 1)
+  summarise(across(c(corolla_length, corolla_width, style_length, max_anther, min_anther,sepal_width),
+              ~mean(.x, na.rm=TRUE))) 
+  
+```
+
+
+#Model for All the traits - greenhouse
 ```{r}
 library(broom)
 all.morph.traits <- c("corolla_length", "corolla_width", "style_length", "max_anther", "min_anther","sepal_width", "inflo_height_cm")
@@ -79,7 +101,38 @@ ggsave(allmorphtraits, file="plots-nitrogen/allmorphtraitn.png", width= 4.5, hei
 
 ```
 
-# read in nectar data and find averages 
+#Model for All the traits - field
+```{r}
+library(broom)
+all.morph.traits.field <- c("corolla_length", "corolla_width", "style_length", "max_anther", "min_anther","sepal_width")
+
+morph.models.field <- morphdata.field %>% pivot_longer(all_of(all.morph.traits.field), names_to = "trait") %>% group_by(trait) %>% nest() %>% 
+      mutate(morph.trait.field.lmer=map(data, ~lmer(value~treatment+ (1|plantid), data=.x))) %>% 
+      mutate(morph.field.Anova= map(morph.trait.field.lmer, ~tidy(Anova(.x, type=3)))) %>%  unnest(morph.field.Anova) %>%
+      dplyr::select(-data,-morph.trait.field.lmer) %>% 
+      mutate(significant = ifelse(p.value<0.05, "*","") )
+
+kable(morph.models.field, digits=3) #spits out model into table
+
+#boxplot for averages of all traits
+allmorphtraits.field <- morphdata1.field %>% pivot_longer(all_of(all.morph.traits.field), names_to = "trait") %>% 
+    #filter(trait%in% c("corolla_length", "max_anther")) %>% 
+    ggplot(aes(color= str_to_title(treatment), x=str_to_title(treatment), y=value))+geom_boxplot()+
+    facet_wrap(vars(trait),scales = "free_y", labeller=as_labeller(c(corolla_length="Corolla Length", corolla_width= "Corolla Width", style_length="Style Length", max_anther="Max Stamen", min_anther= "Min Stamen",sepal_width="Sepal Width", inflo_height_cm="Inforecence Height (cm)")))+
+    labs(y="Length (mm)", x="Nitrogen", color="Nitrogen") +
+  scale_color_manual(values = c("orange","purple","blue"))+
+  theme_minimal()+
+  theme(panel.grid.major.x = element_blank(), legend.position = "bottom")
+  #scale_y_continuous(limits=c(0, NA))
+
+print(allmorphtraits.field)
+
+ggsave(allmorphtraits.field, file="plots-nitrogen/NEXP1.field.allmorphtraits.png", width= 4.5, height=5.5)
+
+```
+
+
+# read in nectar data and find averages - greenhouse
 ```{r}
 exp1.treatments <-read_sheet("1nyUqE-4dVr-81-MFMuAi5-dU4BIYZfuzF8xDEoFyJIk", sheet="Treatments")
 
@@ -118,7 +171,46 @@ nectardata %>% ggplot(aes(x=concentration  , y=nectar.production))+geom_point()+
 
 ```
 
-Total Flower number
+# Field - nectar 
+```{r}
+exp1.treatments.field <-read_sheet("1-da-LVmcsivkvo8MHfHbBa_LnMxGA64Ob9qCtySYANA", sheet="2022")
+
+nectardata.field <- read_sheet("1NNWmlf8Ts8JXoCbynnFB3l56fnt6tTup4X3ffrzN71E", sheet="nectar", na=c("","NA")) %>% 
+    drop_na(nectar_48_h_mm) %>% 
+  #mutate(plant = as.numeric(plant)) %>% 
+  mutate(nectar.production = nectar_48_h_mm * 5 /(2 * 32)) %>%    #5-uL microcapillary tube 32 mm in length, 2 days
+  left_join(exp1.treatments.field) %>% mutate(plantid=paste0(site,plant)) %>% mutate(treatment=replace_na(treatment, "ambient"))
+
+nectar.traits.field <- c('nectar.production', "nectar_conc") 
+
+nectar.field.models <- nectardata.field %>% pivot_longer(all_of(nectar.traits.field), names_to = "trait") %>% group_by(trait,site) %>% nest() %>% 
+      mutate(nectar.trait.field.lmer=map(data, ~lmer(value~treatment+ (1|plantid), data=.x))) %>% 
+      mutate(nectar.field.Anova= map(nectar.trait.field.lmer, ~tidy(Anova(.x, type=3)))) %>%  unnest(nectar.field.Anova) %>%
+      dplyr::select(-data,-nectar.trait.field.lmer) %>% 
+      mutate(significant = ifelse(p.value<0.05, "*","") ) %>% filter(term!="(Intercept)")
+
+kable(nectar.field.models, digits=3) #spits out model into table
+
+#average nectar data
+ nectardata1.field<- nectardata.field %>%
+    group_by(plantid, treatment, site, plant) %>% 
+    summarise(across(all_of(nectar.traits.field), ~mean(.x, na.rm=TRUE))) 
+
+#boxplot for averages of all traits
+ 
+nectardata1.field %>% pivot_longer(all_of(nectar.traits.field), names_to = "trait") %>% #need to pivot longer for facets
+    ggplot(aes(color= treatment, x=site, y=value))+geom_boxplot()+
+    facet_wrap(vars(trait),scales = "free_y")+
+    ylab("") +
+   scale_color_manual(values = c("purple", "orange", "blue"))
+
+#
+nectardata.field %>% ggplot(aes(x=nectar.production  , y=nectar_conc))+geom_point()+geom_smooth()
+
+```
+
+
+#Total Flower number
 ```{r}
 total.flower<-read_sheet("1nyUqE-4dVr-81-MFMuAi5-dU4BIYZfuzF8xDEoFyJIk", sheet="Flower Number") %>% 
    left_join(exp1.treatments) %>% mutate(treatment=factor(treatment, levels=c("LOW","HIGH")))
