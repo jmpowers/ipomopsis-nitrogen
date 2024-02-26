@@ -32,15 +32,25 @@ library(knitr)
 library(broom)
 library(broom.mixed)
 
+#set contrast 
+#in order to run type 3 anova must set contrast before lmer
+options(contrasts = c("contr.sum", "contr.poly")) 
+
+#maybe for cap: options(contrasts = c("contr.treatment", "contr.poly"))for when you plot arrows
+
+
 #library(multcomp) #reads lsmeans cld don't load just ::
 ```
 
 # Greenhouse - read in morphology metadata & find plant averags for morph traits
 ```{r}
+
+#TODO: inflo height - only have 1 measurement per plant (delete replicates)
 exp1.treatments.greenhouse <-read_sheet("1nyUqE-4dVr-81-MFMuAi5-dU4BIYZfuzF8xDEoFyJIk", sheet="Treatments") 
 
 morphdata <- read_sheet("1nyUqE-4dVr-81-MFMuAi5-dU4BIYZfuzF8xDEoFyJIk", sheet="Flower Morphology", na=c("","NA")) %>% 
-  mutate(corolla_length=as.numeric(corolla_length))%>% left_join(exp1.treatments)
+  mutate(corolla_length=as.numeric(corolla_length))%>% left_join(exp1.treatments.greenhouse) %>% 
+  mutate(S.T=paste0(species,treatment))
 
 #Making new vector with means of each trait for each individual plant
 morphdata1<- morphdata %>%
@@ -53,15 +63,20 @@ morphdata1<- morphdata %>%
 
 #Field - read in morph data & find averages
 ```{r}
-exp1.treatments.field <-read_sheet("1-da-LVmcsivkvo8MHfHbBa_LnMxGA64Ob9qCtySYANA", sheet="2022") 
+exp1.treatments.field <-read_sheet("1-da-LVmcsivkvo8MHfHbBa_LnMxGA64Ob9qCtySYANA", sheet="2022") %>% mutate(treatment=dplyr::recode(treatment, "water control"="watercontrol"))
+ 
+
 
 morphdata.field <- read_sheet("1NNWmlf8Ts8JXoCbynnFB3l56fnt6tTup4X3ffrzN71E", sheet="2022") %>% 
    select(-treatment) %>% left_join(exp1.treatments.field) %>% mutate(treatment=replace_na(treatment, "ambient")) %>%  # get rid of this last part when you get real treatments for all plants from arturo
+     mutate(treatment2=dplyr::recode(treatment, "watercontrol"= "ambient")) %>% #combines control & water control
+    mutate(treatment3=dplyr::recode(treatment, "watercontrol"="water", "nitrogen"="water")) %>%
     drop_na(corolla_length) %>%  #drops plants with no data based on nothing recorded for corolla length
-    mutate(plantid=paste0(site, plant))
-
-#TODO ask arturo for plant treatment list and inflo height?
-
+    mutate(plantid=paste0(site, plant)) %>% 
+    mutate(S.T=paste0(site,treatment)) %>% 
+    mutate(S.T2=paste0(site,treatment2)) %>% 
+    mutate(S.T3=paste0(site,treatment3))
+  
 #Making new vector with means of each trait for each individual plant
 morphdata1.field<- morphdata.field %>%
     group_by(plantid, treatment, site) %>% #takes mean for each plant (i.e. agg 1)
@@ -71,23 +86,28 @@ morphdata1.field<- morphdata.field %>%
 ```
 
 
-#Model for All the traits - greenhouse
+#Greenhouse - Model for All the traits
 ```{r}
 library(broom)
 all.morph.traits <- c("corolla_length", "corolla_width", "style_length", "max_anther", "min_anther","sepal_width", "inflo_height_cm")
 
 morph.models <- morphdata %>% pivot_longer(all_of(all.morph.traits), names_to = "trait") %>% group_by(trait) %>% nest() %>% 
-      mutate(morph.trait.lmer=map(data, ~lmer(value~treatment+ (1|plantid), data=.x))) %>% 
-      mutate(morph.Anova= map(morph.trait.lmer, ~tidy(Anova(.x, type=3)))) %>%  unnest(morph.Anova) %>%
-      dplyr::select(-data,-morph.trait.lmer) %>% 
-      mutate(significant = ifelse(p.value<0.05, "*","") )
+      mutate(morph.trait.lmer=map(data, ~lmer(value~S.T + (1|plantid), data=.x))) %>% 
+      mutate(morph.Anova= map(morph.trait.lmer, ~tidy(Anova(.x, type=3)))) %>%  
+      mutate(morph.glht= map(morph.trait.lmer, ~tidy(multcomp:::summary.glht(multcomp::glht(.x, linfct=multcomp::mcp(S.T= 
+                                           c("AGGLOW - AGGHIGH == 0",
+                                             "TENLOW - TENHIGH ==0"))), test=multcomp::adjusted(type="fdr"))))) %>% 
+      #formatting for kable below
+      dplyr::select(-data,-morph.trait.lmer, -morph.Anova) %>% 
+      unnest(morph.glht) %>% 
+      mutate(significant = ifelse(adj.p.value<0.05, "*","") )
 
 kable(morph.models, digits=3) #spits out model into table
 
 #boxplot for averages of all traits
 allmorphtraits <- morphdata1 %>% pivot_longer(all_of(all.morph.traits), names_to = "trait") %>% 
     #filter(trait%in% c("corolla_length", "max_anther")) %>% 
-    ggplot(aes(color= str_to_title(treatment), x=str_to_title(treatment), y=value))+geom_boxplot()+
+    ggplot(aes(color= str_to_title(treatment), x=str_to_title(species), y=value))+geom_boxplot()+
     facet_wrap(vars(trait),scales = "free_y", labeller=as_labeller(c(corolla_length="Corolla Length", corolla_width= "Corolla Width", style_length="Style Length", max_anther="Max Stamen", min_anther= "Min Stamen",sepal_width="Sepal Width", inflo_height_cm="Inforecence Height (cm)")))+
     labs(y="Length (mm)", x="Nitrogen", color="Nitrogen") +
   scale_color_manual(values = c("orange","purple"))+
@@ -96,28 +116,44 @@ allmorphtraits <- morphdata1 %>% pivot_longer(all_of(all.morph.traits), names_to
   #scale_y_continuous(limits=c(0, NA))
 
 print(allmorphtraits)
-
 ggsave(allmorphtraits, file="plots-nitrogen/allmorphtraitn.png", width= 4.5, height=5.5)
+
+#glht
+multcomp:::summary.glht(multcomp::glht(total.emission.model2, linfct=multcomp::mcp(S.T= 
+                                           c("agglow - agghigh == 0",
+                                             "tenlow-tenhigh==0"))),                                                               test=multcomp::adjusted(type="fdr"))
+
+
 
 ```
 
-#Model for All the traits - field
+
+#Field - Model for All the traits - nitrogen, water control, ambient - USE THIS ONE! 
 ```{r}
 library(broom)
 all.morph.traits.field <- c("corolla_length", "corolla_width", "style_length", "max_anther", "min_anther","sepal_width")
 
-morph.models.field <- morphdata.field %>% pivot_longer(all_of(all.morph.traits.field), names_to = "trait") %>% group_by(trait) %>% nest() %>% 
-      mutate(morph.trait.field.lmer=map(data, ~lmer(value~treatment+ (1|plantid), data=.x))) %>% 
-      mutate(morph.field.Anova= map(morph.trait.field.lmer, ~tidy(Anova(.x, type=3)))) %>%  unnest(morph.field.Anova) %>%
-      dplyr::select(-data,-morph.trait.field.lmer) %>% 
-      mutate(significant = ifelse(p.value<0.05, "*","") )
+morph.models.field <- morphdata.field %>% pivot_longer(all_of(all.morph.traits.field), names_to = "trait") %>% group_by(trait)          %>% nest() %>% 
+      mutate(morph.trait.lmer=map(data, ~lmer(value~S.T + (1|plantid), data=.x))) %>% 
+      mutate(morph.Anova= map(morph.trait.lmer, ~tidy(Anova(.x, type=3)))) %>%  
+      mutate(morph.glht= map(morph.trait.lmer, ~tidy(multcomp:::summary.glht(multcomp::glht(.x, linfct=multcomp::mcp(S.T= 
+                                           c("Laggambient - Laggnitrogen == 0",
+                                             "Ihybambient - Ihybnitrogen == 0",
+                                             "Laggwatercontrol - Laggambient == 0",
+                                             "Ihybwatercontrol - Ihybambient == 0",
+                                             "Laggnitrogen - Laggwatercontrol==0",
+                                             "Ihybnitrogen - Ihybwatercontrol==0"))), test=multcomp::adjusted(type="fdr"))))) %>% 
+      #formatting for kable below
+      dplyr::select(-data,-morph.trait.lmer, -morph.Anova) %>% 
+      unnest(morph.glht) %>% 
+      mutate(significant = ifelse(adj.p.value<0.05, "*","") )
 
 kable(morph.models.field, digits=3) #spits out model into table
 
 #boxplot for averages of all traits
 allmorphtraits.field <- morphdata1.field %>% pivot_longer(all_of(all.morph.traits.field), names_to = "trait") %>% 
     #filter(trait%in% c("corolla_length", "max_anther")) %>% 
-    ggplot(aes(color= str_to_title(treatment), x=str_to_title(treatment), y=value))+geom_boxplot()+
+    ggplot(aes(color= str_to_title(treatment), x=str_to_title(site), y=value))+geom_boxplot()+
     facet_wrap(vars(trait),scales = "free_y", labeller=as_labeller(c(corolla_length="Corolla Length", corolla_width= "Corolla Width", style_length="Style Length", max_anther="Max Stamen", min_anther= "Min Stamen",sepal_width="Sepal Width", inflo_height_cm="Inforecence Height (cm)")))+
     labs(y="Length (mm)", x="Nitrogen", color="Nitrogen") +
   scale_color_manual(values = c("orange","purple","blue"))+
@@ -129,10 +165,86 @@ print(allmorphtraits.field)
 
 ggsave(allmorphtraits.field, file="plots-nitrogen/NEXP1.field.allmorphtraits.png", width= 4.5, height=5.5)
 
+#difference in corolla width is due to watering plant not due to nitrogen 
+
 ```
 
+#Field - Model for All the traits - ONLY nitrogen, ambient = water effect
+```{r}
+library(broom)
+all.morph.traits.field <- c("corolla_length", "corolla_width", "style_length", "max_anther", "min_anther","sepal_width")
 
-# read in nectar data and find averages - greenhouse
+morph.models.field <- morphdata.field %>% pivot_longer(all_of(all.morph.traits.field), names_to = "trait") %>% group_by(trait)          %>% nest() %>% 
+      mutate(morph.trait.lmer=map(data, ~lmer(value~S.T2 + (1|plantid), data=.x))) %>% 
+      mutate(morph.Anova= map(morph.trait.lmer, ~tidy(Anova(.x, type=3)))) %>%  
+      mutate(morph.glht= map(morph.trait.lmer, ~tidy(multcomp:::summary.glht(multcomp::glht(.x, linfct=multcomp::mcp(S.T2= 
+                                           c("Laggambient - Laggnitrogen == 0",
+                                             "Ihybambient - Ihybnitrogen == 0"))), test=multcomp::adjusted(type="fdr"))))) %>% 
+      #formatting for kable below
+      dplyr::select(-data,-morph.trait.lmer, -morph.Anova) %>% 
+      unnest(morph.glht) %>% 
+      mutate(significant = ifelse(adj.p.value<0.05, "*","") )
+
+kable(morph.models.field, digits=3) #spits out model into table
+
+#boxplot for averages of all traits
+allmorphtraits.field <- morphdata1.field %>% pivot_longer(all_of(all.morph.traits.field), names_to = "trait") %>% 
+    #filter(trait%in% c("corolla_length", "max_anther")) %>% 
+    ggplot(aes(color= str_to_title(treatment), x=str_to_title(site), y=value))+geom_boxplot()+
+    facet_wrap(vars(trait),scales = "free_y", labeller=as_labeller(c(corolla_length="Corolla Length", corolla_width= "Corolla Width", style_length="Style Length", max_anther="Max Stamen", min_anther= "Min Stamen",sepal_width="Sepal Width", inflo_height_cm="Inforecence Height (cm)")))+
+    labs(y="Length (mm)", x="Nitrogen", color="Nitrogen") +
+  scale_color_manual(values = c("orange","purple","blue"))+
+  theme_minimal()+
+  theme(panel.grid.major.x = element_blank(), legend.position = "bottom")
+  #scale_y_continuous(limits=c(0, NA))
+
+print(allmorphtraits.field)
+
+ggsave(allmorphtraits.field, file="plots-nitrogen/NEXP1.field.allmorphtraits.png", width= 4.5, height=5.5)
+
+#difference in corolla width is due to watering plant not due to nitrogen 
+
+```
+
+#Field - Model for All the traits - ONLY water =(nitrogen+water control), ambient 
+```{r}
+library(broom)
+all.morph.traits.field <- c("corolla_length", "corolla_width", "style_length", "max_anther", "min_anther","sepal_width")
+
+morph.models.field <- morphdata.field %>% pivot_longer(all_of(all.morph.traits.field), names_to = "trait") %>% group_by(trait)          %>% nest() %>% 
+      mutate(morph.trait.lmer=map(data, ~lmer(value~S.T3 + (1|plantid), data=.x))) %>% 
+      mutate(morph.Anova= map(morph.trait.lmer, ~tidy(Anova(.x, type=3)))) %>%  
+      mutate(morph.glht= map(morph.trait.lmer, ~tidy(multcomp:::summary.glht(multcomp::glht(.x, linfct=multcomp::mcp(S.T3= 
+                                           c("Laggambient - Laggwater == 0",
+                                             "Ihybambient - Ihybwater == 0" 
+                                              ))), test=multcomp::adjusted(type="fdr"))))) %>% 
+      #formatting for kable below
+      dplyr::select(-data,-morph.trait.lmer, -morph.Anova) %>% 
+      unnest(morph.glht) %>% 
+      mutate(significant = ifelse(adj.p.value<0.05, "*","") )
+
+kable(morph.models.field, digits=3) #spits out model into table
+
+#boxplot for averages of all traits
+allmorphtraits.field <- morphdata1.field %>% pivot_longer(all_of(all.morph.traits.field), names_to = "trait") %>% 
+    #filter(trait%in% c("corolla_length", "max_anther")) %>% 
+    ggplot(aes(color= str_to_title(treatment), x=str_to_title(site), y=value))+geom_boxplot()+
+    facet_wrap(vars(trait),scales = "free_y", labeller=as_labeller(c(corolla_length="Corolla Length", corolla_width= "Corolla Width", style_length="Style Length", max_anther="Max Stamen", min_anther= "Min Stamen",sepal_width="Sepal Width", inflo_height_cm="Inforecence Height (cm)")))+
+    labs(y="Length (mm)", x="Nitrogen", color="Nitrogen") +
+  scale_color_manual(values = c("orange","purple","blue"))+
+  theme_minimal()+
+  theme(panel.grid.major.x = element_blank(), legend.position = "bottom")
+  #scale_y_continuous(limits=c(0, NA))
+
+print(allmorphtraits.field)
+
+ggsave(allmorphtraits.field, file="plots-nitrogen/NEXP1.field.allmorphtraits.png", width= 4.5, height=5.5)
+
+#difference in corolla width is due to watering plant not due to nitrogen 
+
+```
+
+# Greenhouse - nectar
 ```{r}
 exp1.treatments <-read_sheet("1nyUqE-4dVr-81-MFMuAi5-dU4BIYZfuzF8xDEoFyJIk", sheet="Treatments")
 

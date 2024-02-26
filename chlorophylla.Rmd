@@ -6,29 +6,47 @@ output: html_document
 editor_options: 
   chunk_output_type: console
 ---
-```{r}
-#Read in data
 
+```{r, load packages}
+# install.packages("lme4", type="source") # to fix issue with Matrix 
+ library(lme4) 
+# install.packages("Matrix")
+# library(Matrix)
+library(car)
 library(tidyverse)
+library(emmeans)
 
+#because I had to sign in on new computer
 #git commit --amend --reset-author
 #git config --global --edit
+```
+
+#Read in reflectence data & treatments
+```{r,Read in reflectence data}
+
+#read data and clean: 
+   # wavelengths are every other column so we want to skip the first column  
+   #column to rownames makes first column the row names; first col named ...1 
+
 field.raw <- read_csv("data/Leafspec_AA_20220804.csv", 
       skip = 1) %>% as.data.frame() %>% column_to_rownames("...1") #makes first column the row names; first col named ...1 lol 
 
 greenhouse.raw <- read_csv("data/Leafspec_EXP1N_JB_20220801.csv", 
-      skip = 1) %>%  as.data.frame() %>% column_to_rownames("...1")
+      skip = 1) %>%  as.data.frame() %>% column_to_rownames("...1") 
 
 #Read in CSVs with species, plantid and treatment
 greenhouse.treatment <- read_csv("data/exp1_treatments.csv")
-field.treatment <- read_csv("data/NEXP1_field_treatments - 2022.csv")   
+field.treatment <- read_csv("data/NEXP1_field_treatments - 2022.csv") 
+
+#wavelengths <- field.raw[,1] 
 
 
-wavelengths <- field.raw[,1]
+```
+
+#Greenhouse chlorophyll a
+```{r}
 
 #selects columns with reflectance values which are only cols with plant number (alternate from column 2 to the end of dataset)
-field.wavelength <- field.raw[,seq(1,ncol(field.raw), by=2)] 
-
 greenhouse.wavelength <- greenhouse.raw[,seq(1,ncol(greenhouse.raw), by=2)] %>% t() %>% as.data.frame() %>% #t transposes data frame (cols to rows, rows to cols), t gets rid of data frame so gotta bring it back
           rownames_to_column("plantleaf") %>% 
         separate("plantleaf", into = c("plant", "leaf"), sep= "\\.\\.\\.") %>%  #separates plant and leaf number into two diff columns
@@ -36,30 +54,53 @@ greenhouse.wavelength <- greenhouse.raw[,seq(1,ncol(greenhouse.raw), by=2)] %>% 
         mutate(chlorophylla= (`750`-`705`)/(`750`+`705`), .after="leaf" ) %>%  #equation to find leaf reflectance; .after is name of column you want column to appear after
         mutate(species=tolower(species), plant=as.integer(plant), plantid=paste0(species, plant)) %>% 
           left_join(greenhouse.treatment) 
-      
+
+#boxplot  
 ggplot(greenhouse.wavelength, aes(x= species, y= chlorophylla, color=treatment)) + 
     geom_boxplot()
 
-# install.packages("lme4", type="source") # to fix issue with Matrix 
- library(lme4) 
-# install.packages("Matrix")
-# library(Matrix)
-install.packages("car")
-library(car)
-
+#Model reflectance (wavelength) with chlorophyll a as a function of species x treatment with plant id as a random effect
 greenhouse.model <- lmer(data=greenhouse.wavelength, chlorophylla ~ species*treatment + (1|plantid)) #lmer fits the model to the data, anova tests whether the coefficients at bottom of lmer are different than zero
 
 #the intercept in the lmer is the chlorophyll a for aggregata high nitrogen bc the intercept categorizes your data alphabetically so A is before T and High is before Low
 
+#Anova on model 
 Anova(greenhouse.model, type=3) 
 #species interaction bc agg has more chlorophyll a in high N compared to high N tenuitubas 
 
-#mean chlorophyll 
-install.packages("emmeans")
-library(emmeans)
-
+#mean chlorophyll for each plant
 greenhouse.means <- summary(emmeans(greenhouse.model, specs=c("species","treatment")))
 
+```
+
+#Field chlorophyll a
+```{r}
+
+#TODO: when separate plantleaf to plant and leaf NAs
+
+#selects columns with reflectance values which are only cols with plant number (alternate from column 2 to the end of dataset)
+field.wavelength <- field.raw[,seq(1,ncol(field.raw), by=2)] %>% t() %>% as.data.frame() %>% #t transposes data frame (cols to rows, rows to cols), t gets rid of data frame so gotta bring it back
+          rownames_to_column("plant") %>% 
+        mutate(chlorophylla= (`750`-`705`)/(`750`+`705`), .after="plant" ) %>%  #equation to find leaf reflectance; .after is name of column you want column to appear after
+          left_join(field.treatment) %>%  #add treatments
+        mutate(plantid=paste0(site, plant))
+#boxplot  
+ggplot(field.wavelength, aes(x= site, y= chlorophylla, color=treatment)) + 
+    geom_boxplot()
+
+#Model reflectance (wavelength) with chlorophyll a as a function of species x treatment with plant id as a random effect
+field.model <- lm(data=field.wavelength, chlorophylla ~ site*treatment) #lm and no random effect of leaf because only 1 leaf measurement
+
+#the intercept in the lmer is the chlorophyll a for aggregata high nitrogen bc the intercept categorizes your data alphabetically so A is before T and High is before Low
+
+#Anova on model 
+Anova(field.model, type=3) 
+#species interaction bc agg has more chlorophyll a in high N compared to high N tenuitubas 
+
+#mean chlorophyll for each plant
+field.means <- summary(emmeans(field.model, specs=c("site","treatment")))
+
+#TODO: track down mistery plants that have NA: NA561, NA300,NA531 - figure out what treatment belong to
 
 ```
 
