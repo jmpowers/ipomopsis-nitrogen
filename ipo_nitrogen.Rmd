@@ -123,8 +123,8 @@ ipochems <- read_csv("data/Ipo volatile compounds - chemsf_ipo.csv") %>%
 #shorten chemical names and merge compounds with multiple names
 shortnames <- ipochems %>% select(name, shortname) %>% filter(shortname!="") %>% deframe()
 
-exp1.data$Name <- recode(exp1.data$Name, !!!shortnames)
-exp1.field.data$Name <- recode(exp1.field.data$Name, !!!shortnames)
+exp1.data$Name <- dplyr::recode(exp1.data$Name, !!!shortnames)
+exp1.field.data$Name <- dplyr::recode(exp1.field.data$Name, !!!shortnames)
 
 exp1.all <- dcast(exp1.data, Filename~Name, sum, value.var="Area") #all means all VOCs unfiltered
 rownames(exp1.all) <- exp1.all[,1]
@@ -313,18 +313,23 @@ setdiff(colnames(vol.qual.field), colnames(vol.qual))
 # Quantitative integrations greenhouse & field
 
 ```{r quant}
+#field and greenhouse voc list
+voclist<- unique(c(colnames(vol.qual), colnames(vol.qual.field)))
+#TODO: add compounds with capital letters to compoound shortname list
+
 #read in the large 2022 quant integration output and cut it down to NEXP chromatograms
 source("read_shimadzu.R") #loads the function that reads the shimadzu output text file
 # quantpath <- "~/MyDocs/MEGA/UCI/Schiedea/Analysis/scent/rmbl/RMBL Batches/quant_round3/"
 # bfiles <-  list.files(quantpath)
 # quant.full <- map_dfr(set_names(paste0(quantpath, bfiles), bfiles), read.shimadzu.quant, .id="batch") %>%
-quant.full <- read.shimadzu.quant("data/quant_Ipo2022part1_5.txt") %>% #reads in shimadzu text file with quant integrations
+quant.full <- read.shimadzu.quant("data/quant_Ipo2022part1_5.txt") %>% #reads in shimadzu text file with quant integrations 
+  #TODO: john update quant part 6
   mutate(Name = trimws(Name), Area=replace_na(Area, 0)) %>%
    distinct(Filename, Name, .keep_all=T) 
 quant.full %>% select(Dirname, Filename, Name, Area) %>%
   mutate(Dirname = fct_relabel(Dirname, str_remove, "C:/GCMSsolution/Data/Project1_190815/")) %>%
   filter(Name != "1,6,10-Dodecatrien-3-ol, 3,7,11-trimethyl-") %>% #John- why??
-  mutate(Name = recode(Name, !!!shortnames)) %>%
+  mutate(Name = dplyr::recode(Name, !!!shortnames)) %>%
   #filter(str_detect(Filename, "^NEXP")) %>%
   select(-Dirname) %>%
   pivot_wider(names_from="Name", values_from="Area") %>%
@@ -332,7 +337,7 @@ quant.full %>% select(Dirname, Filename, Name, Area) %>%
 vol.exp1.exp1field <- read_tsv("data/quant_2022_exp1_exp1field.tsv") 
 
 #weatherport quant
-vol <- vol.exp1.exp1field %>% #takes origional file names and left joins it with verdicts 
+vol <- vol.exp1.exp1field %>% #takes original file names and left joins it with verdicts 
   left_join(select(exp1.verdicts, Filename = FileName, sample2)) %>% drop_na(sample2) %>% #grabs two columns from verdicts - Filename (which is the origional filename on hard drive) and sample2 (which is the sample that is in that file name)
   select(-Filename) %>% rename(Filename = sample2) %>%  #replace FileName with the sample2 it holds (accounts for skips)
   column_to_rownames("Filename")
@@ -340,7 +345,7 @@ contams <- c("methyl salicylate", "benzaldehyde","trans-Geranylgeraniol","Decana
              "(2E)-2,7-dimethylocta-2,6-dien-1-ol", #same peak as b-myrcene
              "3-methylbutanal oxime")#passed bouquet in OTC experiment but rare here
 
-vol <- vol[rownames(vol.qual), !colnames(vol) %in% contams] # reorders rows to match vol.qual and removes contaminates 
+vol <- vol[rownames(vol.qual), intersect(voclist,colnames(vol))] # rownames puts in same order as vol.qual; voclist filters list down to compounds only found in either greenhouse & field
 vol <- vol / (as.numeric(meta$equil + meta$pumping)/3600) / meta$flrs #0.5 hr of equilibration plus 0.25 hr pumping, one flower
 
 #field quant
@@ -349,13 +354,15 @@ vol.field <-  vol.exp1.exp1field %>% #takes origional file names and left joins 
   select(-Filename) %>% rename(Filename = sample2) %>%  #replace FileName with the sample2 it holds (accounts for skips)
   column_to_rownames("Filename")
 
-vol.field <- vol.field[rownames(vol.qual.field), !colnames(vol.field) %in% contams] # reorders rows to match vol.qual and removes contaminates 
+vol.field <- vol.field[rownames(vol.qual.field), intersect(voclist,colnames(vol.field))] 
 vol.field <- vol.field / (as.numeric(meta.field$equil + meta.field$pumping)/3600) / meta.field$flowers #0.5 hr of equilibration plus 0.25 hr pumping, one flower
+
 
 #compare lists
 (added_quant <- setdiff(colnames(vol), colnames(vol.qual)))#in quant (from temp experiment) but do not pass filters in this dataset
 (new_quant <- colnames(vol)[28:33]) #newly integrated, pass filters
 (need_quant <- setdiff(colnames(vol.qual), colnames(vol))) # filtered volatiles that need quant integration. 
+(need_quant <- setdiff(colnames(vol.qual.field), colnames(vol.field)))
 #vol <- bind_cols(vol, vol.qual[,need_quant]) #temporary, add a couple volatiles that don't have quant integrations yet (currently not on same scale!)
 ```
 
@@ -369,7 +376,7 @@ vol.field <- vol.field / (as.numeric(meta.field$equil + meta.field$pumping)/3600
 #combine field and greenhouse
 ```{r}
 #combine greenhouse and field experiment data Ihyp -> ten, Lagg -> agg
-megameta <- bind_rows(greenhouse=meta, .id = "experiment", field=meta.field %>% mutate(treatment=as.character(recode(treatment,`water control` = "low",control="low", nitrogen="high")), time=as.character(time), species= as.character(recode(species, Ihyb="ten", Lagg="agg")))) 
+megameta <- bind_rows(greenhouse=meta, .id = "experiment", field=meta.field %>% mutate(treatment=as.character(dplyr::recode(treatment,`water control` = "low",control="low", nitrogen="high")), time=as.character(time), species= as.character(dplyr::recode(species, Ihyb="ten", Lagg="agg")))) 
 
 mega.vol <- bind_rows(vol, vol.field)
 
@@ -715,11 +722,14 @@ library(lme4)
 #treatment has water control and contorl; treatment2 combines water control + control = low
 noaverage.field$S.T.T <- factor(paste0(noaverage.field$species, noaverage.field$time, noaverage.field$treatment2))
 (indolelmer.field<-lmer(sqrt(indole)~S.T.T + (1|plantid), data=noaverage.field)) #use not averaged data! d
-summary(multcomp::glht(indolelmer.field, linfct= multcomp::mcp(S.T.T = "Tukey")))
+summary(multcomp::glht(indolelmer.field, linfct= multcomp::mcp(S.T.T ="Tukey")))
+
+#TODO: need to make S.T.T for field???
+
 #no significant p values :(
   
-  #c("LaggDhigh - LaggDlow == 0","LaggNhigh - LaggNlow == 0", "IhybNhigh - IhybNlow == 0", "IhybDhigh - IhybDlow==0"))))
-
+  #c("LaggDnitrogen - LaggDcontrol == 0","LaggNnitrogen - LaggNcontrol == 0", "IhybNnitrogen - IhybNcontrol == 0", "IhybDnitrogen - IhybDcontrol==0"))))
+  #"Tukey"
 
 
 ```
@@ -801,7 +811,7 @@ cap.dataframe <- fortify(agg.day.cap) #turns cap into data frame so you can run 
 
 
 ##generate a plot in ggplot
-agg.Day.ordination = ggplot(bind_cols(filter(cap.dataframe, Score=="sites"),averageaggmetadata), aes(x=CAP1, y= MDS1, color = treatment)) + 
+agg.Day.ordination = ggplot(bind_cols(filter(cap.dataframe, score=="sites"),averageaggmetadata), aes(x=CAP1, y= MDS1, color = treatment)) + 
   geom_point(size=2.6) +
   theme_classic() + 
   coord_fixed(xlim=c(-1.5, 2.9), ylim=c(-1, 2.4)) +
@@ -962,7 +972,7 @@ anova(Lagg.night.cap, by="term")
 
 # Total emissions 
 
-# Greenhouse- total emissions
+## Greenhouse- total emissions
 ```{r}
 #Need average agg and ten for boxplot 
 averageaggmetadata$totalemssions <-rowSums(averageaggtable) #sums rows of volatiles to get total emissions (via adding all peak areas) for each sample
@@ -1033,8 +1043,12 @@ multcomp:::summary.glht(multcomp::glht(total.emission.model2, linfct=multcomp::m
 
 
 
-# Field- total emissions
+## Field- total emissions
 ```{r}
+#Average Lagg for day and night
+averageLaggmetadata.field<- averagemetadata.field[averagemetadata.field$species=="Lagg",]
+averageLaggtable.field<-averagetable.field[averagemetadata.field$species=="Lagg",]
+
 #average Ihyb total emissions = row sums 
 averageHYBmetadata.field$totalemssions <-rowSums(averageHYBtable.field) #sums rows of volatiles to get total emissions (via adding all peak areas) for each sample
 
@@ -1223,7 +1237,7 @@ relativeamountPA <- decostand(vol, "pa")
 rel.amount.cap <- capscale(sqrt(relativeamount.vol) ~ treatment, data = meta, distance = "bray")
 
 rel.amount.dataframe <- fortify(rel.amount.cap)
-rel.amount.ordination = ggplot(bind_cols(filter(rel.amount.dataframe, Score=="sites"),meta), aes(x=CAP1, y= MDS1, color = treatment)) + 
+rel.amount.ordination = ggplot(bind_cols(filter(rel.amount.dataframe, score=="sites"),meta), aes(x=CAP1, y= MDS1, color = treatment)) + 
   geom_point(size=2.6) +
   theme_classic() + 
   coord_fixed(xlim=c(-1.5, 2.9), ylim=c(-1, 2.4)) +
