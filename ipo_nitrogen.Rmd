@@ -50,7 +50,7 @@ exp1_field_nofilename <- read_csv("data/2022 Poverty Gulch Volatiles.csv") %>%
   mutate(plant = as.character(plant),
          Sample=paste0(plant, ifelse(is.na(replicate),"", replicate)), 
          type= factor(ifelse(str_detect(Sample, "AIR"), "ambient", "floral")), date=ymd(date),
-         treatment=fct_recode(replace_na(treatment, "air"),control="ambient"),
+         treatment=fct_recode(replace_na(treatment, "air"),control="ambient", watercontrol ="water control"),
          equil=pump-bag, pumping=end-pump) 
 
 exp1_field_link <-read_csv("data/AA_samples6.csv") %>%   #links filename and metadata
@@ -176,7 +176,7 @@ metadata.field <- exp1_field_meta %>% #Filename already accounted for skips
   mutate(plantid = paste(species, plant), 
          speciestime = paste(species, time, sep="."),
          plant = as.character(plant)) %>% 
-  mutate(treatmentx2=fct_recode(treatment, control="water control")) %>%  #combine water control and control 
+  mutate(treatmentx2=fct_recode(treatment, control="watercontrol")) %>%  #combine watercontrol and control 
   left_join(exp1.field.verdicts) %>% rename(filename=sample2) %>%
   
   drop_na(filename) %>% #TODO need to rescue some of these rows that might be good?
@@ -190,7 +190,7 @@ metadata.field <- filter(metadata.field, !filename %in% MnD) #drops filenames th
 exp1.field.all <- filter(exp1.field.all, !rownames(exp1.field.all) %in% DnM)
 exp1.field.data <- filter(exp1.field.data, !exp1.field.data$Filename %in% DnM)
 
-metadata.field %>% count(species, time, treatment) %>% kable() #TODO change the treatment names to make more sense
+metadata.field %>% count(species, time, treatment) %>% kable() 
 metadata.field %>% drop_na(species) %>% count(species, plantid, time) %>% 
   ggplot(aes(x=n, fill=time))+ geom_histogram(binwidth=1) + facet_wrap(vars(time), ncol=1)+
   labs(x="Samples per plant") 
@@ -314,7 +314,7 @@ setdiff(colnames(vol.qual.field), colnames(vol.qual))
 
 ```{r quant}
 #field and greenhouse voc list
-voclist<- unique(c(colnames(vol.qual), colnames(vol.qual.field)))
+voclist<- unique(c(colnames(vol.qual), colnames(vol.qual.field), "indole"))
 #TODO: add compounds with capital letters to compoound shortname list
 
 #read in the large 2022 quant integration output and cut it down to NEXP chromatograms
@@ -367,7 +367,7 @@ vol.field <- vol.field / (as.numeric(meta.field$equil + meta.field$pumping)/3600
 ```
 
 #Convert to ng/flower/hour
-#TODO
+###TODO
 ```{r}
 #TODO:john- go through 31 compound list and assign compounds to compound class. Look at shortnames(called ipochems in code) google sheet standard column to ID compound class
 
@@ -378,7 +378,7 @@ ipochemsf <- filter(ipochems, shortname%in%voclist)
 #reads in spreadsheet with standard slopes in from johns github
 read_csv(url("https://raw.githubusercontent.com/jmpowers/RMBL-GCMS/main/output/standards/regression_slopes.csv")) %>% filter(year == "2022b_newflowpath") 
 #TODO :john - convert standards in the spreadsheet to shortnames 
-vol <- sweep(vol, 2, pull(ipochemsf, paste0("area_per_ng","2022")), FUN = '/')
+#vol <- sweep(vol, 2, pull(ipochemsf, paste0("area_per_ng","2022")), FUN = '/')
   #sweep goes through every column in vol (which are all your compounds)
   #for each compound it divides by the slope of the standards which = area_per_ng
 
@@ -388,7 +388,7 @@ vol <- sweep(vol, 2, pull(ipochemsf, paste0("area_per_ng","2022")), FUN = '/')
 #combine field and greenhouse
 ```{r}
 #combine greenhouse and field experiment data Ihyp -> ten, Lagg -> agg
-megameta <- bind_rows(greenhouse=meta, .id = "experiment", field=meta.field %>% mutate(treatment=as.character(dplyr::recode(treatment,`water control` = "low",control="low", nitrogen="high")), time=as.character(time), species= as.character(dplyr::recode(species, Ihyb="ten", Lagg="agg")))) 
+megameta <- bind_rows(greenhouse=meta, .id = "experiment", field=meta.field %>% mutate(treatment=as.character(dplyr::recode(treatment,`watercontrol` = "low",control="low", nitrogen="high")), time=as.character(time), species= as.character(dplyr::recode(species, Ihyb="ten", Lagg="agg")))) 
 
 mega.vol <- bind_rows(vol, vol.field)
 
@@ -482,8 +482,10 @@ prints out graphs
 #   scale_color_viridis_c(option="magma") + geom_text(aes(x=4.5, label=n)) +
 #   stat_summary(fun="median", fun.max=~median(.x)+RT.tol, fun.min=~median(.x)-RT.tol, geom="pointrange", color="magenta", size=0.5, shape=15)
 # 
-# #TODO delete (2E)-2,7-dimethylocta-2,6-dien-1-ol (same peak as b-myrcene) from quant integrations
-# #TODO the following compounds have multiple, overlapping RTs
+# #TODO john - (already done?) delete (2E)-2,7-dimethylocta-2,6-dien-1-ol (same peak as b-myrcene) from quant integrations
+# #TODO the following compounds have multiple, overlapping RTs - this is the puzzle
+    #TODO at RMBL look at chromatograms, maybe rename compounds to terpene 1, 2, 3 etc. 
+
 # mess <- c("p-mentha-1,3,8-triene", "carveol", "cosmene", "4,7-Methano-1H-indene, 2,4,5,6,7,7a-hexahydro-")
 # longdata.RT.mess <- longdata.RT %>% filter(name %in% mess) %>% 
 #   arrange(RT) %>% mutate(cluster = kmeans(RT, 4, nstart=4)$cluster) %>% 
@@ -602,9 +604,6 @@ anova(AverageVOCcapS.T.T, by="term")
 
 # Field Average VOCs
 ```{r}
-
-#TODO: noaverage.field lots of NAs and no compounds, bind_cols not work
-
 #make average volatile table: 
 noaverage.field <- bind_cols(meta.field,vol.field)%>%   #want to make table with metadata and volatile list that is not averaged to run Anova on
   group_by(time, treatment, species)%>%
@@ -614,9 +613,8 @@ averagePlant.field<-bind_cols(meta.field,vol.field) %>% group_by(plantid, time, 
   summarize(across(where(is.numeric),mean)) %>% ungroup()    
 #takes average of each sample for dayand night
 
-#TODO: change column numbers below???
-averagetable.field<- averagePlant.field[,12:ncol(averagePlant.field)] #seperates table into meta data and volatile list table (not necesaary)
-averagemetadata.field<- averagePlant.field[,1:12]
+averagetable.field<- averagePlant.field[,15:ncol(averagePlant.field)] #seperates table into meta data and volatile list table (not necesaary)
+averagemetadata.field<- averagePlant.field[,1:14]
 
 #Number of plants sampled for time, species and treatment
 count(averagemetadata.field, species, time, treatment)
@@ -731,12 +729,10 @@ library(lmerTest)
 library(lme4)
 
 #Only indole lmer with plantid as random effect for field
-#treatment has water control and contorl; treatment2 combines water control + control = low
-noaverage.field$S.T.T <- factor(paste0(noaverage.field$species, noaverage.field$time, noaverage.field$treatment2))
+#treatment has watercontrol and contorl; treatmentx2 combines watercontrol + control = low
+noaverage.field$S.T.T <- factor(paste0(noaverage.field$species, noaverage.field$time, noaverage.field$treatmentx2))
 (indolelmer.field<-lmer(sqrt(indole)~S.T.T + (1|plantid), data=noaverage.field)) #use not averaged data! d
-summary(multcomp::glht(indolelmer.field, linfct= multcomp::mcp(S.T.T ="Tukey")))
-
-#TODO: need to make S.T.T for field???
+summary(multcomp::glht(indolelmer.field, linfct= multcomp::mcp(S.T.T =c("LaggDnitrogen - LaggDcontrol == 0","LaggNnitrogen - LaggNcontrol == 0", "IhybNnitrogen - IhybNcontrol == 0", "IhybDnitrogen - IhybDcontrol==0"))))
 
 #no significant p values :(
   
@@ -852,10 +848,9 @@ ggsave(agg.Day.ordination, file='agg_Day_ordinationplot.jpg', width=130, height=
 #Compound names on ordination plot
 library(ggrepel) #makes it so labels don't overlap
 
-#TODO: fix ggplot of compound names
-ggplot(filter(cap.dataframe, Score=="species", sqrt(CAP1^2+MDS1^2)>0.2), aes(x=CAP1, y= MDS1)) + 
+ggplot(filter(cap.dataframe, score=="species", sqrt(CAP1^2+MDS1^2)>0), aes(x=CAP1, y= MDS1)) + 
   geom_point()+
-  geom_text_repel(aes(label=Label)) +
+  geom_text_repel(aes(label=label)) +
   theme_classic() + 
   #coord_fixed(xlim=c(-1.25, 1), ylim=c(-1.5, 0.4)) +#coord fixed evenly scales x&y
   geom_hline(yintercept = 0, linetype="dotted") + 
@@ -865,6 +860,7 @@ ggplot(filter(cap.dataframe, Score=="species", sqrt(CAP1^2+MDS1^2)>0.2), aes(x=C
   theme(plot.title = element_text(hjust = 0.5))+
   ylab("MDS1") + 
   xlab("CAP1") 
+
 
 #text(cap, display = "species", col="grey50")
 #text(cap, display = "cn", labels= c("Day","Night","High Nitrogen","Low Nitrogen"), col="gray")
@@ -1123,16 +1119,16 @@ Anova(total.emission.model2.field, type=3)
   #subtracts means from different groups (like Agg day low - agg day high) c
       #can specify which group like below or write linfct=mcp(model ="Tukey"))
   # summary () gives you p-values
-summary(multcomp::glht(total.emission.model2.field, linfct=multcomp::mcp(S.T.T= "Tukey")),
-                                          # c("IhybDnitrogen - IhybDcontrol == 0", "IhybDnitrogen - IhybDwater control == 0", "IhybDcontrol - IhybDwater control == 0", "IhybNnitrogen - IhybNcontrol == 0", "IhybNnitrogen - IhybNwater control == 0", "IhybNcontrol - IhybNwater control == 0","LaggDnitrogen - LaggDcontrol == 0 ", "LaggDnitrogen - LaggDwater control == 0 ", "LaggDwater control - LaggDcontrol == 0 ","LaggNnitrogen - LaggNcontrol == 0 ", "LaggNnitrogen - LaggNwater control == 0 ", "LaggNwater control - LaggNcontrol == 0 "))),                                                              
+summary(multcomp::glht(total.emission.model2.field, linfct=multcomp::mcp(S.T.T= c("IhybDnitrogen - IhybDcontrol == 0", "IhybDnitrogen - IhybDwatercontrol == 0", "IhybDcontrol - IhybDwatercontrol == 0", "IhybNnitrogen - IhybNcontrol == 0", "IhybNnitrogen - IhybNwatercontrol == 0", "IhybNcontrol - IhybNwatercontrol == 0","LaggDnitrogen - LaggDcontrol == 0 ", "LaggDnitrogen - LaggDwatercontrol == 0 ", "LaggDwatercontrol - LaggDcontrol == 0 ","LaggNnitrogen - LaggNcontrol == 0 ", "LaggNnitrogen - LaggNwatercontrol == 0 ", "LaggNwatercontrol - LaggNcontrol == 0 "))),
+        
+                                          # c("IhybDnitrogen - IhybDcontrol == 0", "IhybDnitrogen - IhybDwatercontrol == 0", "IhybDcontrol - IhybDwatercontrol == 0", "IhybNnitrogen - IhybNcontrol == 0", "IhybNnitrogen - IhybNwatercontrol == 0", "IhybNcontrol - IhybNwatercontrol == 0","LaggDnitrogen - LaggDcontrol == 0 ", "LaggDnitrogen - LaggDwatercontrol == 0 ", "LaggDwatercontrol - LaggDcontrol == 0 ","LaggNnitrogen - LaggNcontrol == 0 ", "LaggNnitrogen - LaggNwatercontrol == 0 ", "LaggNwatercontrol - LaggNcontrol == 0 "))),                                                              
   test=multcomp::adjusted(type="fdr"))
 
 
-#TODO: fix so has both species
 #plot total emissions for each compound present 
 plot.total.emissions.field.pretty=
   ggplot(meta.field, aes( y= totalemission, x=str_to_title(species), #could do with average metadata instead of all data points in meta
-  color=str_to_title(treatment)))+
+  color=str_to_title(treatment) %>% factor(levels=c("Control", "Watercontrol", "Nitrogen")) %>% fct_recode(`Water control`="Watercontrol")))+ 
   #annotate(geom="rect", ymin = 0, ymax = Inf, xmin=2.5, xmax=6)+
   geom_boxplot(position=position_dodge(width=0.9))+
  # geom_point (position=position_dodge(width=0.9))+ #makes it so point don't overlap
@@ -1155,7 +1151,7 @@ plot.total.emissions.field.pretty=
         legend.text=element_text(size=9), legend.position = "bottom")+
  # scale_x_discrete(labels=c('Day', 'Night', 'Day','Night'))+
   labs(color="Treatment")+
-   scale_color_manual(values = c("orange","purple","magenta"))+
+   scale_color_manual(values = c(Nitrogen="orange",Control="purple",`Water control`="magenta"))+
  # scale_fill_manual(values = c("white","grey90"))+
   facet_wrap(vars(time), labeller = as_labeller(c(D="Day", N="Night")))
 
@@ -1313,7 +1309,7 @@ rel.amount.ordination.field = ggplot(bind_cols(filter(rel.amount.dataframe.field
   theme(plot.title = element_text(hjust = 0.5))+
   ylab("MDS1 (% explained)") + 
   xlab("CAP1 (% explained)") + 
-  scale_color_manual(name="Nitrogen Level", labels= c("Control", "Nitrogen", "Water Control"), values=c("pink","tan2","cadetblue3")) + 
+  scale_color_manual(name="Nitrogen Level", labels= c("Control", "Nitrogen", "watercontrol"), values=c("pink","tan2","cadetblue3")) + 
   labs(subtitle="ANOVA; p=0.451",hjust = 1)+ #adds subtitle at top of figure
    theme(legend.title = element_text(size=12, color = "black"), legend.text=element_text(size=10),
            legend.justification=c(0,1), 
@@ -1410,16 +1406,16 @@ write_csv(compoundpercentchange.lowhigh, file = "Nexp1_Compound%change_lowhigh_g
 ```
 
 #Field compound % change high/low nitrogen
-#doesn't work bc 3 treatments, water control two words
+#doesn't work bc 3 treatments, watercontrol two words
 ```{r}
-#make treatment2 = water control + control 
+#make treatment2 = watercontrol + control 
 
 #compound % change Treatment low/high
 compoundratios.lowhigh.field <- averagePlant.field %>% group_by(time, species, treatment) %>% 
   summarise(across(colnames(vol.field),mean)) %>%  #takes mean of each compound for each species and time
   pivot_longer(colnames(vol.field)) %>% #dplr can't divide rows but can divide columns so need to make compounds into columns
   pivot_wider(names_from = treatment, values_from = value) %>%  #name day column and night column
-  mutate(HighLowRatio= `water control`/nitrogen * 100)
+  mutate(HighLowRatio= `watercontrol`/nitrogen * 100)
 #library(broom)
 compoundchangemodel.lowhigh.field <- averagePlant.field %>% pivot_longer(colnames(vol.field)) %>%
     group_by(species, name) %>% nest() %>% 

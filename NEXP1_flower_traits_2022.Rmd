@@ -45,7 +45,7 @@ options(contrasts = c("contr.sum", "contr.poly"))
 # Greenhouse - read in morphology metadata & find plant averags for morph traits
 ```{r}
 
-#TODO: inflo height - only have 1 measurement per plant (delete replicates)
+#TODO: Janelel - inflo height - only have 1 measurement per plant (delete replicates)
 exp1.treatments.greenhouse <-read_sheet("1nyUqE-4dVr-81-MFMuAi5-dU4BIYZfuzF8xDEoFyJIk", sheet="Treatments") 
 
 morphdata <- read_sheet("1nyUqE-4dVr-81-MFMuAi5-dU4BIYZfuzF8xDEoFyJIk", sheet="Flower Morphology", na=c("","NA")) %>% 
@@ -325,7 +325,7 @@ nectardata.field %>% ggplot(aes(x=nectar.production  , y=nectar_conc))+geom_poin
 #Total Flower number
 ```{r}
 total.flower<-read_sheet("1nyUqE-4dVr-81-MFMuAi5-dU4BIYZfuzF8xDEoFyJIk", sheet="Flower Number") %>% 
-   left_join(exp1.treatments) %>% mutate(treatment=factor(treatment, levels=c("LOW","HIGH")))
+   left_join(exp1.treatments.greenhouse) %>% mutate(treatment=factor(treatment, levels=c("LOW","HIGH")))
 
 
 flower.nub.lm=lm(flower_num~treatment*species, data=total.flower)
@@ -350,37 +350,16 @@ alpha=0.05, Letters=letters,adjust="tukey")
 #library (tibble)
 
 #need treatmentspecies so paste0 
-flowerdatamutate <- as_tibble(total.flower)%>%mutate(nitrogenmicrobe=paste0(nitrogen,microbe))%>% 
-  mutate(nitrogenmicrobe=factor(nitrogenmicrobe))#paste0 because glht doesn't like spaces in data sets
+flowerdatamutate <- as_tibble(total.flower)%>%mutate(treatmentspecies=factor(paste0(treatment,species))) #paste0 because glht doesn't like spaces in data sets
 
 #model to put into glht bc glht doesn't like spaces
-flower.nub.lmer.glht=lmer(total_flower_number~nitrogenmicrobe + (1|plant), data=flowerdatamutate)
+flower.nub.lm.glht=lm(flower_num~treatmentspecies, data=flowerdatamutate)
 
-summary(multcomp::glht(flower.nub.lmer.glht, linfct=multcomp::mcp(nitrogenmicrobe="Tukey")), test=multcomp::adjusted(type="none"))
+summary(multcomp::glht(flower.nub.lm.glht, linfct=multcomp::mcp(treatmentspecies="Tukey")), test=multcomp::adjusted(type="fdr"))
 
-##plot with species on x-axis, bars show N treatment, y axis is lsmean
 
-Fig.flower.number = ggplot(flower.num.N, aes(x=nitrogen, y=lsmean, fill=microbe)) +
-  geom_bar(position=position_dodge(), stat="identity", width = 0.5,  linewidth=0.5)+
-  geom_errorbar(aes(ymin=lsmean-SE, ymax=lsmean+SE),
-                width=.2, # Width of the error bars
-                position=position_dodge(.5))  +
-scale_fill_manual(values=c("orange", "lightblue3"), name = "Nitrogen Level", labels = c("High", "Low")) + 
-  labs(y="Total Flower Number", x="") +
-  annotate("text", x = 1.6, y = 300, label = "*", size = 4)+
-  annotate("text", x = 1, y = 280, label = "**", size = 4)+
-  theme(panel.border = element_blank(),
-      panel.grid.major = element_blank(),
-      #panel.grid.minor = element_blank(),
-      panel.background = element_blank())+
-  theme(legend.title = element_text(size=11, color = "black"),
-        legend.text=element_text(size=9),
-        #axis.text.x = element_text(size=9),
-        axis.ticks = element_blank())#+
-  #scale_x_discrete(labels=c('I. aggregata', 'I. tenuituba'))
-
-Fig.flower.number
-ggsave(Fig.flower.number, file='plot_flower_number.jpg', width=110, height=110, units= 'mm', dpi=300)
+#Fig.flower.number
+#ggsave(Fig.flower.number, file='plot_flower_number.jpg', width=110, height=110, units= 'mm', dpi=300)
 
 
 ```
