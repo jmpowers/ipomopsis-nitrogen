@@ -45,8 +45,7 @@ options(contrasts = c("contr.sum", "contr.poly"))
 # Greenhouse - read in morphology metadata & find plant averags for morph traits
 ```{r}
 
-#TODO: Janelel - inflo height - only have 1 measurement per plant (delete replicates)
-exp1.treatments.greenhouse <-read_sheet("1nyUqE-4dVr-81-MFMuAi5-dU4BIYZfuzF8xDEoFyJIk", sheet="Treatments") 
+exp1.treatments.greenhouse <-read_sheet("1nyUqE-4dVr-81-MFMuAi5-dU4BIYZfuzF8xDEoFyJIk", sheet="Treatments") #loads from EXP 1 (N) Flower Traits on google drive
 
 morphdata <- read_sheet("1nyUqE-4dVr-81-MFMuAi5-dU4BIYZfuzF8xDEoFyJIk", sheet="Flower Morphology", na=c("","NA")) %>% 
   mutate(corolla_length=as.numeric(corolla_length))%>% left_join(exp1.treatments.greenhouse) %>% 
@@ -91,6 +90,7 @@ morphdata1.field<- morphdata.field %>%
 library(broom)
 all.morph.traits <- c("corolla_length", "corolla_width", "style_length", "max_anther", "min_anther","sepal_width", "inflo_height_cm")
 
+#TODO: error bc only one measurement for inflo height per plant
 morph.models <- morphdata %>% pivot_longer(all_of(all.morph.traits), names_to = "trait") %>% group_by(trait) %>% nest() %>% 
       mutate(morph.trait.lmer=map(data, ~lmer(value~S.T + (1|plantid), data=.x))) %>% 
       mutate(morph.Anova= map(morph.trait.lmer, ~tidy(Anova(.x, type=3)))) %>%  
