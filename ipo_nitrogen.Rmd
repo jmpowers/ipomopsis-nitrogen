@@ -369,6 +369,18 @@ vol.field <- vol.field / (as.numeric(meta.field$equil + meta.field$pumping)/3600
 #Convert to ng/flower/hour
 #TODO
 ```{r}
+#TODO:john- go through 31 compound list and assign compounds to compound class. Look at shortnames(called ipochems in code) google sheet standard column to ID compound class
+
+setdiff(voclist, shortnames) #these are the ones you need to figure out compound class for - assign to one of the standards we used.and change the name/add compound shortname
+
+#Converting to ng/hr uses standards for 2022 on the GCMS
+ipochemsf <- filter(ipochems, shortname%in%voclist)
+#reads in spreadsheet with standard slopes in from johns github
+read_csv(url("https://raw.githubusercontent.com/jmpowers/RMBL-GCMS/main/output/standards/regression_slopes.csv")) %>% filter(year == "2022b_newflowpath") 
+#TODO :john - convert standards in the spreadsheet to shortnames 
+vol <- sweep(vol, 2, pull(ipochemsf, paste0("area_per_ng","2022")), FUN = '/')
+  #sweep goes through every column in vol (which are all your compounds)
+  #for each compound it divides by the slope of the standards which = area_per_ng
 
 ```
 
