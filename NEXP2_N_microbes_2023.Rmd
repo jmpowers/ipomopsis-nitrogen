@@ -376,7 +376,7 @@ greekify <- function(names) {
 library(ggvegan)
 library(ggrepel)
 cap.night.dataframe <- fortify(average.night.cap) #makes a dataframe for ggplot to use
-average.night.ordination = ggplot(bind_cols(filter(cap.night.dataframe, Score=="sites"),averagenightmetadata), 
+average.night.ordination = ggplot(bind_cols(filter(cap.night.dataframe, score=="sites"),averagenightmetadata), 
         aes(x=CAP1, y= CAP2, label=Label)) + 
   geom_point(size=2.6, aes(color = microbe, shape= nitrogen)) + 
   theme_classic() + 
@@ -397,17 +397,17 @@ average.night.ordination = ggplot(bind_cols(filter(cap.night.dataframe, Score=="
            legend.background = element_blank(),
            legend.key = element_blank(),
             plot.subtitle = element_text(hjust = 1))+ #moves subtitle to right side 
-    geom_segment(data=cap.night.dataframe %>% filter(Score=="biplot", str_detect(Label, ":")), #adds arrows 
+    geom_segment(data=cap.night.dataframe %>% filter(score=="biplot", str_detect(Label, ":")), #adds arrows 
              aes(x=0,y=0,xend=CAP1*1.8, yend=CAP2*1.8), 
               arrow=arrow(length=unit(0.5, "lines")))+ #scales arrow length
-    geom_text(data=cap.night.dataframe %>% filter(Score=="biplot", str_detect(Label, ":")) %>% #labels text to arrows
+    geom_text(data=cap.night.dataframe %>% filter(score=="biplot", str_detect(Label, ":")) %>% #labels text to arrows
             mutate(Label=c("Low Normal", "Low Sterile")), #edits arrow labels
             aes(x=CAP1*2, y=CAP2*2, angle=atan(CAP2/CAP1)*180/pi), hjust=c(0,1), fontface="bold", size=3) +
     geom_text_repel(data=cap.night.dataframe %>% left_join(ipochems, by=c("Label"="name")) %>% #adds compound name to arrows
-              filter(Score=="species", Label%in%names(top.6.vocs)) %>%  #gets rid of compounds clusterd in middle of cap
+              filter(score=="species", Label%in%names(top.6.vocs)) %>%  #gets rid of compounds clusterd in middle of cap
               mutate(Label=greekify(Label)),
               aes(x=CAP1*6, y=CAP2*6), size=3) +
-    geom_label(data=cap.night.dataframe %>% filter(Score =="centroids",
+    geom_label(data=cap.night.dataframe %>% filter(score =="centroids",
                 Label%in%c("microbeSterile","microbeNormal", "microbeEarly")) %>% 
                  mutate(Label= c("Early","Normal", "Sterile")), color="blue")+
                 #can add high/low N here but they were essentially the same
@@ -595,7 +595,7 @@ rel.amount.cap <- capscale(sqrt(relativeamount.vol) ~ nitrogen+microbe+time, dat
 
 library(ggvegan)
 rel.amount.dataframe <- fortify(rel.amount.cap)
-rel.amount.ordination = ggplot(bind_cols(filter(rel.amount.dataframe, Score=="sites"),meta), aes(x=CAP1, y= CAP2, color = paste(nitrogen, microbe), shape=time)) + 
+rel.amount.ordination = ggplot(bind_cols(filter(rel.amount.dataframe, score=="sites"),meta), aes(x=CAP1, y= CAP2, color = paste(nitrogen, microbe), shape=time)) + 
   geom_point(size=2.6) +
   theme_classic() + 
  # coord_fixed(xlim=c(-1.5, 2.9), ylim=c(-1, 2.4)) +

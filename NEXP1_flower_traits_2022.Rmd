@@ -38,9 +38,69 @@ options(contrasts = c("contr.sum", "contr.poly"))
 
 #maybe for cap: options(contrasts = c("contr.treatment", "contr.poly"))for when you plot arrows
 
-
-#library(multcomp) #reads lsmeans cld don't load just ::
 ```
+
+#data visualization
+```{r,data visualization set up}
+#set standard figure dimensions
+opts_chunk$set(fig.height=8, fig.width=8, dpi=100, fig.path="figures/") #sets standard width and height for all figures in rmd; creates folder only when rmd is knitted
+#can also change height in {} at the top of the chunk
+
+#set figure theme
+NEXP1.theme <- theme(
+      #axis text
+                  axis.title = element_text(size=13),     #x axis title text size
+                  axis.text.x = element_text(size=12, color = "black"),     #x axis labels text size
+                  axis.ticks.x = element_blank(),  # Remove tick marks on x-axis
+                  axis.title.x = element_text(margin = margin(t = 10)),  # Adds 10 units of space on top of the x-axis title
+                  axis.title.y = element_text(margin = margin(r = 15)),  # Adds 15 units of space to the right of the y-axis title
+      #legend
+                  legend.text = element_text(size=11),       #legend text size
+                  legend.title = element_text(size=12, color = "black", hjust = 0.5),  #legend title text size
+                  legend.position = "right",                #"left", "right", "bottom", "top", or a coordinate
+                  legend.direction = "vertical",           #layout direction of the legend ("horizontal" or "vertical")
+                  legend.spacing = unit(1, "cm"),            #spacing between legend items; adds 1cm of space between
+                  legend.key.size = unit(1.1, "cm"),         #size of the legend keys (symbols); sets legend key to 1.5cm
+      #panels
+                  panel.border = element_blank(),            # border around the plot area
+                  panel.grid.major = element_line(colour="white"),
+                  #panel.grid.minor = element_blank(),
+                  panel.background = element_rect(fill = "white", # # Remove grey background (set to white)
+                                          #colour = "lightblue",
+                                          linetype = "solid"),
+      
+      #facets
+                  strip.text.x = element_text(size=11),       #strip text on x-axis facet
+                  strip.background = element_rect(colour="white", fill="white")) #background for the strip label
+                  strip.text = element_text(size = 13)        #This changes the size of the facet labels
+
+
+#color scheme
+#scale_color_manual(name="Nitrogen Level", 
+#        labels= c("no water added",  "high nitrogen", "low nitrogen"), #Specifies treatment names in legend
+#        values=c("#8b9b31", "#b35f98", "#3a8db3")
+  
+
+#ggplot boxplot code: 
+#plot.total.emissions.field=
+#  ggplot(meta.field, aes( y= totalemission, x=time, color=treatment))+
+#  geom_boxplot(position=position_dodge(width=0.9))+
+#  geom_point (position=position_dodge(width=0.9))+ #makes it so point don't overlap
+#  scale_y_sqrt()+
+#  ylab("Total Emissions")+
+#  xlab("") +
+#  facet_wrap(vars(species)) +
+#  facet_grid(. ~ species, labeller=labeller(species = facet.labs))+ 
+#  scale_x_discrete(labels=c('Day', 'Night', 'Day','Night'))+ #x axis text
+#  ylim(0.1, 0.56)+  # Set y-axis limits from 0.1 to 0.56 + 
+#  scale_color_manual(name="Nitrogen Level", 
+#        labels= c("no water added",  "high nitrogen", "low nitrogen"), #Specifies treatment names in legend
+#        values=c("#8b9b31", "#b35f98", "#3a8db3")
+
+
+#print(plot.total.emissions.field)  
+```
+
 
 # Greenhouse - read in morphology metadata & find plant averags for morph traits
 ```{r}
@@ -85,38 +145,54 @@ morphdata1.field<- morphdata.field %>%
 ```
 
 
-#Greenhouse - Model for All the traits
+#G- Model for All the traits
 ```{r}
 library(broom)
-all.morph.traits <- c("corolla_length", "corolla_width", "style_length", "max_anther", "min_anther","sepal_width", "inflo_height_cm")
+library(emmeans)
+all.morph.traits <- c("corolla_length", "corolla_width", "style_length", "max_anther", "min_anther","sepal_width")
 
-#TODO: error bc only one measurement for inflo height per plant
-morph.models <- morphdata %>% pivot_longer(all_of(all.morph.traits), names_to = "trait") %>% group_by(trait) %>% nest() %>% 
+
+morph.models.everything <- morphdata %>% pivot_longer(all_of(all.morph.traits), names_to = "trait") %>% group_by(trait) %>% nest() %>% 
       mutate(morph.trait.lmer=map(data, ~lmer(value~S.T + (1|plantid), data=.x))) %>% 
       mutate(morph.Anova= map(morph.trait.lmer, ~tidy(Anova(.x, type=3)))) %>%  
       mutate(morph.glht= map(morph.trait.lmer, ~tidy(multcomp:::summary.glht(multcomp::glht(.x, linfct=multcomp::mcp(S.T= 
                                            c("AGGLOW - AGGHIGH == 0",
                                              "TENLOW - TENHIGH ==0"))), test=multcomp::adjusted(type="fdr"))))) %>% 
+      mutate(emmeans=map(morph.trait.lmer, ~tidy(emmeans(.x, "S.T")))) #gives means so we can do % change from high to low
+
       #formatting for kable below
-      dplyr::select(-data,-morph.trait.lmer, -morph.Anova) %>% 
+morph.models<- morph.models.everything %>% dplyr::select(-data,-morph.trait.lmer, -morph.Anova, -emmeans) %>% 
       unnest(morph.glht) %>% 
-      mutate(significant = ifelse(adj.p.value<0.05, "*","") )
+      mutate(significant = ifelse(adj.p.value<0.05, "*","") )  
+      
 
 kable(morph.models, digits=3) #spits out model into table
+
+#emmeans table 
+morph.emmeans<- morph.models.everything %>% dplyr::select(-data,-morph.trait.lmer, -morph.Anova, -morph.glht) %>% 
+      unnest(emmeans)  
+    
+kable(morph.emmeans, digits=3) #spits out model into table
+#now divide high by low to get % change
 
 #boxplot for averages of all traits
 allmorphtraits <- morphdata1 %>% pivot_longer(all_of(all.morph.traits), names_to = "trait") %>% 
     #filter(trait%in% c("corolla_length", "max_anther")) %>% 
-    ggplot(aes(color= str_to_title(treatment), x=str_to_title(species), y=value))+geom_boxplot()+
-    facet_wrap(vars(trait),scales = "free_y", labeller=as_labeller(c(corolla_length="Corolla Length", corolla_width= "Corolla Width", style_length="Style Length", max_anther="Max Stamen", min_anther= "Min Stamen",sepal_width="Sepal Width", inflo_height_cm="Inforecence Height (cm)")))+
-    labs(y="Length (mm)", x="Nitrogen", color="Nitrogen") +
-  scale_color_manual(values = c("orange","purple"))+
-  theme_minimal()+
-  theme(panel.grid.major.x = element_blank(), legend.position = "bottom")
-  #scale_y_continuous(limits=c(0, NA))
+    ggplot(aes(color= str_to_title(treatment), x=str_to_title(species), y=value))+
+        geom_boxplot(position=position_dodge(width=0.9))+
+        geom_point (position=position_dodge(width=0.9))+ #makes it so point don't overlap
+        facet_wrap(vars(trait),scales = "free_y", labeller=as_labeller(c(corolla_length="Corolla Length", corolla_width= "Corolla Width", style_length="Style Length", max_anther="Max Stamen", min_anther= "Min Stamen",sepal_width="Sepal Width", inflo_height_cm="Inforecence Height (cm)")))+
+        labs(y="Length (mm)", x="Species", color="Nitrogen") +
+    NEXP1.theme+
+   #scale_y_sqrt()+
+    scale_x_discrete(labels=c('I.agg', 'I. ten'))+ #x axis text
+    scale_color_manual(name="Nitrogen Level", 
+        labels= c(  "High nitrogen", "Low nitrogen"), #Specifies treatment names in legend
+        values=c( "#b35f98", "#3a8db3"))
+
 
 print(allmorphtraits)
-ggsave(allmorphtraits, file="plots-nitrogen/allmorphtraitn.png", width= 4.5, height=5.5)
+ggsave(allmorphtraits, file="plots-nitrogen/allmorphtraits.png", width= 4.5, height=5.5)
 
 #glht
 multcomp:::summary.glht(multcomp::glht(total.emission.model2, linfct=multcomp::mcp(S.T= 
@@ -153,17 +229,20 @@ kable(morph.models.field, digits=3) #spits out model into table
 #boxplot for averages of all traits
 allmorphtraits.field <- morphdata1.field %>% pivot_longer(all_of(all.morph.traits.field), names_to = "trait") %>% 
     #filter(trait%in% c("corolla_length", "max_anther")) %>% 
-    ggplot(aes(color= str_to_title(treatment), x=str_to_title(site), y=value))+geom_boxplot()+
-    facet_wrap(vars(trait),scales = "free_y", labeller=as_labeller(c(corolla_length="Corolla Length", corolla_width= "Corolla Width", style_length="Style Length", max_anther="Max Stamen", min_anther= "Min Stamen",sepal_width="Sepal Width", inflo_height_cm="Inforecence Height (cm)")))+
-    labs(y="Length (mm)", x="Nitrogen", color="Nitrogen") +
-  scale_color_manual(values = c("orange","purple","blue"))+
-  theme_minimal()+
-  theme(panel.grid.major.x = element_blank(), legend.position = "bottom")
-  #scale_y_continuous(limits=c(0, NA))
-
+    ggplot(aes(color= str_to_title(treatment), x=str_to_title(site), y=value))+
+       geom_boxplot(position=position_dodge(width=0.9))+
+       geom_point (position=position_dodge(width=0.9))+ #makes it so point don't overlap
+       facet_wrap(vars(trait),scales = "free_y", labeller=as_labeller(c(corolla_length="Corolla Length", corolla_width= "Corolla Width", style_length="Style Length", max_anther="Max Stamen", min_anther= "Min Stamen",sepal_width="Sepal Width", inflo_height_cm="Inforecence Height (cm)")))+
+       labs(y="Length (mm)", x="Species", color="Nitrogen") +
+       NEXP1.theme+
+       scale_x_discrete(labels=c('Hybrids', 'I. aggregata'))+ #x axis text
+       scale_color_manual(name="Nitrogen Level", 
+          labels= c("No water added",  "High nitrogen", "Low nitrogen"), #Specifies treatment names in legend
+          values=c("#8b9b31", "#b35f98", "#3a8db3"))
+  
 print(allmorphtraits.field)
 
-ggsave(allmorphtraits.field, file="plots-nitrogen/NEXP1.field.allmorphtraits.png", width= 4.5, height=5.5)
+ggsave(allmorphtraits.field, file="plots-nitrogen/NEXP1.field.allmorphtraits.png", width= 4.5, height=5.5, dpi=600)
 
 #difference in corolla width is due to watering plant not due to nitrogen 
 
@@ -244,6 +323,33 @@ ggsave(allmorphtraits.field, file="plots-nitrogen/NEXP1.field.allmorphtraits.png
 
 ```
 
+#Inflo height
+```{r}
+
+inflo.model <- morphdata %>% mutate(S.T=factor(S.T)) %>%  pivot_longer(inflo_height_cm, names_to = "trait") %>% group_by(trait) %>% nest() %>% 
+      mutate(inflo.lm=map(data, ~lm(value~S.T, data=.x))) %>% 
+      mutate(inflo.Anova= map(inflo.lm, ~tidy(Anova(.x, type=3)))) %>%  
+      mutate(inflo.glht= map(inflo.lm, ~tidy(multcomp:::summary.glht(multcomp::glht(.x, linfct=multcomp::mcp(S.T= 
+                                           c("AGGLOW - AGGHIGH == 0",
+                                             "TENLOW - TENHIGH ==0"))), test=multcomp::adjusted(type="fdr"))))) %>% 
+      mutate(emmeans=map(inflo.lm, ~tidy(emmeans(.x, "S.T")))) #gives means so we can do % change from high to low
+
+      #formatting glht table for kable below
+inflo.glht<- inflo.model %>% dplyr::select(-data,-inflo.lm, -inflo.Anova, -emmeans) %>% 
+      unnest(inflo.glht) %>% 
+      mutate(significant = ifelse(adj.p.value<0.05, "*","") )  
+
+kable(inflo.glht, digits=3) #spits out model into table
+
+#emmeans table 
+inflo.emmeans<-inflo.model %>% dplyr::select(-data,-inflo.lm, -inflo.Anova, -inflo.glht) %>% 
+      unnest(emmeans)  
+    
+kable(inflo.emmeans, digits=3) #spits out model into table
+#now divide 'estimate' high by low to get % change
+#48.66/40
+```
+
 # Greenhouse - nectar
 ```{r}
 exp1.treatments <-read_sheet("1nyUqE-4dVr-81-MFMuAi5-dU4BIYZfuzF8xDEoFyJIk", sheet="Treatments")
@@ -272,13 +378,16 @@ kable(nectar.models, digits=3) #spits out model into table
 
 #boxplot for averages of all traits
  
-nectardata1 %>% pivot_longer(all_of(nectar.traits), names_to = "trait") %>% #need to pivot longer for facets
+nectar.plot <- nectardata1 %>% pivot_longer(all_of(nectar.traits), names_to = "trait") %>% #need to pivot longer for facets
     ggplot(aes(color= treatment, x=species, y=value))+geom_boxplot()+
     facet_wrap(vars(trait),scales = "free_y")+
     ylab("") +
-   scale_color_manual(values = c("purple", "orange"))
+   scale_color_manual(values = c("skyblue", "orange"))+theme_minimal()+
+  theme(panel.grid.major.x = element_blank(), legend.position = "bottom")+ 
+   labs(y="", x="Species", color="Nitrogen")
+print(nectar.plot)
+ggsave(nectar.plot, file='greenhouse_nectar.jpg', width=150, height=140, units= 'mm', dpi=300)
 
-#
 nectardata %>% ggplot(aes(x=concentration  , y=nectar.production))+geom_point()+geom_smooth()
 
 ```
@@ -310,11 +419,15 @@ kable(nectar.field.models, digits=3) #spits out model into table
 
 #boxplot for averages of all traits
  
-nectardata1.field %>% pivot_longer(all_of(nectar.traits.field), names_to = "trait") %>% #need to pivot longer for facets
+nectar.field.plot <- nectardata1.field %>% pivot_longer(all_of(nectar.traits.field), names_to = "trait") %>% #need to pivot longer for facets
     ggplot(aes(color= treatment, x=site, y=value))+geom_boxplot()+
     facet_wrap(vars(trait),scales = "free_y")+
     ylab("") +
-   scale_color_manual(values = c("purple", "orange", "blue"))
+    scale_color_manual(values = c("forestgreen","orange","skyblue"))+theme_minimal()+
+  theme(panel.grid.major.x = element_blank(), legend.position = "bottom")+ 
+   labs(y="", x="Species", color="Nitrogen")
+print(nectar.field.plot)
+ggsave(nectar.field.plot, file='field_nectar.jpg', width=150, height=140, units= 'mm', dpi=300)
 
 #
 nectardata.field %>% ggplot(aes(x=nectar.production  , y=nectar_conc))+geom_point()+geom_smooth()
@@ -332,8 +445,12 @@ flower.nub.lm=lm(flower_num~treatment*species, data=total.flower)
   
 Anova(flower.nub.lm, type=3)#Type 3
 
-ggplot(total.flower, aes(y=flower_num, x=species, color=treatment))+geom_boxplot()+
-  scale_color_manual(values = c("purple", "orange"))
+flower.number.plot<- ggplot(total.flower, aes(y=flower_num, x=species, color=treatment))+geom_boxplot()+
+  scale_color_manual(values = c("skyblue", "orange"))+theme_minimal()+
+  theme(panel.grid.major.x = element_blank(), legend.position = "bottom")+ 
+   labs(y="Flower Number", x="Species", color="Nitrogen")
+print(flower.number.plot)
+ggsave(flower.number.plot, file="plots-nitrogen/NEXP1.greenhouse.flowernumber.png", width= 4.5, height=5.5)
 
 #nitrogen only p= 0.0074
 

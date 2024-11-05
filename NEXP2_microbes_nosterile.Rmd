@@ -32,7 +32,7 @@ setwd("~/Desktop/ipomopsis-nitrogen")
 ```{r read_scents}
 library(googlesheets4)
 exp2_meta <- read_sheet("1Jw9XkjSVKy1ajPhcYH2qajfzk2QgLbGQkHFASIfn6yw", sheet="Volatiles", guess_max=200) %>% #sheet selects "Volatiles" sheet on Google Sheets, guess_max reads 200 lines before program guesses the type of each column (string vs integer vs date)
-  mutate(plant = as.character(plant), vial=as.character(vial), time=recode(time,"AM"="D", "PM"="N"), date=as.Date(date), plant=tolower(plant), 
+  mutate(plant = as.character(plant), vial=as.character(vial), time=recode(time, "AM"="D", "PM"="N"), date=as.Date(date), plant=tolower(plant), 
          type=ifelse(str_detect(plant,"amb"), "ambient", "floral"), #creates new column with amb and                                                                                       floral
           equil=pump-bag, pumping=end-pump) %>% 
             #duration of equilibriated and pumping
@@ -332,7 +332,7 @@ anova(AverageVOCcapM.N.T, by="term")
 
 ```
 
-# Greenhouse- I. aggregata Daytime Volatiles
+# I. aggregata Daytime Volatiles
 
 ```{r}
 averagedaymetadata<- averagemetadata[averagemetadata$time=="D",]
@@ -342,11 +342,51 @@ average.day.cap <- capscale(sqrt(averagedaytable) ~ nitrogen*microbe, data = ave
 
 #To get % explained (= eigenvalues) for each cap axis
 eig <-eigenvals(average.day.cap)
-axis.eig <- eig/ sum(eig)
+axis.eig.day <- eig/ sum(eig)
 print(axis.eig)
 
 anova(average.day.cap, by="term")
 
+cap.day.dataframe <- fortify(average.day.cap) #makes a dataframe for ggplot to use
+average.day.ordination = ggplot(bind_cols(filter(cap.day.dataframe, score=="sites"),averagedaymetadata), 
+        aes(x=CAP1, y= CAP2, label=label)) + 
+  geom_point(size=2.6, aes(color = microbe, shape= nitrogen)) + 
+  theme_classic() + 
+  coord_fixed() + #automatically scales x and y-axes so they are similar
+  geom_hline(yintercept = 0, linetype="dotted") + 
+  geom_vline(xintercept = 0, linetype="dotted") +
+  labs(color = "Soil", shape = "Nitrogen") +
+ # ggtitle("I. aggregata Nighttime Volatiles") +
+  theme(plot.title = element_text(hjust = 0.5))+
+  ylab(paste0("CAP2 (", round(100*axis.eig.day[2]), "% explained)")) + 
+  #custom CAP axes: rounds and multiplies the eigenvalue above for % explained
+  xlab(paste0("CAP1 (", round(100*axis.eig.day[1]), "% explained)")) + 
+ # scale_color_manual(name="Nitrogen Level", labels= c("High", "Low"), values=c("tan2","cadetblue3")) +
+  #labs(subtitle="ANOVA; p=0.264",hjust = 1)+ #adds subtitle at top of figure
+   theme(legend.title = element_text(size=12, color = "black"), legend.text=element_text(size=11),
+           legend.justification=c(0,1), 
+           legend.position="right",  #c(0.90, 0.32)
+           legend.background = element_blank(),
+           legend.key = element_blank(),
+            plot.subtitle = element_text(hjust = 1))+ #moves subtitle to right side 
+    geom_segment(data=cap.night.dataframe %>% filter(score=="biplot", str_detect(label, ":")), #adds arrows 
+             aes(x=0,y=0,xend=CAP1*1.8, yend=CAP2*1.8), 
+              arrow=arrow(length=unit(0.5, "lines")))+ #scales arrow length
+    geom_text(data=cap.night.dataframe %>% filter(score=="biplot", str_detect(label, ":")) %>% #labels text to arrows
+            mutate(label=c("Low Normal")), #edits arrow labels
+            aes(x=CAP1*2, y=CAP2*2, angle=atan(CAP2/CAP1)*180/pi), hjust=c(0), fontface="bold", size=3) +
+    geom_text_repel(data=cap.night.dataframe %>% left_join(ipochems, by=c("label"="name")) %>% #adds compound name to arrows
+              filter(score=="species", label%in%names(top.6.vocs)) %>%  #gets rid of compounds clusterd in middle of cap
+              mutate(label=greekify(label)),
+              aes(x=CAP1*6, y=CAP2*6), size=3) +
+    geom_label(data=cap.night.dataframe %>% filter(score =="centroids",
+                label%in%c("microbeNormal", "microbeEarly")) %>% 
+                 mutate(label= c("Early","Normal")), color="blue")+
+                #can add high/low N here but they were essentially the same
+    scale_color_manual(values = c("orange","purple"))
+    
+print(average.day.ordination)
+ggsave(average.day.ordination, file="plots-microbe-nosterile/day.cap.png", width= 6, height=6)
 
 ```
 
@@ -395,9 +435,9 @@ average.night.ordination = ggplot(bind_cols(filter(cap.night.dataframe, score=="
   xlab(paste0("CAP1 (", round(100*axis.eig.night[1]), "% explained)")) + 
  # scale_color_manual(name="Nitrogen Level", labels= c("High", "Low"), values=c("tan2","cadetblue3")) +
   #labs(subtitle="ANOVA; p=0.264",hjust = 1)+ #adds subtitle at top of figure
-   theme(legend.title = element_text(size=12, color = "black"), legend.text=element_text(size=10),
+   theme(legend.title = element_text(size=12, color = "black"), legend.text=element_text(size=11),
            legend.justification=c(0,1), 
-           legend.position=c(0.77, 0.62),
+           legend.position="right", #c(0.77, 0.62)
            legend.background = element_blank(),
            legend.key = element_blank(),
             plot.subtitle = element_text(hjust = 1))+ #moves subtitle to right side 
@@ -415,11 +455,11 @@ average.night.ordination = ggplot(bind_cols(filter(cap.night.dataframe, score=="
                 label%in%c("microbeNormal", "microbeEarly")) %>% 
                  mutate(label= c("Early","Normal")), color="blue")+
                 #can add high/low N here but they were essentially the same
-    scale_color_manual(values = c("orange","purple","magenta"))
+    scale_color_manual(values = c("orange","purple"))
     
 print(average.night.ordination)
 
-ggsave(average.night.ordination, file="plots-microbe-nosterile/night.cap.png", width= 5, height=6)
+ggsave(average.night.ordination, file="plots-microbe-nosterile/night.cap.png", width= 6, height=6)
 
 ```
 
@@ -541,11 +581,13 @@ mega.glht <- bind_cols(meta,vol.qual) %>%  #combines meta and vol.qual
   mutate(glht.every.vol = map(model,~multcomp::glht(.x, linfct=multcomp::mcp(T.N.M="Tukey")))) %>% 
   mutate(summary.glht= map(glht.every.vol, ~summary(.x, test=multcomp::adjusted(type="fdr"))))   #summary.glht has all pvalues
   
-bind_cols(meta,vol.qual) %>%  
+peak.area.plot <- bind_cols(meta,vol.qual) %>%  
   pivot_longer(all_of(colnames(vol.qual))) %>% 
   ggplot(aes(color=paste(nitrogen, microbe), x=time, y=value))+geom_boxplot()+scale_y_sqrt()+
   facet_wrap(vars(name),scales = "free_y")+
   ylab("Peak Area") 
+
+ggsave(peak.area.plot, file="plots-microbe-nosterile/peak.area.plot.png", width= 15, height=25)
 
 #mega.glht$summary.glht[1]
 #multcomp::cld(mega.glht$summary.glht[[1]])
@@ -595,7 +637,11 @@ relativeamountPA <- decostand(vol.qual, "pa")
 #View(relativeamountPA)
 
 #cap on relative amount (with Square root transform) 
-rel.amount.cap <- capscale(sqrt(relativeamount.vol) ~ nitrogen+microbe+time, data = meta, distance = "bray")
+rel.amount.cap <- capscale(sqrt(relativeamount.vol) ~ nitrogen*microbe*time, data = meta, distance = "bray")
+
+eig.rel <-eigenvals(rel.amount.cap)
+axis.eig.rel <- eig.rel/ sum(eig.rel)
+print(axis.eig.rel)
 
 library(ggvegan)
 rel.amount.dataframe <- fortify(rel.amount.cap)
@@ -608,19 +654,21 @@ rel.amount.ordination = ggplot(bind_cols(filter(rel.amount.dataframe, score=="si
   labs(color = "Treatment", fill = "Treatment") +
  # ggtitle("I. aggregata Daytime Volatiles") +
   theme(plot.title = element_text(hjust = 0.5))+
-  ylab("CAP2 (% explained)") + 
-  xlab("CAP1 (% explained)") + 
+ ylab(paste0("CAP2 (", round(100*axis.eig.rel[2]), "% explained)")) + 
+  #custom CAP axes: rounds and multiplies the eigenvalue above for % explained
+  xlab(paste0("CAP1 (", round(100*axis.eig.rel[1]), "% explained)")) + 
  # scale_color_manual(name="Nitrogen Level", labels= c("High", "Low"), values=c("tan2","cadetblue3")) +
   #labs(subtitle="ANOVA; p=0.264",hjust = 1)+ #adds subtitle at top of figure
    theme(legend.title = element_text(size=12, color = "black"), legend.text=element_text(size=10),
            legend.justification=c(0,1), 
-           legend.position=c(0.03, 0.95),
+           legend.position="right", #c(0.03, 0.95)
            legend.background = element_blank(),
            legend.key = element_blank(),
             plot.subtitle = element_text(hjust = 1)) #moves subtitle to right side 
   
     
 print(rel.amount.ordination)
+ggsave(rel.amount.ordination, file="plots-microbe-nosterile/rel.amount.cap.png", width= 8, height=6)
 
 anova(rel.amount.cap, by="term")
 

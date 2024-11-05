@@ -36,7 +36,7 @@ library(bouquet)
 knitr::opts_chunk$set(comment="", cache=T, warning=F, message=F, 
                       fig.path = "plots-nitrogen/", dev="svglite", dev.args=list(fix_text_size=FALSE), fig.height=8, fig.width=10)
 ```
-
+#setup
 ```{r read_scents}
 setwd("~/Desktop/ipomopsis-nitrogen") #set working directory
 library(googlesheets4) #need for read_sheets 
@@ -72,7 +72,7 @@ setdiff(drop_na(exp1_field_meta, type)$Filename, exp1_field_link$Filename)
 #dropping filenames with no metadata; remove later
 exp1_field_meta <- drop_na(exp1_field_meta, type)
 
-gc_verdicts <- read_sheet("1X8oo7qZlo1p6MVl_CBeBe6CUTHEAcd-FWQzfHud3Qws", sheet = "2022gc220929") %>% #verdicts = the truth of the skips, renames all skips in R 
+gc_verdicts <- read_sheet("1X8oo7qZlo1p6MVl_CBeBe6CUTHEAcd-FWQzfHud3Qws", sheet = "gc2022") %>% #verdicts = the truth of the skips, renames all skips in R 
   mutate(sample2 = ifelse(is.na(sample), FileName, sample))
 
 #verdicts 
@@ -220,6 +220,7 @@ metadata.field %>% count(date-treatment_date) %>% kable(caption=paste("days sinc
 ```{r filtering}
 metadata <- metadata %>% mutate(type= ifelse(species=="AMB", "ambient","floral")) %>% rename(trap=sample) %>% as.data.frame() %>% 
   load_metadata(date = "date", sample = "filename", group = "speciestime", type = "type") #combine species and time (previously separate)
+#if issue with "rename" just rerun where you first made metadata
 
 longdata <- load_longdata(exp1.data, sample = "Filename", RT = "Ret.Time", 
                           name = "Name", area = "Area", match = "SI", maxmatch=100)
@@ -313,6 +314,8 @@ setdiff(colnames(vol.qual.field), colnames(vol.qual))
 # Quantitative integrations greenhouse & field
 
 ```{r quant}
+# spreadsheet with all quant names: https://docs.google.com/spreadsheets/d/12S3xQonUx0tXOSGY2oT4sEpxtVdIBr1BEUIiWUXnSs0/edit?gid=1698770934#gid=1698770934
+
 #field and greenhouse voc list
 voclist<- unique(c(colnames(vol.qual), colnames(vol.qual.field), "indole"))
 #TODO: add compounds with capital letters to compoound shortname list
@@ -328,8 +331,11 @@ quant.full <- read.shimadzu.quant("data/quant_Ipo2022part1_5.txt") %>% #reads in
    distinct(Filename, Name, .keep_all=T) 
 quant.full %>% select(Dirname, Filename, Name, Area) %>%
   mutate(Dirname = fct_relabel(Dirname, str_remove, "C:/GCMSsolution/Data/Project1_190815/")) %>%
-  filter(Name != "1,6,10-Dodecatrien-3-ol, 3,7,11-trimethyl-") %>% #John- why??
+  filter(Name != "1,6,10-Dodecatrien-3-ol, 3,7,11-trimethyl-") %>% #
+  #1,6,10-Dodecatrien-3-ol, 3,7,11-trimethyl- is a real compound but not in Carries experiment
+  #TODO: john add 1,6,10-Dodecatrien-3-ol, 3,7,11-trimethyl- to ipochem short names list
   mutate(Name = dplyr::recode(Name, !!!shortnames)) %>%
+  mutate(Name = dplyr::recode(Name, "tricyclo[5.2.1.02,6]dec-2-ene"= "monoterpene A","3-ethenyl-1,2-dimethylcyclohexa-1,4-diene"= "monoterpene B","cosmene"= "monoterpene C", "p-mentha-1,3,8-triene"="monoterpene D" )) %>%  #renames retention time puzzel compounds to monoterpene A-D
   #filter(str_detect(Filename, "^NEXP")) %>%
   select(-Dirname) %>%
   pivot_wider(names_from="Name", values_from="Area") %>%
@@ -343,9 +349,9 @@ vol <- vol.exp1.exp1field %>% #takes original file names and left joins it with 
   column_to_rownames("Filename")
 contams <- c("methyl salicylate", "benzaldehyde","trans-Geranylgeraniol","Decanal", "D-limonene", "Nonanoic acid", "Caprolactam",
              "(2E)-2,7-dimethylocta-2,6-dien-1-ol", #same peak as b-myrcene
-             "3-methylbutanal oxime")#passed bouquet in OTC experiment but rare here
+             "3-methylbutanal oxime") #passed bouquet in OTC experiment but rare here
 
-vol <- vol[rownames(vol.qual), intersect(voclist,colnames(vol))] # rownames puts in same order as vol.qual; voclist filters list down to compounds only found in either greenhouse & field
+vol <- vol[rownames(vol.qual), c(intersect(voclist,colnames(vol)), "monoterpene A", "monoterpene B", "monoterpene C", "monoterpene D")] # rownames puts in same order as vol.qual; voclist filters list down to compounds only found in either greenhouse & field. Adds monoterpenes we removed back in
 vol <- vol / (as.numeric(meta$equil + meta$pumping)/3600) / meta$flrs #0.5 hr of equilibration plus 0.25 hr pumping, one flower
 
 #field quant
@@ -354,22 +360,21 @@ vol.field <-  vol.exp1.exp1field %>% #takes origional file names and left joins 
   select(-Filename) %>% rename(Filename = sample2) %>%  #replace FileName with the sample2 it holds (accounts for skips)
   column_to_rownames("Filename")
 
-vol.field <- vol.field[rownames(vol.qual.field), intersect(voclist,colnames(vol.field))] 
+vol.field <- vol.field[rownames(vol.qual.field), c(intersect(voclist,colnames(vol)), "monoterpene A", "monoterpene B", "monoterpene C", "monoterpene D")] 
 vol.field <- vol.field / (as.numeric(meta.field$equil + meta.field$pumping)/3600) / meta.field$flowers #0.5 hr of equilibration plus 0.25 hr pumping, one flower
 
 
 #compare lists
-(added_quant <- setdiff(colnames(vol), colnames(vol.qual)))#in quant (from temp experiment) but do not pass filters in this dataset
-(new_quant <- colnames(vol)[28:33]) #newly integrated, pass filters
-(need_quant <- setdiff(colnames(vol.qual), colnames(vol))) # filtered volatiles that need quant integration. 
-(need_quant <- setdiff(colnames(vol.qual.field), colnames(vol.field)))
+(added_quant <- setdiff(colnames(vol), colnames(vol.qual)))#in quant (from temp experiment) but do not pass filters in this dataset. Bc indole didn't pass qual tests but we want to look at it
+#TODO: john - why shortnames not short?
+(need_quant <- setdiff(colnames(vol.qual), colnames(vol))) # filtered volatiles that need quant integration. Passed bouquet but don't have quant for these compounds
+#TODO: need quant to list above and below (excluding the compounds we renamed as monoterpene A-D)
+(need_quant <- setdiff(colnames(vol.qual.field), colnames(vol.field))) #field bouquet filters. Ignore 4 we renamed but rest need quant integration. 
 #vol <- bind_cols(vol, vol.qual[,need_quant]) #temporary, add a couple volatiles that don't have quant integrations yet (currently not on same scale!)
 ```
 
 #Convert to ng/flower/hour
-###TODO
 ```{r}
-#TODO:john- go through 31 compound list and assign compounds to compound class. Look at shortnames(called ipochems in code) google sheet standard column to ID compound class
 
 setdiff(voclist, shortnames) #these are the ones you need to figure out compound class for - assign to one of the standards we used.and change the name/add compound shortname
 
@@ -418,14 +423,18 @@ bd <- betadisper(vegdist(vol), meta$plantid) #gives bray curtis distance
 plot(bd)
 bdday <- betadisper(vegdist(vol[meta$time=="D",]), meta$plantid[meta$time=="D"])
 plot(bdday)
+bdnight <- betadisper(vegdist(vol[meta$time=="N",]), meta$plantid[meta$time=="N"])
+plot(bdnight)
 count(meta,species,plant) #number of samples per plant
 ##variation within one plant is similar to variation among all plants
 ##Do the plants have different levels of variation in their scents? 
 ##anova(bdday)
 anova(bdday) #for day only
+anova(bdnight)
+anova(bd)
 
 ##are the plants different from one another
-anova(capscale(vol~time+plantid, data=meta), by="term")
+anova(capscale(vol~time*plantid, data=meta), by="term")
 ##yes the plants are unique when you throw out the variation due to time (or at least 1 plant is different than the rest)
 
 #do day and night have different variances? 
@@ -473,28 +482,33 @@ prints out graphs
 #terpenes 1-4
 
 ```{r retention, fig.width=12}
-# longdata.RT <- longdata %>% filter(name %in% c(colnames(vol.qual), colnames(vol))) %>% 
-#   group_by(name) %>%  mutate(n=n(), RT.sd=sd(RT)) %>% ungroup() %>% 
-#   mutate(name=fct_reorder(name, RT))
-# 
-# RT.tol <- 0.17  # 10 seconds before or after in quantitative params
-# ggplot(longdata.RT, aes(x=RT, y=name,color=RT.sd)) + geom_jitter(width=0, height=0.4, size=1) + 
-#   scale_color_viridis_c(option="magma") + geom_text(aes(x=4.5, label=n)) +
-#   stat_summary(fun="median", fun.max=~median(.x)+RT.tol, fun.min=~median(.x)-RT.tol, geom="pointrange", color="magenta", size=0.5, shape=15)
-# 
-# #TODO john - (already done?) delete (2E)-2,7-dimethylocta-2,6-dien-1-ol (same peak as b-myrcene) from quant integrations
-# #TODO the following compounds have multiple, overlapping RTs - this is the puzzle
-    #TODO at RMBL look at chromatograms, maybe rename compounds to terpene 1, 2, 3 etc. 
+longdata.RT <- longdata %>% filter(name %in% c(colnames(vol.qual), colnames(vol))) %>%
+  group_by(name) %>%  mutate(n=n(), RT.sd=sd(RT)) %>% ungroup() %>%
+  mutate(name=fct_reorder(name, RT))
 
-# mess <- c("p-mentha-1,3,8-triene", "carveol", "cosmene", "4,7-Methano-1H-indene, 2,4,5,6,7,7a-hexahydro-")
-# longdata.RT.mess <- longdata.RT %>% filter(name %in% mess) %>% 
-#   arrange(RT) %>% mutate(cluster = kmeans(RT, 4, nstart=4)$cluster) %>% 
-#   group_by(cluster) %>% mutate(RT.cluster = round(mean(RT),2)) %>% ungroup()
-# ggplot(longdata.RT.mess, aes(x=factor(RT.cluster), fill=name)) + geom_bar()
-# ggplot(longdata.RT.mess, aes(x=RT, color=name, fill=name)) + facet_wrap(vars(RT.cluster), scales="free_x") + theme_minimal() +
-#   geom_density(alpha=0.2, linewidth=2) + geom_jitter(aes(y=-as.integer(factor(name))*10), width=0.0002, height=4)
-# 
-# mess.wide <- longdata.RT.mess %>% select(sample, RT.cluster, area) %>% pivot_wider(names_from = RT.cluster, values_from=area, values_fn=sum, values_fill=0)
+RT.tol <- 0.17  # 10 seconds before or after in quantitative params
+
+#qual data, cosmene is showing up at 3 diff retention times which is impossible so that means 3 compounds are being identified as cosmene. Ions are shared among all 3 compounds. 4 compounds are: "p-mentha-1,3,8-triene", "carveol", "cosmene", "4,7-Methano-1H-indene, 2,4,5,6,7,7a-hexahydro-"
+ggplot(longdata.RT, aes(x=RT, y=name,color=RT.sd)) + geom_jitter(width=0, height=0.4, size=1) +
+  scale_color_viridis_c(option="magma") + geom_text(aes(x=4.5, label=n)) +
+  stat_summary(fun="median", fun.max=~median(.x)+RT.tol, fun.min=~median(.x)-RT.tol, geom="pointrange", color="magenta", size=0.5, shape=15)
+
+#TODO john - (already done?) delete (2E)-2,7-dimethylocta-2,6-dien-1-ol (same peak as b-myrcene) from quant integrations
+#TODO the following compounds have multiple, overlapping RTs - this is the puzzle
+#TODO at RMBL look at chromatograms, maybe rename compounds to terpene 1, 2, 3 etc.
+
+mess <- c("p-mentha-1,3,8-triene", "carveol", "cosmene", "4,7-Methano-1H-indene, 2,4,5,6,7,7a-hexahydro-")
+longdata.RT.mess <- longdata.RT %>% filter(name %in% mess) %>%
+  arrange(RT) %>% mutate(cluster = kmeans(RT, 4, nstart=4)$cluster) %>%
+  group_by(cluster) %>% mutate(RT.cluster = round(mean(RT),2)) %>% ungroup()
+
+#shows 4 peaks that come up & their retention times. Color shows you what compound it gets identified as
+ggplot(longdata.RT.mess, aes(x=factor(RT.cluster), fill=name)) + geom_bar()
+#are there differences in retention times? answer: no
+ggplot(longdata.RT.mess, aes(x=RT, color=name, fill=name)) + facet_wrap(vars(RT.cluster), scales="free_x") + theme_minimal() +
+  geom_density(alpha=0.2, linewidth=2) + geom_jitter(aes(y=-as.integer(factor(name))*10), width=0.0002, height=4)
+
+mess.wide <- longdata.RT.mess %>% select(sample, RT.cluster, area) %>% pivot_wider(names_from = RT.cluster, values_from=area, values_fn=sum, values_fill=0)
 ```
 
 
@@ -557,7 +571,7 @@ legend("topleft", legend=levels(factor((meta$species))), title="Species", fill=c
 legend("topright", levels(factor((meta$time))), title="Time", pch=c(1,19))
 text(cap_treat, display="species", cex=0.5, col=3)
 text(cap_treat, display="cn", cex=0.5)
-#kable(arrange(as.data.frame(cap_treat$CCA$v), CAP1)) 
+kable(arrange(as.data.frame(cap_treat$CCA$v), CAP1)) 
 
 ```
 
@@ -596,7 +610,7 @@ averagetable<- averagePlant[,12:ncol(averagePlant)] #seperates table into meta d
 averagemetadata<- averagePlant[,1:12]
 
 #cap species * treatment * time p=0.001
-AverageVOCcapS.T.T <- capscale(sqrt(averagetable) ~ species * treatment * time, data = averagemetadata, distance = "bray")
+AverageVOCcapS.T.T <- capscale(sqrt(averagetable) ~ time*species*treatment, data = averagemetadata, distance = "bray")
 
 anova(AverageVOCcapS.T.T, by="term")
 
@@ -620,7 +634,7 @@ averagemetadata.field<- averagePlant.field[,1:14]
 count(averagemetadata.field, species, time, treatment)
 
 #cap species * treatment * time 
-Field.AverageVOCcapS.T.T <- capscale(sqrt(averagetable.field) ~ species * treatment * time, data = averagemetadata.field, distance = "bray")
+Field.AverageVOCcapS.T.T <- capscale(sqrt(averagetable.field) ~ time*species * treatment, data = averagemetadata.field, distance = "bray")
 
 anova(Field.AverageVOCcapS.T.T, by="term")
 #species p= 0.002, time p=0.001, species:time p=0.008
@@ -664,7 +678,7 @@ plot.indole.aggten=
       strip.background = element_rect(colour="white", fill="white"))+
     scale_color_manual(name="Nitrogen Level", 
         labels= c("High",  "Low"), 
-        values=c("tan2","cadetblue3"))+
+        values=c("orange","skyblue"))+
     theme(legend.title = element_text(size=11, color = "black"),
         legend.text=element_text(size=9))
 print(plot.indole.aggten)    
@@ -718,7 +732,7 @@ plot.indole.Lagghyb.field=
       strip.background = element_rect(colour="white", fill="white"))+
     scale_color_manual(name="Nitrogen Level", 
        # labels= c("High",  "Low", "Control"), #rename legend treatment names
-        values=c("tan2","cadetblue3","purple"))+
+        values=c("skyblue","orange", "purple"))+
     theme(legend.title = element_text(size=11, color = "black"),
         legend.text=element_text(size=9))
 print(plot.indole.Lagghyb.field)    
@@ -830,8 +844,8 @@ agg.Day.ordination = ggplot(bind_cols(filter(cap.dataframe, score=="sites"),aver
   theme(plot.title = element_text(hjust = 0.5))+
   ylab("MDS1 (33.2% explained)") + 
   xlab("CAP1 (12.5% explained)") + 
-  scale_color_manual(name="Nitrogen Level", labels= c("High", "Low"), values=c("tan2","cadetblue3")) +
-  labs(subtitle="ANOVA; previously p=0.021",hjust = 1)+ #adds subtitle at top of figure
+  scale_color_manual(name="Nitrogen Level", labels= c("High", "Low"), values=c("orange","skyblue")) +
+  labs(subtitle="ANOVA; p=0.037",hjust = 1)+ #adds subtitle at top of figure
    theme(legend.title = element_text(size=12, color = "black"), legend.text=element_text(size=10),
            legend.justification=c(0,1), 
            legend.position=c(0.03, 0.95),
@@ -975,7 +989,7 @@ Lagg.night.cap <- capscale(sqrt(averageLaggtableNIGHT.field) ~ treatment, data =
 #axis.eig.ihyb.day <- eig.ihyb.day/ sum(eig.ihyb.day)
 
 anova(Lagg.night.cap, by="term")
-#p=0.253
+#p=0.19
 ```
 
 # Total emissions 
@@ -990,44 +1004,26 @@ meta$totalemission <- rowSums(vol)  #attatches row sums to metadata
 total.emission.model <-lmer(totalemission~treatment*species*time + (1|plantid), data=meta) #models looks at total emissions as a function of treatment*species*time with plantid as a random effect
 Anova(total.emission.model, type=3) #type 3 anova on the model to get p-value
 
-##############################################
-#boxplot of Total emissions for Agg and Ten day & night
+#emmeans table 
+total.emmeans<-emmeans(total.emission.model,c("time")) 
 
-facet.labs <- c(agg="I. aggregata", ten="I. tenuituba")
-
-plot.total.emissions=
-  ggplot(meta, aes( y= totalemission, x=time, #could do with average metadata instead of all data points in meta
-  color=treatment))+
-  geom_boxplot(position=position_dodge(width=0.9))+
-  geom_point (position=position_dodge(width=0.9))+ #makes it so point don't overlap
-  scale_y_sqrt()+
-  ylab("Total Emissions")+
-  xlab("") +
-  facet_wrap(vars(species)) +
-    facet_grid(. ~ species, labeller=labeller(species = facet.labs))+ 
-    theme(panel.border = element_blank(),
-      panel.grid.major = element_line(colour="white"),
-      #panel.grid.minor = element_blank(),
-      panel.background = element_rect(fill = "gray96",
-                                #colour = "lightblue",
-                                  linetype = "solid"),
-      strip.text.x = element_text(size=11),
-      strip.background = element_rect(colour="white", fill="white"))+
-    scale_color_manual(name="Nitrogen Level", 
-        labels= c("High",  "Low"), 
-        values=c("tan2","cadetblue3"))+
-    theme(legend.title = element_text(size=11, color = "black"),
-        legend.text=element_text(size=9))+
-  scale_x_discrete(labels=c('Day', 'Night', 'Day','Night'))
-
-print(plot.total.emissions)   
-#ggsave(plot.total.emissions, file='total_emissions_boxplot.jpg', width=150, height=110, units= 'mm', dpi=300)
+library(knitr)    
+kable(total.emmeans, digits=3) #spits out model into table
+#now divide 'estimate' high by low to get % change
+#total emissions 23% higher at night 
 
 #######################################
 meta$S.T.T <- paste0(meta$species, meta$time, meta$treatment) #add column with species, treatment and time to metadata. Need for glht
 
 #finding p-values to compare treatment within each of the four groups
 total.emission.model2 <-lmer(totalemission~S.T.T + (1|plantid), data=meta)
+
+#to get emmeans for % change
+library(emmeans)
+
+emmeans(total.emission.model2, "S.T.T") #c("treatment", "species", "time")
+
+#divide high/low -> get percent change from high to low
 
 Anova(total.emission.model2, type=3)
 
@@ -1046,7 +1042,27 @@ multcomp:::summary.glht(multcomp::glht(total.emission.model2, linfct=multcomp::m
                                              "tenNlow-tenNhigh==0"))),                                                               test=multcomp::adjusted(type="fdr"))
 
 #total emissions change at night time between high and low in agg p=0.0349
-  
+
+
+#total emissions pretty - greenhouse 
+
+plot.total.emissions.pretty=
+  ggplot(meta, aes( y= totalemission, x=str_to_title(species),
+  color=str_to_title(treatment) %>% factor(levels=c("Low", "High"))))+ #%>% 
+   # fct_recode(`Water control`="Watercontrol")))+ 
+  geom_boxplot(position=position_dodge(width=0.9))+
+  scale_y_sqrt()+
+  ylab("Total Emissions")+
+  xlab("Species") +
+    theme_minimal()+
+    theme(legend.title = element_text(size=11, color = "black"), panel.grid.major.x=element_blank(),
+        legend.text=element_text(size=9), legend.position = "bottom")+
+  labs(color="Treatment")+
+   scale_color_manual(values = c(High="orange",Low="skyblue"))+
+  facet_wrap(vars(time), labeller = as_labeller(c(D="Day", N="Night")))
+
+print(plot.total.emissions.pretty)
+ggsave(plot.total.emissions.pretty, file='greenhouse_totalemissions.jpg', width=150, height=140, units= 'mm', dpi=300)
 ```
 
 
@@ -1068,6 +1084,15 @@ meta.field$totalemission <- rowSums(vol.field)  #attatches row sums to metadata
 total.emission.model.field <-lmer(totalemission~treatment*species*time + (1|plantid), data=meta.field) #models looks at total emissions as a function of treatment*species*time with plantid as a random effect
 Anova(total.emission.model.field, type=3) #type 3 anova on the model to get p-value
 #time p= 0.00053
+
+
+#emmeans table 
+field.total.emmeans<-emmeans(total.emission.model.field, c("time")) 
+
+library(knitr)    
+kable(field.total.emmeans, digits=3) #spits out model into table
+#now divide 'estimate' high by low to get % change
+#total emissions 19.3% higher at night 
 
 ##############################################
 #boxplot of Total emissions for Agg and Ten day & night
@@ -1094,7 +1119,7 @@ plot.total.emissions.field=
       strip.background = element_rect(colour="white", fill="white"))+
     scale_color_manual(name="Nitrogen Level", 
         #labels= c("High",  "Low"), #Specifies treatment names in legend
-        values=c("pink","tan2","cadetblue3"))+
+        values=c("pink","orange","skyblue"))+
     theme(legend.title = element_text(size=11, color = "black"),
         legend.text=element_text(size=9))+
   scale_x_discrete(labels=c('Day', 'Night', 'Day','Night'))
@@ -1127,14 +1152,35 @@ summary(multcomp::glht(total.emission.model2.field, linfct=multcomp::mcp(S.T.T= 
 
 #plot total emissions for each compound present 
 plot.total.emissions.field.pretty=
-  ggplot(meta.field, aes( y= totalemission, x=str_to_title(species), #could do with average metadata instead of all data points in meta
-  color=str_to_title(treatment) %>% factor(levels=c("Control", "Watercontrol", "Nitrogen")) %>% fct_recode(`Water control`="Watercontrol")))+ 
-  #annotate(geom="rect", ymin = 0, ymax = Inf, xmin=2.5, xmax=6)+
+  ggplot(meta.field, aes( y= totalemission, x=str_to_title(species),
+  color=str_to_title(treatment) %>% factor(levels=c("Control", "Watercontrol", "Nitrogen")) %>% 
+    fct_recode(`Water control`="Watercontrol")))+ 
   geom_boxplot(position=position_dodge(width=0.9))+
- # geom_point (position=position_dodge(width=0.9))+ #makes it so point don't overlap
   scale_y_sqrt()+
   ylab("Total Emissions")+
   xlab("Species") +
+    theme_minimal()+
+    theme(legend.title = element_text(size=11, color = "black"), panel.grid.major.x=element_blank(),
+        legend.text=element_text(size=9), legend.position = "bottom")+
+  labs(color="Treatment")+
+   scale_color_manual(values = c(Nitrogen="orange",Control="darkgreen",`Water control`="skyblue"))+
+  facet_wrap(vars(time), labeller = as_labeller(c(D="Day", N="Night")))
+
+print(plot.total.emissions.field.pretty)
+ggsave(plot.total.emissions.field.pretty, file='field_totalemissions.jpg', width=150, height=140, units= 'mm', dpi=300)
+```
+
+#Boxplot code
+```{r}
+#plot.total.emissions.field.pretty=
+#  ggplot(meta.field, aes( y= totalemission, x=str_to_title(species), #could do with average metadata instead of all data points in meta
+#  color=str_to_title(treatment) %>% factor(levels=c("Control", "Watercontrol", "Nitrogen")) %>% fct_recode(`Water control`="Watercontrol")))+ 
+  #annotate(geom="rect", ymin = 0, ymax = Inf, xmin=2.5, xmax=6)+
+#  geom_boxplot(position=position_dodge(width=0.9))+
+ # geom_point (position=position_dodge(width=0.9))+ #makes it so point don't overlap
+##  scale_y_sqrt()+
+#  ylab("Total Emissions")+
+#  xlab("Species") +
     #theme(panel.border = element_blank(),
      # panel.grid.major = element_line(colour="white"),
       #panel.grid.minor = element_blank(),
@@ -1146,16 +1192,14 @@ plot.total.emissions.field.pretty=
     #scale_color_manual(name="Nitrogen Level", 
      #   labels= c("High",  "Low"), 
       #  values=c("tan2","cadetblue3"))+
-    theme_minimal()+
-    theme(legend.title = element_text(size=11, color = "black"), panel.grid.major.x=element_blank(),
-        legend.text=element_text(size=9), legend.position = "bottom")+
+ #   theme_minimal()+
+ #   theme(legend.title = element_text(size=11, color = "black"), panel.grid.major.x=element_blank(),
+ #       legend.text=element_text(size=9), legend.position = "bottom")+
  # scale_x_discrete(labels=c('Day', 'Night', 'Day','Night'))+
-  labs(color="Treatment")+
-   scale_color_manual(values = c(Nitrogen="orange",Control="purple",`Water control`="magenta"))+
+#  labs(color="Treatment")+
+#   scale_color_manual(values = c(Nitrogen="orange",Control="purple",`Water control`="magenta"))+
  # scale_fill_manual(values = c("white","grey90"))+
-  facet_wrap(vars(time), labeller = as_labeller(c(D="Day", N="Night")))
-
-print(plot.total.emissions.field.pretty)
+ # facet_wrap(vars(time), labeller = as_labeller(c(D="Day", N="Night")))
 ```
 
 
@@ -1169,10 +1213,10 @@ dominantvocs <-averagePlant%>% pivot_longer(any_of(colnames(vol)))%>%     group_
   arrange(species, time, treatment, desc(value))
 
 ggplot(dominantvocs, aes(y=fct_reorder(name, value), x=value, color=treatment, shape=time))+
-         geom_point()+ #plots points
+         geom_point(size=3)+ #plots points
     scale_x_sqrt()+ #scales x axis so you can see small peak area dots
     facet_wrap(vars(species))+ #makes two pannels, agg and ten
-    scale_color_manual(values=c("orange","lightblue"))+ #manually change colros
+    scale_color_manual(values=c("orange","skyblue"))+ #manually change colros
     theme_minimal() #removed grey from background
     
 
@@ -1186,10 +1230,10 @@ dominantvocs.field <-averagePlant.field%>% pivot_longer(any_of(colnames(vol.fiel
   arrange(species, time, treatment, desc(value))
 
 ggplot(dominantvocs.field, aes(y=fct_reorder(name, value), x=value, color=treatment, shape=time))+
-         geom_point()+ #plots points
+         geom_point(size =3)+ #plots points
     scale_x_sqrt()+ #scales x axis so you can see small peak area dots
     facet_wrap(vars(species))+ #makes two pannels, agg and ten
-    scale_color_manual(values=c("pink","orange","lightblue"))+ #manually change colros
+    scale_color_manual(values=c("pink","orange","skyblue"))+ #manually change colros
     theme_minimal() #removed grey from background
     
 
@@ -1256,7 +1300,7 @@ rel.amount.ordination = ggplot(bind_cols(filter(rel.amount.dataframe, score=="si
   theme(plot.title = element_text(hjust = 0.5))+
   ylab("MDS1 (% explained)") + 
   xlab("CAP1 (% explained)") + 
-  scale_color_manual(name="Nitrogen Level", labels= c("High", "Low"), values=c("tan2","cadetblue3")) +
+  scale_color_manual(name="Nitrogen Level", labels= c("High", "Low"), values=c("orange","skyblue")) +
   labs(subtitle="ANOVA; p=0.264",hjust = 1)+ #adds subtitle at top of figure
    theme(legend.title = element_text(size=12, color = "black"), legend.text=element_text(size=10),
            legend.justification=c(0,1), 
@@ -1298,7 +1342,7 @@ relativeamountPA.field <- decostand(vol.field, "pa")
 rel.amount.cap.field <- capscale(sqrt(relativeamount.vol.field) ~ treatment, data = meta.field, distance = "bray")
 
 rel.amount.dataframe.field <- fortify(rel.amount.cap.field)
-rel.amount.ordination.field = ggplot(bind_cols(filter(rel.amount.dataframe.field, Score=="sites"),meta.field), aes(x=CAP1, y= MDS1, color = treatment)) + 
+rel.amount.ordination.field = ggplot(bind_cols(filter(rel.amount.dataframe.field, score=="sites"),meta.field), aes(x=CAP1, y= MDS1, color = treatment)) + 
   geom_point(size=2.6) +
   theme_classic() + 
   coord_fixed(xlim=c(-1.5, 2.9), ylim=c(-1, 2.4)) +
@@ -1309,7 +1353,7 @@ rel.amount.ordination.field = ggplot(bind_cols(filter(rel.amount.dataframe.field
   theme(plot.title = element_text(hjust = 0.5))+
   ylab("MDS1 (% explained)") + 
   xlab("CAP1 (% explained)") + 
-  scale_color_manual(name="Nitrogen Level", labels= c("Control", "Nitrogen", "watercontrol"), values=c("pink","tan2","cadetblue3")) + 
+  scale_color_manual(name="Nitrogen Level", labels= c("Control", "Nitrogen", "watercontrol"), values=c("pink","orange","skyblue")) + 
   labs(subtitle="ANOVA; p=0.451",hjust = 1)+ #adds subtitle at top of figure
    theme(legend.title = element_text(size=12, color = "black"), legend.text=element_text(size=10),
            legend.justification=c(0,1), 
@@ -1382,6 +1426,8 @@ write_csv(compoundpercentchange, file = "Nexp1_Compound%change_DN.csv")
 #Greenhouse compound % change high/low nitrogen
 ```{r}
 #compound % change Treatment low/high
+library(tidyverse)
+library(broom)
 
 compoundratios.lowhigh <- averagePlant %>% group_by(time, species, treatment) %>% 
   summarise(across(colnames(vol),mean)) %>%  #takes mean of each compound for each species and time

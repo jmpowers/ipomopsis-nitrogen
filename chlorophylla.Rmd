@@ -2,23 +2,85 @@
 title: "Leaf_reflectance"
 author: "Janelle and John"
 date: "2024-02-02"
-output: html_document
+output: html_document:
+  self_contained: no
 editor_options: 
   chunk_output_type: console
 ---
 
 ```{r, load packages}
-# install.packages("lme4", type="source") # to fix issue with Matrix 
- library(lme4) 
-# install.packages("Matrix")
-# library(Matrix)
+library(lme4) 
 library(car)
 library(tidyverse)
 library(emmeans)
+```
 
-#because I had to sign in on new computer
-#git commit --amend --reset-author
-#git config --global --edit
+```{r,data visualization set up}
+#set standard figure dimensions
+library(knitr)
+opts_chunk$set(fig.height=8, fig.width=8, dpi=100, fig.path="figures/") #sets standard width and height for all figures in rmd; creates folder only when rmd is knitted
+#can also change height in {} at the top of the chunk
+
+library(ggplot2)
+#set figure theme
+NEXP1.theme <- theme(
+      #axis text
+                  axis.title = element_text(size=14),     #x axis title text size
+                  axis.text.x = element_text(size=14, color = "black"),     #x axis labels text size
+                  axis.ticks.x = element_blank(),  # Remove tick marks on x-axis
+                  axis.title.x = element_text(margin = margin(t = 6)),  # Adds 10 units of space on top of the x-axis title
+                  axis.title.y = element_text(margin = margin(r = 15)),  # Adds 15 units of space to the right of the y-axis title
+      #legend
+                  legend.text = element_text(size=11),       #legend text size
+                  legend.title = element_text(size=12, color = "black", hjust = 0.5),  #legend title text size
+                  legend.position = "right",                #"left", "right", "bottom", "top", or a coordinate
+                  legend.direction = "vertical",           #layout direction of the legend ("horizontal" or "vertical")
+                  legend.spacing = unit(1, "cm"),            #spacing between legend items; adds 1cm of space between
+                  legend.key.size = unit(1.1, "cm"),         #size of the legend keys (symbols); sets legend key to 1.5cm
+      #panels
+                  panel.border = element_blank(),            # border around the plot area
+                  panel.grid.major = element_line(colour="white"),
+                  #panel.grid.minor = element_blank(),
+                  panel.background = element_rect(fill = "white", # # Remove grey background (set to white)
+                                          #colour = "lightblue",
+                                          linetype = "solid"),
+      
+      #facets
+                  strip.text.x = element_text(size=11),       #strip text on x-axis facet
+                  strip.background = element_rect(colour="white", fill="white")) #background for the strip label
+
+
+
+#color scheme
+#scale_color_manual(name="Nitrogen Level", 
+#        labels= c("no water added",  "high nitrogen", "low nitrogen"), #Specifies treatment names in legend
+#        values=c("#8b9b31", "#b35f98", "#3a8db3")
+  
+#color=c("#afd4c6", "#bf7522", "#b2acc1", "#d59f7d", "#1f6589", "#3a8db3")
+
+#color=c("#8b9b31", "#c26236", "#bf8a28", "#c26778", "#b35f98" )
+
+#color=c("#363289", "#615bba", "#c26236", "#268c57", "#136332")
+
+#color= c("#6d144d", "#902233", "#a83a04","#b6895b", "#a7b288" )
+
+#color= c("#550c38", "#7c1c5c", "#546401", "#02547c","#013155")
+
+#ggplot boxplot code: 
+#plot.total.emissions.field=
+#  ggplot(meta.field, aes( y= totalemission, x=time, color=treatment))+
+#  geom_boxplot(position=position_dodge(width=0.9))+
+#  geom_point (position=position_dodge(width=0.9))+ #makes it so point don't overlap
+#  scale_y_sqrt()+
+#  ylab("Total Emissions")+
+#  xlab("") +
+#  facet_wrap(vars(species)) +
+#  facet_grid(. ~ species, labeller=labeller(species = facet.labs))+ 
+#  scale_x_discrete(labels=c('Day', 'Night', 'Day','Night'))+ #x axis text
+#  ylim(0.1, 0.56)+  # Set y-axis limits from 0.1 to 0.56
+
+
+#print(plot.total.emissions.field)  
 ```
 
 #Read in reflectence data & treatments
@@ -57,7 +119,18 @@ greenhouse.wavelength <- greenhouse.raw[,seq(1,ncol(greenhouse.raw), by=2)] %>% 
 
 #boxplot  
 ggplot(greenhouse.wavelength, aes(x= species, y= chlorophylla, color=treatment)) + 
-    geom_boxplot()
+        geom_boxplot(position=position_dodge(width=0.9))+
+        geom_point (position=position_dodge(width=0.9))+ #Adds points & makes it so point don't overlap
+        #scale_y_sqrt()+
+        ylab("Chlorophyll a")+
+        xlab("") +
+        scale_x_discrete(labels = c("Hybrids", "I. aggregata"))+
+        ylim(0.2, 0.56)+  # Set y-axis limits from 0.1 to 0.56
+    NEXP1.theme + 
+    scale_color_manual(name="Nitrogen Level", 
+        labels= c("High nitrogen", "Low nitrogen"), #Specifies treatment names in legend
+        values=c( "#b35f98", "#3a8db3"))
+
 
 #Model reflectance (wavelength) with chlorophyll a as a function of species x treatment with plant id as a random effect
 greenhouse.model <- lmer(data=greenhouse.wavelength, chlorophylla ~ species*treatment + (1|plantid)) #lmer fits the model to the data, anova tests whether the coefficients at bottom of lmer are different than zero
@@ -75,18 +148,28 @@ greenhouse.means <- summary(emmeans(greenhouse.model, specs=c("species","treatme
 
 #Field chlorophyll a
 ```{r}
-
-#TODO: when separate plantleaf to plant and leaf NAs
-
 #selects columns with reflectance values which are only cols with plant number (alternate from column 2 to the end of dataset)
 field.wavelength <- field.raw[,seq(1,ncol(field.raw), by=2)] %>% t() %>% as.data.frame() %>% #t transposes data frame (cols to rows, rows to cols), t gets rid of data frame so gotta bring it back
           rownames_to_column("plant") %>% 
         mutate(chlorophylla= (`750`-`705`)/(`750`+`705`), .after="plant" ) %>%  #equation to find leaf reflectance; .after is name of column you want column to appear after
           left_join(field.treatment) %>%  #add treatments
-        mutate(plantid=paste0(site, plant))
+        mutate(plantid=paste0(site, plant)) %>% 
+        drop_na(site, treatment) #TODO: track down mistery plants that have NA: NA561, NA300,NA531 - figure out what treatment and site they belong to
+
 #boxplot  
+
 ggplot(field.wavelength, aes(x= site, y= chlorophylla, color=treatment)) + 
-    geom_boxplot()
+        geom_boxplot(position=position_dodge(width=0.9))+
+        geom_point (position=position_dodge(width=0.9))+ #Adds points & makes it so point don't overlap
+        #scale_y_sqrt()+
+        ylab("Chlorophyll a")+
+        xlab("") +
+        scale_x_discrete(labels = c("Hybrids", "I. aggregata"))+
+        ylim(0.1, 0.56)+  # Set y-axis limits from 0.1 to 0.56
+    NEXP1.theme + 
+    scale_color_manual(name="Nitrogen Level", 
+        labels= c("No water added",  "High nitrogen", "Low nitrogen"), #Specifies treatment names in legend
+        values=c("#8b9b31", "#b35f98", "#3a8db3"))
 
 #Model reflectance (wavelength) with chlorophyll a as a function of species x treatment with plant id as a random effect
 field.model <- lm(data=field.wavelength, chlorophylla ~ site*treatment) #lm and no random effect of leaf because only 1 leaf measurement
@@ -100,7 +183,7 @@ Anova(field.model, type=3)
 #mean chlorophyll for each plant
 field.means <- summary(emmeans(field.model, specs=c("site","treatment")))
 
-#TODO: track down mistery plants that have NA: NA561, NA300,NA531 - figure out what treatment belong to
+
 
 ```
 

@@ -58,13 +58,25 @@ microbe <- as.factor(morphdata$microbe)
 #Model for All the traits
 ```{r}
 library(broom)
+library(tidyverse)
 all.morph.traits <- c("corolla_length", "corolla_width", "style_length", "max_anther", "min_anther","sepal_width")
 
-morph.models <- morphdata %>% pivot_longer(all_of(all.morph.traits), names_to = "trait") %>% group_by(trait) %>% nest() %>% 
-      mutate(morph.trait.lmer=map(data, ~lmer(value~nitrogen*microbe+ (1|plant), data=.x))) %>% 
-      mutate(morph.Anova= map(morph.trait.lmer, ~tidy(Anova(.x, type=3)))) %>%  unnest(morph.Anova) %>%
-      dplyr::select(-data,-morph.trait.lmer) %>% 
-      mutate(significant = ifelse(p.value<0.05, "*","") )
+morph.models.everything <- morphdata %>% pivot_longer(all_of(all.morph.traits), names_to = "trait") %>% group_by(trait) %>% nest() %>% 
+      mutate(morph.trait.lmer=map(data, ~lmer(value~nitrogen*microbe+ (1|plant), data=.x)), 
+      morph.Anova= map(morph.trait.lmer, ~tidy(Anova(.x, type=3)))) %>%  unnest(morph.Anova) %>%
+      dplyr::select(-data) %>% #-morph.trait.lmer
+      mutate(significant = ifelse(p.value<0.05, "*","") ) %>% 
+       mutate(emmeans=map(morph.trait.lmer, ~tidy(emmeans(.x, specs=c("nitrogen", "microbe") ))))
+
+kable(morph.models.everything, digits=3) #spits out model into table
+
+#emmeans table 
+
+morph.emmeans<- morph.models.everything %>% dplyr::select(-morph.trait.lmer, -term, -statistic, -df, -p.value, -significant ) %>% 
+      unnest(emmeans)  
+    
+kable(morph.emmeans, digits=3) #spits out model into table
+#now divide high by low to get % change
 
 #boxplot for averages of all traits
 corollalength.maxstamen <- morphdata1 %>% pivot_longer(all_of(all.morph.traits), names_to = "trait") %>% 
@@ -109,11 +121,15 @@ nectar.models <- nectardata %>% pivot_longer(all_of(nectar.traits), names_to = "
     summarise(across(all_of(nectar.traits), ~mean(.x, na.rm=TRUE))) 
  
 #boxplot for averages of all traits
-nectardata1 %>% pivot_longer(all_of(nectar.traits), names_to = "trait") %>% #need to pivot longer for facets
+nectar.plot <- nectardata1 %>% pivot_longer(all_of(nectar.traits), names_to = "trait") %>% #need to pivot longer for facets
     ggplot(aes(color= microbe, x=nitrogen, y=value))+geom_boxplot()+
     facet_wrap(vars(trait),scales = "free_y")+
-    ylab("") 
-
+    ylab("") +
+   scale_color_manual(values = c("orange", "purple", "magenta"))+theme_minimal()+
+  theme(panel.grid.major.x = element_blank(), legend.position = "bottom")+ 
+   labs(y="", x="Nitrogen", color="Microbe")
+print(nectar.plot)
+ggsave(nectar.plot, file='NEXP2_nectar.jpg', width=150, height=140, units= 'mm', dpi=300)
 #
 nectardata %>% ggplot(aes(x=concentration  , y=nectar.production))+geom_point()+geom_smooth()
 
@@ -196,6 +212,14 @@ ggplot(biomass, aes(y=total, x=nitrogen, color=microbe))+geom_boxplot()+
 
 
 #percent water= wet-dry/ wet
+
+#emmeans table 
+biomass.emmeans<-emmeans(biomass.lm,c("nitrogen")) #%>% dplyr::select(-data,-inflo.lm, -inflo.Anova, -inflo.glht) %>% 
+      #unnest(emmeans)  
+library(knitr)    
+kable(biomass.emmeans, digits=3) #spits out model into table
+#now divide 'estimate' high by low to get % change
+#emmeans for nitrogen only: 37.791/30.311
 ```
 
 # Inflorecence height
@@ -210,6 +234,14 @@ Anova(height.lm, type=3) #effect of nitrogen p=0.03551
 ggplot(infloheight, aes(y=height, x=nitrogen, color=microbe))+geom_boxplot()+
   scale_color_manual(values = c("orange","purple","magenta"))
 
+#emmeans table 
+inflo.emmeans<-emmeans(height.lm,c("nitrogen")) 
+
+library(knitr)    
+kable(inflo.emmeans, digits=3) #spits out model into table
+#now divide 'estimate' high by low to get % change
+
+
 ```
 
 # Total Flower number
@@ -220,9 +252,18 @@ flowernum<-read_sheet("1Jw9XkjSVKy1ajPhcYH2qajfzk2QgLbGQkHFASIfn6yw", sheet="Tot
 #microbe+nitrogen model
 flowernum.lm=lm(total_flower_number~nitrogen+microbe, data=flowernum)
 Anova(flowernum.lm, type=3) #effect of nitrogen p=0.003352
+#if the interaction wasn't significant, we dropped if from the model 
 
 ggplot(flowernum, aes(y=total_flower_number, x=nitrogen, color=microbe))+geom_boxplot()+
   scale_color_manual(values = c("orange","purple","magenta"))
+
+
+#emmeans table 
+flowernum.emmeans<-emmeans(flowernum.lm,c("nitrogen")) 
+
+library(knitr)    
+kable(flowernum.emmeans, digits=3) #spits out model into table
+#now divide 'estimate' high by low to get % change
 
 ```
 
