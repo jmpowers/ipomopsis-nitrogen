@@ -36,6 +36,104 @@ library(bouquet)
 knitr::opts_chunk$set(comment="", cache=T, warning=F, message=F, 
                       fig.path = "plots-nitrogen/", dev="svglite", dev.args=list(fix_text_size=FALSE), fig.height=8, fig.width=10)
 ```
+
+#data visualization
+```{r,data visualization set up}
+#set standard figure dimensions
+opts_chunk$set(fig.height=8, fig.width=8, dpi=100, fig.path="figures/") #sets standard width and height for all figures in rmd; creates folder only when rmd is knitted
+#can also change height in {} at the top of the chunk
+
+#set figure theme
+NEXP1.theme <- theme(
+      #axis text
+                  axis.title = element_text(size=13),     #x axis title text size
+                  axis.text.x = element_text(size=12, color = "black"),     #x axis labels text size
+                  axis.ticks.x = element_blank(),  # Remove tick marks on x-axis
+                  axis.title.x = element_text(margin = margin(t = 10)),  # Adds 10 units of space on top of the x-axis title
+                  axis.text.y = element_text(size = 12),
+                  axis.title.y = element_text(margin = margin(r = 15)),  # Adds 15 units of space to the right of the y-axis title
+      #legend
+                  legend.text = element_text(size=11),       #legend text size
+                  legend.title = element_text(size=12, color = "black", hjust = 0.5),  #legend title text size
+                  legend.position = "right",                #"left", "right", "bottom", "top", or a coordinate
+                  legend.direction = "vertical",           #layout direction of the legend ("horizontal" or "vertical")
+                  legend.spacing = unit(1, "cm"),            #spacing between legend items; adds 1cm of space between
+                  legend.key.size = unit(1.1, "cm"),         #size of the legend keys (symbols); sets legend key to 1.5cm
+      #panels
+                  panel.border = element_blank(),            # border around the plot area
+                  panel.grid.major = element_line(colour="white"),
+                  #panel.grid.minor = element_blank(),
+                  panel.background = element_rect(fill = "white", # # Remove grey background (set to white)
+                                          #colour = "lightblue",
+                                          linetype = "solid"),
+      
+      #facets
+                  strip.text.x = element_text(size=11),       #strip text on x-axis facet
+                  strip.background = element_rect(colour="white", fill="white"), #background for the strip label
+                  strip.text = element_text(size = 16, face="italic") )       #This changes the size of the facet labels
+
+#TODO: when I change the strip.text (aka facet text) font, nothing happens...
+
+field.label.colors.theme <- scale_color_manual(name="Nitrogen Level", 
+          labels= c(control="No water added", nitrogen= "High nitrogen", watercontrol= "Low nitrogen"), 
+          values=c(control="#8b9b31",nitrogen="#b35f98", watercontrol="#3a8db3"))
+
+greenhouse.label.colors.theme <- scale_color_manual(name="Nitrogen Level", 
+          labels= c( high= "High nitrogen", low= "Low nitrogen"), 
+          values=c(high="#b35f98", low="#3a8db3"))
+
+#color scheme
+#scale_color_manual(name="Nitrogen Level", 
+#        labels= c("no water added",  "high nitrogen", "low nitrogen"), #Specifies treatment names in legend
+#        values=c("#8b9b31", "#b35f98", "#3a8db3")
+  
+
+#ggplot boxplot code: 
+#plot.total.emissions.field=
+#  ggplot(meta.field, aes( y= totalemission, x=time, color=treatment))+
+#  geom_boxplot(position=position_dodge(width=0.9))+
+#  geom_point (position=position_dodge(width=0.9))+ #makes it so point don't overlap
+#  scale_y_sqrt()+
+#  ylab("Total Emissions")+
+#  xlab("") +
+#  facet_wrap(vars(species)) +
+#  facet_grid(. ~ species, labeller=labeller(species = facet.labs))+ 
+#  scale_x_discrete(labels=c('Day', 'Night', 'Day','Night'))+ #x axis text
+#  ylim(0.1, 0.56)+  # Set y-axis limits from 0.1 to 0.56 + 
+#  NEXP1.theme +
+#  scale_color_manual(name="Nitrogen Level", 
+#        labels= c("no water added",  "high nitrogen", "low nitrogen"), #Specifies treatment names in legend
+#        values=c("#8b9b31", "#b35f98", "#3a8db3")
+
+
+#print(plot.total.emissions.field)  
+
+#ggplot ordination code: 
+#agg.Day.ordination = ggplot(bind_cols(filter(cap.dataframe, score=="sites"),averageaggmetadata), aes(x=CAP1, y= MDS1, color = treatment)) + 
+#  geom_point(size=2.6) +
+#  theme_classic() + 
+#  coord_fixed(xlim=c(-1.5, 2.9), ylim=c(-1, 2.4)) +
+#  geom_hline(yintercept = 0, linetype="dotted") + 
+#  geom_vline(xintercept = 0, linetype="dotted") +
+#  labs(color = "Treatment", fill = "Treatment") +
+ # ggtitle("I. aggregata Daytime Volatiles") +
+#  theme(plot.title = element_text(hjust = 0.5))+
+#  ylab("MDS1 (33.2% explained)") + 
+#  xlab("CAP1 (12.5% explained)") + 
+#  scale_color_manual(name="Nitrogen Level", labels= c("High", "Low"), values=c("orange","skyblue")) +
+#  labs(subtitle="ANOVA; p=0.031",hjust = 1)+ #adds subtitle at top of figure
+#   theme(legend.title = element_text(size=12, color = "black"), legend.text=element_text(size=10),
+#           legend.justification=c(0,1), 
+#           legend.position=c(0.03, 0.95),
+#           legend.background = element_blank(),
+#           legend.key = element_blank(),
+#            plot.subtitle = element_text(hjust = 1)) #moves subtitle to right side 
+  
+#print(agg.Day.ordination)
+```
+
+
+
 #setup
 ```{r read_scents}
 setwd("~/Desktop/ipomopsis-nitrogen") #set working directory
@@ -375,6 +473,7 @@ vol.field <- vol.field / (as.numeric(meta.field$equil + meta.field$pumping)/3600
 
 #Convert to ng/flower/hour
 ```{r}
+#TODO: question for john - is this used later in the code? why is vol commented out at the bottom?
 
 setdiff(voclist, shortnames) #these are the ones you need to figure out compound class for - assign to one of the standards we used.and change the name/add compound shortname
 
@@ -494,8 +593,7 @@ ggplot(longdata.RT, aes(x=RT, y=name,color=RT.sd)) + geom_jitter(width=0, height
   stat_summary(fun="median", fun.max=~median(.x)+RT.tol, fun.min=~median(.x)-RT.tol, geom="pointrange", color="magenta", size=0.5, shape=15)
 
 #TODO john - (already done?) delete (2E)-2,7-dimethylocta-2,6-dien-1-ol (same peak as b-myrcene) from quant integrations
-#TODO the following compounds have multiple, overlapping RTs - this is the puzzle
-#TODO at RMBL look at chromatograms, maybe rename compounds to terpene 1, 2, 3 etc.
+
 
 mess <- c("p-mentha-1,3,8-triene", "carveol", "cosmene", "4,7-Methano-1H-indene, 2,4,5,6,7,7a-hexahydro-")
 longdata.RT.mess <- longdata.RT %>% filter(name %in% mess) %>%
@@ -561,7 +659,7 @@ ph  <- pheatmap(as.matrix(t(vol.field))^(1/4),
 ```{r cap}
 (cap_treat <- vegan::capscale(sqrt(vol) ~ species + time + treatment, data=meta))
 anova.cca(cap_treat, by="margin") # samples should be averaged by plant first
-#species (p= 0.03 and time (p=0.001) effect
+#species (p= 0.03 and time (p=0.001), treatment (p=0.05) effect
 
 plot(cap_treat, type="n")
 points(cap_treat, display="sites", 
@@ -572,6 +670,65 @@ legend("topright", levels(factor((meta$time))), title="Time", pch=c(1,19))
 text(cap_treat, display="species", cex=0.5, col=3)
 text(cap_treat, display="cn", cex=0.5)
 kable(arrange(as.data.frame(cap_treat$CCA$v), CAP1)) 
+
+
+# Convert ordination scores to data frame
+ordination_scores <- as.data.frame(cap_treat$CCA$v)  
+#need to add speices and time to cap_treat
+
+#Ordination ggplot
+greenhouse_ordination <- ggplot(cap_treat, aes(x = CAP1, y = CAP2, color = species, shape = time)) +
+  geom_point(size = 2.6) +
+  theme_classic() +
+  coord_fixed(xlim = c(-1.5, 2.9), ylim = c(-1, 2.4)) +
+  geom_hline(yintercept = 0, linetype = "dotted") +
+  geom_vline(xintercept = 0, linetype = "dotted") +
+  labs(color = "Species", shape = "Time") +
+  ggtitle("Grenhouse Volatiles") +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    legend.title = element_text(size = 12, color = "black"),
+    legend.text = element_text(size = 10),
+    legend.justification = c(0, 1),
+    legend.position = c(0.03, 0.95),
+    legend.background = element_blank(),
+    legend.key = element_blank(),
+    plot.subtitle = element_text(hjust = 1)
+  ) +
+  xlab("CAP1 (% explained)") +
+  ylab("MDS1 (% explained)") +
+  scale_color_manual(
+    name = "Nitrogen Level",
+    labels = c("High", "Low"),
+    values = c("orange", "skyblue")
+  ) +
+  labs(subtitle = "ANOVA; p=0.031", hjust = 1)
+
+# Print the plot
+print(greenhouse_ordination)
+
+
+greenhouse.ordination = ggplot(bind_cols(filter(cap_treat, score=="sites"),meta), aes(x=CAP1, y= MDS1, color = treatment)) 
+  geom_point(size=2.6) +
+  theme_classic() +
+  coord_fixed(xlim=c(-1.5, 2.9), ylim=c(-1, 2.4)) +
+  geom_hline(yintercept = 0, linetype="dotted") +
+  geom_vline(xintercept = 0, linetype="dotted") +
+  labs(color = "Treatment", fill = "Treatment") +
+  ggtitle("I. aggregata Daytime Volatiles") +
+  theme(plot.title = element_text(hjust = 0.5))+
+  ylab("MDS1 (33.2% explained)") +
+  xlab("CAP1 (12.5% explained)") +
+  scale_color_manual(name="Nitrogen Level", labels= c("High", "Low"), values=c("orange","skyblue")) +
+  labs(subtitle="ANOVA; p=0.031",hjust = 1)+ #adds subtitle at top of figure
+   theme(legend.title = element_text(size=12, color = "black"), legend.text=element_text(size=10),
+           legend.justification=c(0,1),
+           legend.position=c(0.03, 0.95),
+           legend.background = element_blank(),
+           legend.key = element_blank(),
+            plot.subtitle = element_text(hjust = 1)) #moves subtitle to right side
+
+print(greenhouse.ordination)
 
 ```
 
@@ -604,10 +761,10 @@ noaverage <- bind_cols(meta,vol)%>%   #want to make table with metadata and vola
   mutate(timetreatment=paste0(time,treatment)) #paste0 because glht doesn't like spaces in data sets
 
 averagePlant<-bind_cols(meta,vol) %>% group_by(plantid, time, treatment, species) %>% 
-  summarize(across(where(is.numeric),mean))       #takes average of each sample for day                                                                                             and night
+  summarize(across(where(is.numeric),mean))  #takes average of each sample for day and night
 
 averagetable<- averagePlant[,12:ncol(averagePlant)] #seperates table into meta data and volatile list table (not necesaary)
-averagemetadata<- averagePlant[,1:12]
+averagemetadata<- averagePlant[,1:11]
 
 #cap species * treatment * time p=0.001
 AverageVOCcapS.T.T <- capscale(sqrt(averagetable) ~ time*species*treatment, data = averagemetadata, distance = "bray")
@@ -659,29 +816,23 @@ ggplot(averageTEN, aes(color=treatment, x=time, y=indole))+geom_boxplot()+scale_
 facet.labs <- c(agg="I. aggregata", ten="I. tenuituba")
 
 plot.indole.aggten=
-  ggplot(averagePlant, aes(color=treatment, x=time,y=indole))+
-  #geom_boxplot(position=position_dodge(width=0.9))+
-  #geom_point (position=position_dodge(width=0.9))+
-  geom_boxplot()+
+  ggplot(averagePlant, aes(x=time, y=indole, color=treatment))+
+  geom_boxplot(position=position_dodge(width=0.9))+
+  geom_point (position=position_dodge(width=0.9))+ #makes it so point don't overlap
   scale_y_sqrt()+
   ylab("Indole Emissions")+
-  #ylim(0,25000) + #scales y-axis 
-  facet_wrap(vars(species))+ #makes two columns for species
-    facet_grid(. ~ species, labeller=labeller(species = facet.labs))+ 
-    theme(panel.border = element_blank(),
-      panel.grid.major = element_line(colour="white"),
-      #panel.grid.minor = element_blank(),
-      panel.background = element_rect(fill = "gray96",
-                                #colour = "lightblue",
-                                  linetype = "solid"),
-      strip.text.x = element_text(size=11),
-      strip.background = element_rect(colour="white", fill="white"))+
-    scale_color_manual(name="Nitrogen Level", 
-        labels= c("High",  "Low"), 
-        values=c("orange","skyblue"))+
-    theme(legend.title = element_text(size=11, color = "black"),
-        legend.text=element_text(size=9))
-print(plot.indole.aggten)    
+  xlab("") +
+  facet_wrap(vars(species)) +
+  facet_grid(. ~ species, labeller=labeller(species = facet.labs))+ 
+  scale_x_discrete(labels=c('Day', 'Night', 'Day','Night'))+ #x axis text
+  #ylim(0.1, 0.56) +  # Set y-axis limits from 0.1 to 0.56  
+   NEXP1.theme +
+  scale_color_manual(name="Nitrogen Level", 
+          labels= c( high= "High nitrogen", low= "Low nitrogen"), 
+          values=c(high="#b35f98", low="#3a8db3"))
+
+print(plot.indole.aggten) 
+
 ggsave(plot.indole.aggten, file='Indole_boxplot.jpg', width=150, height=110, units= 'mm', dpi=300)
 
 library(car)
@@ -714,27 +865,20 @@ facet.labs <- c(Lagg="I. aggregata", Ihyb="Hybrids")
 
 plot.indole.Lagghyb.field=
   ggplot(averagePlant.field, aes(color=treatment, x=time,y=indole))+
-  #geom_boxplot(position=position_dodge(width=0.9))+
-  #geom_point (position=position_dodge(width=0.9))+
-  geom_boxplot()+
+  geom_boxplot(position=position_dodge(width=0.9))+
+  geom_point (position=position_dodge(width=0.9))+ #makes it so point don't overlap
   scale_y_sqrt()+
   ylab("Indole Emissions")+
-  #ylim(0,25000) + #scales y-axis 
- # facet_wrap(vars(species))+ #makes two columns for species
-    facet_grid(. ~ species, labeller=labeller(species = facet.labs))+ 
-    theme(panel.border = element_blank(),
-      panel.grid.major = element_line(colour="white"),
-      #panel.grid.minor = element_blank(),
-      panel.background = element_rect(fill = "gray96",
-                                #colour = "lightblue",
-                                  linetype = "solid"),
-      strip.text.x = element_text(size=11),
-      strip.background = element_rect(colour="white", fill="white"))+
-    scale_color_manual(name="Nitrogen Level", 
-       # labels= c("High",  "Low", "Control"), #rename legend treatment names
-        values=c("skyblue","orange", "purple"))+
-    theme(legend.title = element_text(size=11, color = "black"),
-        legend.text=element_text(size=9))
+  xlab("") +
+  facet_wrap(vars(species)) +
+  facet_grid(. ~ species, labeller=labeller(species = facet.labs))+ 
+  scale_x_discrete(labels=c('Day', 'Night', 'Day','Night'))+ #x axis text
+  #ylim(0.1, 0.56) +  # Set y-axis limits from 0.1 to 0.56  
+   NEXP1.theme +
+   scale_color_manual(name="Nitrogen Level", 
+          labels= c(control="No water added", nitrogen= "High nitrogen", watercontrol= "Low nitrogen"), 
+          values=c(control="#8b9b31",nitrogen="#b35f98", watercontrol="#3a8db3"))
+
 print(plot.indole.Lagghyb.field)    
 ggsave(plot.indole.Lagghyb.field, file='Indole_field_agghyb_boxplot.jpg', width=150, height=110, units= 'mm', dpi=300)
 
@@ -845,7 +989,7 @@ agg.Day.ordination = ggplot(bind_cols(filter(cap.dataframe, score=="sites"),aver
   ylab("MDS1 (33.2% explained)") + 
   xlab("CAP1 (12.5% explained)") + 
   scale_color_manual(name="Nitrogen Level", labels= c("High", "Low"), values=c("orange","skyblue")) +
-  labs(subtitle="ANOVA; p=0.037",hjust = 1)+ #adds subtitle at top of figure
+  labs(subtitle="ANOVA; p=0.031",hjust = 1)+ #adds subtitle at top of figure
    theme(legend.title = element_text(size=12, color = "black"), legend.text=element_text(size=10),
            legend.justification=c(0,1), 
            legend.position=c(0.03, 0.95),
@@ -1004,6 +1148,7 @@ meta$totalemission <- rowSums(vol)  #attatches row sums to metadata
 total.emission.model <-lmer(totalemission~treatment*species*time + (1|plantid), data=meta) #models looks at total emissions as a function of treatment*species*time with plantid as a random effect
 Anova(total.emission.model, type=3) #type 3 anova on the model to get p-value
 
+library(emmeans)
 #emmeans table 
 total.emmeans<-emmeans(total.emission.model,c("time")) 
 
@@ -1047,19 +1192,32 @@ multcomp:::summary.glht(multcomp::glht(total.emission.model2, linfct=multcomp::m
 #total emissions pretty - greenhouse 
 
 plot.total.emissions.pretty=
-  ggplot(meta, aes( y= totalemission, x=str_to_title(species),
-  color=str_to_title(treatment) %>% factor(levels=c("Low", "High"))))+ #%>% 
-   # fct_recode(`Water control`="Watercontrol")))+ 
+  ggplot(meta, aes( y= totalemission, x=str_to_title(time), color=treatment)) +
   geom_boxplot(position=position_dodge(width=0.9))+
+  geom_point (position=position_dodge(width=0.9))+ #makes it so point don't overlap
   scale_y_sqrt()+
   ylab("Total Emissions")+
-  xlab("Species") +
-    theme_minimal()+
-    theme(legend.title = element_text(size=11, color = "black"), panel.grid.major.x=element_blank(),
-        legend.text=element_text(size=9), legend.position = "bottom")+
-  labs(color="Treatment")+
-   scale_color_manual(values = c(High="orange",Low="skyblue"))+
-  facet_wrap(vars(time), labeller = as_labeller(c(D="Day", N="Night")))
+  xlab("") +
+  NEXP1.theme +
+  facet_wrap(vars(species)) +
+  facet_grid(. ~ species, labeller=labeller(species = facet.labs)) + 
+  scale_x_discrete(labels=c('Day', 'Night', 'Day','Night')) + #x axis text
+  scale_color_manual(name="Nitrogen Level", 
+          labels= c( high= "High nitrogen", low= "Low nitrogen"), 
+          values=c(high="#b35f98", low="#3a8db3"))
+
+  # color=str_to_title(treatment) %>% factor(levels=c("Low", "High"))))+ #%>% 
+  #  # fct_recode(`Water control`="Watercontrol")))+ 
+  # geom_boxplot(position=position_dodge(width=0.9))+
+  # scale_y_sqrt()+
+  # ylab("Total Emissions")+
+  # xlab("Species") +
+  #   theme_minimal()+
+  #   theme(legend.title = element_text(size=11, color = "black"), panel.grid.major.x=element_blank(),
+  #       legend.text=element_text(size=9), legend.position = "bottom")+
+  # labs(color="Treatment")+
+  #  scale_color_manual(values = c(High="orange",Low="skyblue"))+
+  # facet_wrap(vars(time), labeller = as_labeller(c(D="Day", N="Night")))
 
 print(plot.total.emissions.pretty)
 ggsave(plot.total.emissions.pretty, file='greenhouse_totalemissions.jpg', width=150, height=140, units= 'mm', dpi=300)
@@ -1100,31 +1258,46 @@ kable(field.total.emmeans, digits=3) #spits out model into table
 facet.labs <- c(Lagg="I. aggregata", Ihyb="Hybrids")
 
 plot.total.emissions.field=
-  ggplot(meta.field, aes( y= totalemission, x=time, #could do with average metadata instead of all data points in meta
-  color=treatment))+
+  ggplot(meta.field, aes( y= totalemission, x=time, color=treatment))+ #could do with average metadata instead of all data points in meta
   geom_boxplot(position=position_dodge(width=0.9))+
   geom_point (position=position_dodge(width=0.9))+ #makes it so point don't overlap
   scale_y_sqrt()+
-  ylab("Total Emissions")+
+  ylab("Greenhouse Total Emissions")+
   xlab("") +
   facet_wrap(vars(species)) +
-    facet_grid(. ~ species, labeller=labeller(species = facet.labs))+ 
-    theme(panel.border = element_blank(),
-      panel.grid.major = element_line(colour="white"),
-      #panel.grid.minor = element_blank(),
-      panel.background = element_rect(fill = "gray96",
-                                #colour = "lightblue",
-                                  linetype = "solid"),
-      strip.text.x = element_text(size=11),
-      strip.background = element_rect(colour="white", fill="white"))+
-    scale_color_manual(name="Nitrogen Level", 
-        #labels= c("High",  "Low"), #Specifies treatment names in legend
-        values=c("pink","orange","skyblue"))+
-    theme(legend.title = element_text(size=11, color = "black"),
-        legend.text=element_text(size=9))+
-  scale_x_discrete(labels=c('Day', 'Night', 'Day','Night'))
+  facet_grid(. ~ species, labeller=labeller(species = facet.labs)) + 
+  scale_x_discrete(labels=c('Day', 'Night', 'Day','Night')) + #x axis text
+  NEXP1.theme +
+  scale_color_manual(name="Nitrogen Level", 
+          labels= c(control="No water added", nitrogen= "High nitrogen", watercontrol= "Low nitrogen"), 
+          values=c(control="#8b9b31",nitrogen="#b35f98", watercontrol="#3a8db3"))
+ 
+ print(plot.total.emissions.field) 
+  ##Old figure code:
+  
+  # geom_boxplot(position=position_dodge(width=0.9))+
+  # geom_point (position=position_dodge(width=0.9))+ #makes it so point don't overlap
+  # scale_y_sqrt()+
+  # ylab("Total Emissions")+
+  # xlab("") +
+  # facet_wrap(vars(species)) +
+  #   facet_grid(. ~ species, labeller=labeller(species = facet.labs))+ 
+  #   theme(panel.border = element_blank(),
+  #     panel.grid.major = element_line(colour="white"),
+  #     #panel.grid.minor = element_blank(),
+  #     panel.background = element_rect(fill = "gray96",
+  #                               #colour = "lightblue",
+  #                                 linetype = "solid"),
+  #     strip.text.x = element_text(size=11),
+  #     strip.background = element_rect(colour="white", fill="white"))+
+  #   scale_color_manual(name="Nitrogen Level", 
+  #       #labels= c("High",  "Low"), #Specifies treatment names in legend
+  #       values=c("pink","orange","skyblue"))+
+  #   theme(legend.title = element_text(size=11, color = "black"),
+  #       legend.text=element_text(size=9))+
+  # scale_x_discrete(labels=c('Day', 'Night', 'Day','Night'))
 
-print(plot.total.emissions.field)   
+  
 #ggsave(plot.total.emissions, file='total_emissions_boxplot.jpg', width=150, height=110, units= 'mm', dpi=300)
 
 #######################################
@@ -1149,59 +1322,26 @@ summary(multcomp::glht(total.emission.model2.field, linfct=multcomp::mcp(S.T.T= 
                                           # c("IhybDnitrogen - IhybDcontrol == 0", "IhybDnitrogen - IhybDwatercontrol == 0", "IhybDcontrol - IhybDwatercontrol == 0", "IhybNnitrogen - IhybNcontrol == 0", "IhybNnitrogen - IhybNwatercontrol == 0", "IhybNcontrol - IhybNwatercontrol == 0","LaggDnitrogen - LaggDcontrol == 0 ", "LaggDnitrogen - LaggDwatercontrol == 0 ", "LaggDwatercontrol - LaggDcontrol == 0 ","LaggNnitrogen - LaggNcontrol == 0 ", "LaggNnitrogen - LaggNwatercontrol == 0 ", "LaggNwatercontrol - LaggNcontrol == 0 "))),                                                              
   test=multcomp::adjusted(type="fdr"))
 
-
+#old figure code:
 #plot total emissions for each compound present 
-plot.total.emissions.field.pretty=
-  ggplot(meta.field, aes( y= totalemission, x=str_to_title(species),
-  color=str_to_title(treatment) %>% factor(levels=c("Control", "Watercontrol", "Nitrogen")) %>% 
-    fct_recode(`Water control`="Watercontrol")))+ 
-  geom_boxplot(position=position_dodge(width=0.9))+
-  scale_y_sqrt()+
-  ylab("Total Emissions")+
-  xlab("Species") +
-    theme_minimal()+
-    theme(legend.title = element_text(size=11, color = "black"), panel.grid.major.x=element_blank(),
-        legend.text=element_text(size=9), legend.position = "bottom")+
-  labs(color="Treatment")+
-   scale_color_manual(values = c(Nitrogen="orange",Control="darkgreen",`Water control`="skyblue"))+
-  facet_wrap(vars(time), labeller = as_labeller(c(D="Day", N="Night")))
-
-print(plot.total.emissions.field.pretty)
-ggsave(plot.total.emissions.field.pretty, file='field_totalemissions.jpg', width=150, height=140, units= 'mm', dpi=300)
+# plot.total.emissions.field.pretty=
+#   ggplot(meta.field, aes( y= totalemission, x=str_to_title(species),
+#   color=str_to_title(treatment) %>% factor(levels=c("Control", "Watercontrol", "Nitrogen")) %>% 
+#     fct_recode(`Water control`="Watercontrol")))+ 
+#   geom_boxplot(position=position_dodge(width=0.9))+
+#   scale_y_sqrt()+
+#   ylab("Total Emissions")+
+#   xlab("Species") +
+#     theme_minimal()+
+#     theme(legend.title = element_text(size=11, color = "black"), panel.grid.major.x=element_blank(),
+#         legend.text=element_text(size=9), legend.position = "bottom")+
+#   labs(color="Treatment")+
+#    scale_color_manual(values = c(Nitrogen="orange",Control="darkgreen",`Water control`="skyblue"))+
+#   facet_wrap(vars(time), labeller = as_labeller(c(D="Day", N="Night")))
+# 
+# print(plot.total.emissions.field.pretty)
+# ggsave(plot.total.emissions.field.pretty, file='field_totalemissions.jpg', width=150, height=140, units= 'mm', dpi=300)
 ```
-
-#Boxplot code
-```{r}
-#plot.total.emissions.field.pretty=
-#  ggplot(meta.field, aes( y= totalemission, x=str_to_title(species), #could do with average metadata instead of all data points in meta
-#  color=str_to_title(treatment) %>% factor(levels=c("Control", "Watercontrol", "Nitrogen")) %>% fct_recode(`Water control`="Watercontrol")))+ 
-  #annotate(geom="rect", ymin = 0, ymax = Inf, xmin=2.5, xmax=6)+
-#  geom_boxplot(position=position_dodge(width=0.9))+
- # geom_point (position=position_dodge(width=0.9))+ #makes it so point don't overlap
-##  scale_y_sqrt()+
-#  ylab("Total Emissions")+
-#  xlab("Species") +
-    #theme(panel.border = element_blank(),
-     # panel.grid.major = element_line(colour="white"),
-      #panel.grid.minor = element_blank(),
-     # panel.background = element_rect(fill = "gray96",
-                                #colour = "lightblue",
-      #                            linetype = "solid"),
-     # strip.text.x = element_text(size=11),
-     # strip.background = element_rect(colour="white", fill="white"))+
-    #scale_color_manual(name="Nitrogen Level", 
-     #   labels= c("High",  "Low"), 
-      #  values=c("tan2","cadetblue3"))+
- #   theme_minimal()+
- #   theme(legend.title = element_text(size=11, color = "black"), panel.grid.major.x=element_blank(),
- #       legend.text=element_text(size=9), legend.position = "bottom")+
- # scale_x_discrete(labels=c('Day', 'Night', 'Day','Night'))+
-#  labs(color="Treatment")+
-#   scale_color_manual(values = c(Nitrogen="orange",Control="purple",`Water control`="magenta"))+
- # scale_fill_manual(values = c("white","grey90"))+
- # facet_wrap(vars(time), labeller = as_labeller(c(D="Day", N="Night")))
-```
-
 
 # Individual compound change for treatment based on species and time
 
@@ -1216,7 +1356,9 @@ ggplot(dominantvocs, aes(y=fct_reorder(name, value), x=value, color=treatment, s
          geom_point(size=3)+ #plots points
     scale_x_sqrt()+ #scales x axis so you can see small peak area dots
     facet_wrap(vars(species))+ #makes two pannels, agg and ten
-    scale_color_manual(values=c("orange","skyblue"))+ #manually change colros
+    scale_color_manual(name="Nitrogen Level", 
+          labels= c( high= "High nitrogen", low= "Low nitrogen"), 
+          values=c(high="#b35f98", low="#3a8db3"))+ #manually change colros
     theme_minimal() #removed grey from background
     
 
@@ -1233,7 +1375,9 @@ ggplot(dominantvocs.field, aes(y=fct_reorder(name, value), x=value, color=treatm
          geom_point(size =3)+ #plots points
     scale_x_sqrt()+ #scales x axis so you can see small peak area dots
     facet_wrap(vars(species))+ #makes two pannels, agg and ten
-    scale_color_manual(values=c("pink","orange","skyblue"))+ #manually change colros
+    scale_color_manual(name="Nitrogen Level", 
+          labels= c(control="No water added", nitrogen= "High nitrogen", watercontrol= "Low nitrogen"), 
+          values=c(control="#8b9b31",nitrogen="#b35f98", watercontrol="#3a8db3")) #manually change colros
     theme_minimal() #removed grey from background
     
 
@@ -1300,7 +1444,9 @@ rel.amount.ordination = ggplot(bind_cols(filter(rel.amount.dataframe, score=="si
   theme(plot.title = element_text(hjust = 0.5))+
   ylab("MDS1 (% explained)") + 
   xlab("CAP1 (% explained)") + 
-  scale_color_manual(name="Nitrogen Level", labels= c("High", "Low"), values=c("orange","skyblue")) +
+  scale_color_manual(name="Nitrogen Level", 
+          labels= c( high= "High nitrogen", low= "Low nitrogen"), 
+          values=c(high="#b35f98", low="#3a8db3")) +
   labs(subtitle="ANOVA; p=0.264",hjust = 1)+ #adds subtitle at top of figure
    theme(legend.title = element_text(size=12, color = "black"), legend.text=element_text(size=10),
            legend.justification=c(0,1), 
@@ -1353,7 +1499,9 @@ rel.amount.ordination.field = ggplot(bind_cols(filter(rel.amount.dataframe.field
   theme(plot.title = element_text(hjust = 0.5))+
   ylab("MDS1 (% explained)") + 
   xlab("CAP1 (% explained)") + 
-  scale_color_manual(name="Nitrogen Level", labels= c("Control", "Nitrogen", "watercontrol"), values=c("pink","orange","skyblue")) + 
+  scale_color_manual(name="Nitrogen Level", 
+          labels= c(control="No water added", nitrogen= "High nitrogen", watercontrol= "Low nitrogen"), 
+          values=c(control="#8b9b31",nitrogen="#b35f98", watercontrol="#3a8db3")) + 
   labs(subtitle="ANOVA; p=0.451",hjust = 1)+ #adds subtitle at top of figure
    theme(legend.title = element_text(size=12, color = "black"), legend.text=element_text(size=10),
            legend.justification=c(0,1), 
@@ -1479,4 +1627,28 @@ View(compoundpercentchange.lowhigh.field)
 write_csv(compoundpercentchange.lowhigh.field, file = "Nexp1_Compound%change_lowhigh_field.csv")
 ```
 
+Analyze the correlation between VOC changes and other measured floral traits (e.g., flower size, color) to see if there's a relationship between nitrogen addition and a broader suite of floral traits.
+```{r}
+
+#load in floral trait data
+morphdata1 <- read_csv("data/morphdata1.csv")
+morphdata1.field<- read_csv("data/morphdata1.field.csv")
+
+#combine data frames by plantid for greenhouse day time total emissions only
+
+greenhouse.voc.morph.day <- averagePlant %>% ungroup() %>%  mutate(totalemissions = rowSums(averagetable))  %>%  mutate(plantid= toupper(str_remove(plantid, " ")), treatment=toupper(treatment), species=toupper(species)) %>% left_join(morphdata1) %>%   #treatment and species upper and lowercase in diff data frames so makes them all uppercase
+            select(c("corolla_length", "corolla_width", "style_length", "max_anther", "min_anther","sepal_width", "inflo_height_cm", "totalemissions", colnames(averagetable)) ) %>% #selects morph traits and total emissions to use in correlation table
+                            drop_na()
+  
+#correlation between vocs and morphology 
+install.packages("ggcorrplot")
+library(ggcorrplot)
+
+ggcorrplot(cor(greenhouse.voc.morph.day), lab=TRUE, p.mat= cor_pmat(greenhouse.voc.morph.day) ) 
+#note total emissions spelled wrong in data; correlation numbers are numbers in squares (tells you how strong the correlation is not the significance); x's cross out things that are not significant 
+
+#can do the same thing for night, just copy code
+
+
+```
 

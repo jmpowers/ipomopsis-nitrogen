@@ -75,6 +75,14 @@ NEXP1.theme <- theme(
                   strip.text = element_text(size = 13)        #This changes the size of the facet labels
 
 
+field.label.colors.theme <- scale_color_manual(name="Nitrogen Level", 
+          labels= c(ambient="No water added", nitrogen= "High nitrogen", watercontrol= "Low nitrogen"), 
+          values=c(ambient="#8b9b31",nitrogen="#b35f98", watercontrol="#3a8db3"))
+
+greenhouse.label.colors.theme <- scale_color_manual(name="Nitrogen Level", 
+          labels= c( HIGH= "High nitrogen", LOW= "Low nitrogen"), 
+          values=c(HIGH="#b35f98", LOW="#3a8db3"))
+
 #color scheme
 #scale_color_manual(name="Nitrogen Level", 
 #        labels= c("no water added",  "high nitrogen", "low nitrogen"), #Specifies treatment names in legend
@@ -142,6 +150,14 @@ morphdata1.field<- morphdata.field %>%
   summarise(across(c(corolla_length, corolla_width, style_length, max_anther, min_anther,sepal_width),
               ~mean(.x, na.rm=TRUE))) 
   
+```
+
+# Save morph data for VOC correlation in ipo_nitrogen.rmd
+```{r}
+write_csv(morphdata1, "data/morphdata1.csv")
+
+write_csv(morphdata1.field, "data/morphdata1.field.csv")
+
 ```
 
 
@@ -456,11 +472,11 @@ ggsave(flower.number.plot, file="plots-nitrogen/NEXP1.greenhouse.flowernumber.pn
 
 #######old way#############################
 #make data frame with ls means
-flower.num.N= as.data.frame(lsmeans(flower.nub.lmer, pairwise~ nitrogen|microbe, adjustSigma = TRUE, adjust = "tukey")$lsmeans)
+#flower.num.N= as.data.frame(lsmeans(flower.nub.lmer, pairwise~ nitrogen|microbe, adjustSigma = TRUE, adjust = "tukey")$lsmeans)
 
 #contrast of treatment (high vs low N) in each species (TEN vs AGG), groups a, b
-multcomp::cld(lsmeans(flower.nub.lmer, pairwise~ nitrogen|microbe, adjustSigma = TRUE, adjust = "tukey")$lsmeans ,
-alpha=0.05, Letters=letters,adjust="tukey")
+#multcomp::cld(lsmeans(flower.nub.lmer, pairwise~ nitrogen|microbe, adjustSigma = TRUE, adjust = "tukey")$lsmeans ,
+#alpha=0.05, Letters=letters,adjust="tukey")
 
 ###### glht #########
 
