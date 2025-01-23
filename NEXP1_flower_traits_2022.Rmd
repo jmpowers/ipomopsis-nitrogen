@@ -208,7 +208,7 @@ allmorphtraits <- morphdata1 %>% pivot_longer(all_of(all.morph.traits), names_to
 
 
 print(allmorphtraits)
-ggsave(allmorphtraits, file="plots-nitrogen/allmorphtraits.png", width= 4.5, height=5.5)
+ggsave(allmorphtraits, file="plots-nitrogen/allmorphtraits.png", width=150, height=140, units= 'mm', dpi=600)
 
 #glht
 multcomp:::summary.glht(multcomp::glht(total.emission.model2, linfct=multcomp::mcp(S.T= 
@@ -258,7 +258,7 @@ allmorphtraits.field <- morphdata1.field %>% pivot_longer(all_of(all.morph.trait
   
 print(allmorphtraits.field)
 
-ggsave(allmorphtraits.field, file="plots-nitrogen/NEXP1.field.allmorphtraits.png", width= 4.5, height=5.5, dpi=600)
+ggsave(allmorphtraits.field, file="plots-nitrogen/NEXP1.field.allmorphtraits.png",  width=150, height=140, units= 'mm', dpi=600)
 
 #difference in corolla width is due to watering plant not due to nitrogen 
 
@@ -295,7 +295,7 @@ allmorphtraits.field <- morphdata1.field %>% pivot_longer(all_of(all.morph.trait
 
 print(allmorphtraits.field)
 
-ggsave(allmorphtraits.field, file="plots-nitrogen/NEXP1.field.allmorphtraits.png", width= 4.5, height=5.5)
+ggsave(allmorphtraits.field, file="plots-nitrogen/NEXP1.field.allmorphtraits.png",  width=150, height=140, units= 'mm', dpi=600)
 
 #difference in corolla width is due to watering plant not due to nitrogen 
 
@@ -333,7 +333,7 @@ allmorphtraits.field <- morphdata1.field %>% pivot_longer(all_of(all.morph.trait
 
 print(allmorphtraits.field)
 
-ggsave(allmorphtraits.field, file="plots-nitrogen/NEXP1.field.allmorphtraits.png", width= 4.5, height=5.5)
+ggsave(allmorphtraits.field, file="plots-nitrogen/NEXP1.field.allmorphtraits.png",  width=150, height=140, units= 'mm', dpi=600)
 
 #difference in corolla width is due to watering plant not due to nitrogen 
 
@@ -402,7 +402,7 @@ nectar.plot <- nectardata1 %>% pivot_longer(all_of(nectar.traits), names_to = "t
   theme(panel.grid.major.x = element_blank(), legend.position = "bottom")+ 
    labs(y="", x="Species", color="Nitrogen")
 print(nectar.plot)
-ggsave(nectar.plot, file='greenhouse_nectar.jpg', width=150, height=140, units= 'mm', dpi=300)
+ggsave(nectar.plot, file='greenhouse_nectar.jpg',  width=150, height=140, units= 'mm', dpi=600)
 
 nectardata %>% ggplot(aes(x=concentration  , y=nectar.production))+geom_point()+geom_smooth()
 
@@ -443,7 +443,7 @@ nectar.field.plot <- nectardata1.field %>% pivot_longer(all_of(nectar.traits.fie
   theme(panel.grid.major.x = element_blank(), legend.position = "bottom")+ 
    labs(y="", x="Species", color="Nitrogen")
 print(nectar.field.plot)
-ggsave(nectar.field.plot, file='field_nectar.jpg', width=150, height=140, units= 'mm', dpi=300)
+ggsave(nectar.field.plot, file='field_nectar.jpg',  width=150, height=140, units= 'mm', dpi=600)
 
 #
 nectardata.field %>% ggplot(aes(x=nectar.production  , y=nectar_conc))+geom_point()+geom_smooth()
@@ -466,7 +466,7 @@ flower.number.plot<- ggplot(total.flower, aes(y=flower_num, x=species, color=tre
   theme(panel.grid.major.x = element_blank(), legend.position = "bottom")+ 
    labs(y="Flower Number", x="Species", color="Nitrogen")
 print(flower.number.plot)
-ggsave(flower.number.plot, file="plots-nitrogen/NEXP1.greenhouse.flowernumber.png", width= 4.5, height=5.5)
+ggsave(flower.number.plot, file="plots-nitrogen/NEXP1.greenhouse.flowernumber.png",  width=150, height=140, units= 'mm', dpi=600)
 
 #nitrogen only p= 0.0074
 
