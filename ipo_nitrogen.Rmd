@@ -40,102 +40,6 @@ library(ggvegan)
 library(dplyr)
 ```
 
-#data visualization
-```{r,data visualization set up}
-#set standard figure dimensions
-opts_chunk$set(fig.height=8, fig.width=8, dpi=100, fig.path="figures/") #sets standard width and height for all figures in rmd; creates folder only when rmd is knitted
-#can also change height in {} at the top of the chunk
-
-#set figure theme
-NEXP1.theme <- theme(
-      #axis text
-                  axis.title = element_text(size=13),     #x axis title text size
-                  axis.text.x = element_text(size=12, color = "black"),     #x axis labels text size
-                  axis.ticks.x = element_blank(),  # Remove tick marks on x-axis
-                  axis.title.x = element_text(margin = margin(t = 10)),  # Adds 10 units of space on top of the x-axis title
-                  axis.text.y = element_text(size = 12),
-                  axis.title.y = element_text(margin = margin(r = 15)),  # Adds 15 units of space to the right of the y-axis title
-      #legend
-                  legend.text = element_text(size=11),       #legend text size
-                  legend.title = element_text(size=12, color = "black", hjust = 0.5),  #legend title text size
-                  legend.position = "right",                #"left", "right", "bottom", "top", or a coordinate
-                  legend.direction = "vertical",           #layout direction of the legend ("horizontal" or "vertical")
-                  legend.spacing = unit(1, "cm"),            #spacing between legend items; adds 1cm of space between
-                  legend.key.size = unit(1.1, "cm"),         #size of the legend keys (symbols); sets legend key to 1.5cm
-      #panels
-                  panel.border = element_blank(),            # border around the plot area
-                  panel.grid.major = element_line(colour="white"),
-                  #panel.grid.minor = element_blank(),
-                  panel.background = element_rect(fill = "white", # # Remove grey background (set to white)
-                                          #colour = "lightblue",
-                                          linetype = "solid"),
-      
-      #facets
-                  strip.text.x = element_text(size=14),       #strip text on x-axis facet
-                  strip.background = element_rect(colour="white", fill="white")) #background for the strip label
-                  #strip.text = element_text(size = 20) )   #This changes the size of the facet labels
-
-#TODO: when I change the strip.text (aka facet text) font, nothing happens...
-
-field.label.colors.theme <- scale_color_manual(name="Nitrogen Level", 
-          labels= c(control="No water added", nitrogen= "High nitrogen", watercontrol= "Low nitrogen"), 
-          values=c(control="#8b9b31",nitrogen="#b35f98", watercontrol="#3a8db3"))
-
-greenhouse.label.colors.theme <- scale_color_manual(name="Nitrogen Level", 
-          labels= c( high= "High nitrogen", low= "Low nitrogen"), 
-          values=c(high="#b35f98", low="#3a8db3"))
-
-#color scheme
-#scale_color_manual(name="Nitrogen Level", 
-#        labels= c("no water added",  "high nitrogen", "low nitrogen"), #Specifies treatment names in legend
-#        values=c("#8b9b31", "#b35f98", "#3a8db3")
-  
-
-#ggplot boxplot code: 
-#plot.total.emissions.field=
-#  ggplot(meta.field, aes( y= totalemission, x=time, color=treatment))+
-#  geom_boxplot(position=position_dodge(width=0.9))+
-#  geom_point (position=position_dodge(width=0.9))+ #makes it so point don't overlap
-#  scale_y_sqrt()+
-#  ylab("Total Emissions")+
-#  xlab("") +
-#  facet_wrap(vars(species)) +
-#  facet_grid(. ~ species, labeller=labeller(species = facet.labs))+ 
-#  scale_x_discrete(labels=c('Day', 'Night', 'Day','Night'))+ #x axis text
-#  ylim(0.1, 0.56)+  # Set y-axis limits from 0.1 to 0.56 + 
-#  NEXP1.theme +
-#  scale_color_manual(name="Nitrogen Level", 
-#        labels= c("no water added",  "high nitrogen", "low nitrogen"), #Specifies treatment names in legend
-#        values=c("#8b9b31", "#b35f98", "#3a8db3")
-
-
-#print(plot.total.emissions.field)  
-
-#ggplot ordination code: 
-#agg.Day.ordination = ggplot(bind_cols(filter(cap.dataframe, score=="sites"),averageaggmetadata), aes(x=CAP1, y= MDS1, color = treatment)) + 
-#  geom_point(size=2.6) +
-#  theme_classic() + 
-#  coord_fixed(xlim=c(-1.5, 2.9), ylim=c(-1, 2.4)) +
-#  geom_hline(yintercept = 0, linetype="dotted") + 
-#  geom_vline(xintercept = 0, linetype="dotted") +
-#  labs(color = "Treatment", fill = "Treatment") +
- # ggtitle("I. aggregata Daytime Volatiles") +
-#  theme(plot.title = element_text(hjust = 0.5))+
-#  ylab("MDS1 (33.2% explained)") + 
-#  xlab("CAP1 (12.5% explained)") + 
-#  scale_color_manual(name="Nitrogen Level", labels= c("High", "Low"), values=c("orange","skyblue")) +
-#  labs(subtitle="ANOVA; p=0.031",hjust = 1)+ #adds subtitle at top of figure
-#   theme(legend.title = element_text(size=12, color = "black"), legend.text=element_text(size=10),
-#           legend.justification=c(0,1), 
-#           legend.position=c(0.03, 0.95),
-#           legend.background = element_blank(),
-#           legend.key = element_blank(),
-#            plot.subtitle = element_text(hjust = 1)) #moves subtitle to right side 
-  
-#print(agg.Day.ordination)
-```
-
-
 
 #setup
 ```{r read_scents}
@@ -269,7 +173,7 @@ metadata %>% count(date-treatment_date) %>% kable(caption=paste("days since trea
 ```
 
 
-# Read Arturo's field metadata 
+# Read field metadata 
 
 ```{r metadata.field, fig.height=5, fig.width=5}
 metadata.field <- exp1_field_meta %>% #Filename already accounted for skips
@@ -314,6 +218,135 @@ treatment_date <-  ymd("2022-06-24")#this is not the right date
 ggplot(metadata.field, aes(x=date-treatment_date, fill=species))+geom_histogram(binwidth=1)
 metadata.field %>% count(date-treatment_date) %>% kable(caption=paste("days since treatments began on", treatment_date))
 ```
+
+#data visualization
+```{r,data visualization set up}
+#set standard figure dimensions
+opts_chunk$set(fig.height=8, fig.width=8, dpi=100, fig.path="figures/") #sets standard width and height for all figures in rmd; creates folder only when rmd is knitted
+#can also change height in {} at the top of the chunk
+
+#set figure theme
+NEXP1.theme.boxplot <- theme(
+      #axis text
+                  axis.title = element_text(size=13),     #x axis title text size
+                  axis.text.x = element_text(size=12, color = "black"),     #x axis labels text size
+                  axis.ticks.x = element_blank(),  # Remove tick marks on x-axis
+                  axis.title.x = element_text(margin = margin(t = 10)),  # Adds 10 units of space on top of the x-axis title
+                  axis.text.y = element_text(size = 12),
+                  axis.title.y = element_text(margin = margin(r = 15)),  # Adds 15 units of space to the right of the y-axis title
+      #legend
+                  legend.text = element_text(size=11),       #legend text size
+                  legend.title = element_text(size=12, color = "black", hjust = 0.5),  #legend title text size
+                  legend.position = "right",                #"left", "right", "bottom", "top", or a coordinate
+                  legend.direction = "vertical",           #layout direction of the legend ("horizontal" or "vertical")
+                  legend.spacing = unit(1, "cm"),            #spacing between legend items; adds 1cm of space between
+                  legend.key.size = unit(1.1, "cm"),         #size of the legend keys (symbols); sets legend key to 1.5cm
+      #panels
+                  panel.border = element_blank(),            # border around the plot area
+                  panel.grid.major = element_line(colour="white"),
+                  #panel.grid.minor = element_blank(),
+                  panel.background = element_rect(fill = "white", # # Remove grey background (set to white)
+                                          #colour = "lightblue",
+                                          linetype = "solid"),
+      
+      #facets
+                  strip.text.x = element_text(size=14),       #strip text on x-axis facet
+                  strip.background = element_rect(colour="white", fill="white")) #background for the strip label
+                  #strip.text = element_text(size = 20) )   #This changes the size of the facet labels
+
+#TODO: when I change the strip.text (aka facet text) font, nothing happens...
+
+field.label.colors <- scale_color_manual(name="Nitrogen Level", 
+          labels= c(control="No water added", nitrogen= "High nitrogen", watercontrol= "Low nitrogen"), 
+          values=c(control="#8b9b31",nitrogen="#b35f98", watercontrol="#3a8db3"))
+
+greenhouse.label.colors <- scale_color_manual(name="Nitrogen Level", 
+          labels= c( high= "High nitrogen", low= "Low nitrogen"), 
+          values=c(high="#b35f98", low="#3a8db3"))
+
+# opt 1 = "#F0E442", "#0072B2" ,"#D55E00"
+# opt 2 = "#E69F00", "#CC79A7", "#009E73"
+# opt 4 = "#0072B2", "#E69F00", "#009E73"
+# opt 5 = "#DDA0DD", "#FFA07A", "#008080"
+# opt 6 = "#E69F00", "#56B4E9", "#999999"
+# opt 7 = "#6C8037", "#8E3972", "#2B75A5"
+# opt 8 = "#A3C653", "#BF4080" ,"#2B75A5"
+# opt 10 ="#F9A620","#457A26" ,"#8CCBE2" 
+# 
+# "#9B59B6",nitrogen="#F9A620", watercontrol= "#0072B2"
+
+#order figure legend (must put before each plot is made)
+#df$treatment <- factor(df$treamtent, levels = c("High nitrogen", "Low nitrogen", "No water added"))
+
+
+test.plot=
+  ggplot(meta.field, aes( y= totalemission, x=time, color=treatment))+ #could do with average metadata instead of all data points in meta
+  geom_boxplot(position=position_dodge(width=0.9))+
+  geom_point (position=position_dodge(width=0.9))+ #makes it so point don't overlap
+  scale_y_sqrt()+
+  ylab("Total Emissions")+
+  xlab("") +
+  facet_wrap(vars(species)) +
+  facet_grid(. ~ species, labeller=labeller(species = facet.labs)) + 
+  scale_x_discrete(labels=c('Day', 'Night', 'Day','Night')) + #x axis text
+  NEXP1.theme +
+  scale_color_manual(name="Nitrogen Level", 
+          labels= c(nitrogen= "High nitrogen", watercontrol= "Low nitrogen", control="No water added"), 
+          values=c(control="#8b9b31",nitrogen="#b35f98", watercontrol="#3a8db3"))
+ 
+ 
+print(test.plot) 
+
+#color scheme
+#scale_color_manual(name="Nitrogen Level", 
+#        labels= c("no water added",  "high nitrogen", "low nitrogen"), #Specifies treatment names in legend
+#        values=c("#8b9b31", "#b35f98", "#3a8db3")
+  
+
+#ggplot boxplot code: 
+#plot.total.emissions.field=
+#  ggplot(meta.field, aes( y= totalemission, x=time, color=treatment))+
+#  geom_boxplot(position=position_dodge(width=0.9))+
+#  geom_point (position=position_dodge(width=0.9))+ #makes it so point don't overlap
+#  scale_y_sqrt()+
+#  ylab("Total Emissions")+
+#  xlab("") +
+#  facet_wrap(vars(species)) +
+#  facet_grid(. ~ species, labeller=labeller(species = facet.labs))+ 
+#  scale_x_discrete(labels=c('Day', 'Night', 'Day','Night'))+ #x axis text
+#  ylim(0.1, 0.56)+  # Set y-axis limits from 0.1 to 0.56 + 
+#  NEXP1.theme +
+#  scale_color_manual(name="Nitrogen Level", 
+#        labels= c("no water added",  "high nitrogen", "low nitrogen"), #Specifies treatment names in legend
+#        values=c("#8b9b31", "#b35f98", "#3a8db3")
+
+
+#print(plot.total.emissions.field)  
+
+#ggplot ordination code: 
+#agg.Day.ordination = ggplot(bind_cols(filter(cap.dataframe, score=="sites"),averageaggmetadata), aes(x=CAP1, y= MDS1, color = treatment)) + 
+#  geom_point(size=2.6) +
+#  theme_classic() + 
+#  coord_fixed(xlim=c(-1.5, 2.9), ylim=c(-1, 2.4)) +
+#  geom_hline(yintercept = 0, linetype="dotted") + 
+#  geom_vline(xintercept = 0, linetype="dotted") +
+#  labs(color = "Treatment", fill = "Treatment") +
+ # ggtitle("I. aggregata Daytime Volatiles") +
+#  theme(plot.title = element_text(hjust = 0.5))+
+#  ylab("MDS1 (33.2% explained)") + 
+#  xlab("CAP1 (12.5% explained)") + 
+#  scale_color_manual(name="Nitrogen Level", labels= c("High", "Low"), values=c("orange","skyblue")) +
+#  labs(subtitle="ANOVA; p=0.031",hjust = 1)+ #adds subtitle at top of figure
+#   theme(legend.title = element_text(size=12, color = "black"), legend.text=element_text(size=10),
+#           legend.justification=c(0,1), 
+#           legend.position=c(0.03, 0.95),
+#           legend.background = element_blank(),
+#           legend.key = element_blank(),
+#            plot.subtitle = element_text(hjust = 1)) #moves subtitle to right side 
+  
+#print(agg.Day.ordination)
+```
+
 
 
 # Filtering Exp1 Greenhouse
@@ -662,8 +695,8 @@ ph  <- pheatmap(as.matrix(t(vol.field))^(1/4),
 
 ##weatherport - 
 ```{r cap}
-(cap_treat <- vegan::capscale(sqrt(vol) ~ species + time + treatment, data=meta))
-anova.cca(cap_treat, by="margin") # samples should be averaged by plant first
+(cap_treat <- vegan::capscale(sqrt(vol) ~ species * time * treatment, data=meta))
+anova.cca(cap_treat, by="term") # samples should be averaged by plant first
 #species (p= 0.03 and time (p=0.001), treatment (p=0.05) effect
 
 plot(cap_treat, type="n")
@@ -718,8 +751,8 @@ kable(arrange(as.data.frame(cap_treat$CCA$v), CAP1))
 ##field
 ```{r cap.field}
 
-(cap_treat_field <- vegan::capscale(sqrt(vol.field) ~ species + time + treatment, data=meta.field))
-anova.cca(cap_treat_field, by="margin") # samples should be averaged by plant first
+(cap_treat_field <- vegan::capscale(sqrt(vol.field) ~ species * time * treatment, data=meta.field))
+anova.cca(cap_treat_field, by="term") # samples should be averaged by plant first
 #species (p= 0.063), time (p=0.001)
 
 plot(cap_treat_field, type="n")
@@ -797,8 +830,8 @@ ggplot(averageTEN, aes(color=treatment, x=time, y=indole))+geom_boxplot()+scale_
 
 # agg and ten indole boxplot
 facet.labs <- c(agg="I. aggregata", ten="I. tenuituba")
-#averagePlant$species <- factor(averagePlant$species, levels = c("AGG", "TEN")) #orders species in figure legend
-#averagePlant$treatment <- factor(averagePlant$treatment, levels = c("HIGH", "LOW")) #orders nitrogen levels in the figure legend
+
+averagePlant$species <- factor(averagePlant$species, levels = c("agg", "ten")) #agg is on left facet panel, ten is right side
 
 plot.indole.aggten=
   ggplot(averagePlant, aes(x=time, y=indole, color=treatment))+
@@ -807,8 +840,9 @@ plot.indole.aggten=
   scale_y_sqrt()+
   ylab("Indole Emissions")+
   xlab("") +
-  facet_wrap(vars(species)) +
-  facet_grid(. ~ species, labeller=labeller(species = facet.labs))+ 
+  #facet_wrap(vars(species)) +
+  facet_wrap(. ~species, labeller = labeller(species = c("agg" = expression(italic("I. aggregata")), "ten" = expression(italic("I. tenuituba"))))) +
+  #facet_grid(. ~ species, labeller=labeller(species = facet.labs))+ 
   scale_x_discrete(labels=c('Day', 'Night', 'Day','Night'))+ #x axis text
   #ylim(0.1, 0.56) +  # Set y-axis limits from 0.1 to 0.56  
    NEXP1.theme +
@@ -1149,6 +1183,7 @@ cap.day.dataframe <- fortify(day.cap) #turns cap into data frame so you can run 
 
 
 ##generate a plot in ggplot
+
 Day.ordination = ggplot(bind_cols(filter(cap.day.dataframe, score=="sites"),averagemetadata.DAY), aes(x=CAP1, y= CAP2, color = treatment, shape = species)) + 
   geom_point(size=2.6) +
   theme_classic() + 
@@ -1287,7 +1322,7 @@ Day.ordination.field = ggplot(bind_cols(filter(cap.day.dataframe.field, score=="
     name = "Species",  # Capitalize "Species"
     labels = c("Lagg" = expression(italic("I. aggregata")),   # Italicize names
                "Ihyb" ="Hybrids"), 
-   values = c("Lagg" = 16, "Ihyb" = 17))+  # Assign shapes explicitly 
+   values = c("Lagg" = 16, "Ihyb" = 25))+  # Assign shapes explicitly 
   #labs(subtitle="ANOVA; p=0.031",hjust = 1)+ #adds subtitle at top of figure
    theme(legend.title = element_text(size=12, color = "black"), legend.text=element_text(size=10),
            legend.justification=c(0,1), 
@@ -1360,6 +1395,102 @@ ggsave(Night.ordination.field, file='Night_ordinationplot_field.jpg', width=130,
 
 ```
 
+#Extract legend from ordination plots
+```{r}
+#Make ggplot ordination of megameta
+(cap_treat <- vegan::capscale(sqrt(mega.vol) ~ time +experiment +species+ treatment+species*treatment+ time*species+time*treatment+ species*treatment*time, data=megameta))
+anova.cca(cap_treat, by="term")
+# Extract the site scores from the cap_treat object
+site_scores <- scores(cap_treat, display = "sites")
+
+# Combine site scores with the original data
+megameta_ordination_df <- bind_cols(as.data.frame(site_scores), megameta)
+
+megameta.ordination= ggplot(megameta_ordination_df, aes(x=CAP1, y= CAP2, color = treatment, shape = species)) + 
+  geom_point(size=2.6) +
+  theme_classic() + 
+  geom_hline(yintercept = 0, linetype="dotted") + 
+  geom_vline(xintercept = 0, linetype="dotted") +
+  labs(color = "Treatment", fill = "Treatment") +
+  theme(plot.title = element_text(hjust = 0.5))+
+  scale_color_manual(name="Nitrogen Level", 
+          labels= c(control="No water added", nitrogen= "High nitrogen", watercontrol= "Low nitrogen"), 
+          values=c(control="#8b9b31",nitrogen="#b35f98", watercontrol="#3a8db3"),
+          guide = guide_legend(order = 1))+  # Treatment legend appears first
+  scale_shape_manual(
+    name = "Species",  
+    labels = c("Lagg" = expression(italic("I. aggregata")),  
+               "agg" = expression(italic("I. aggregata")),  # Same label for both
+               "Ihyb" = "Hybrids", 
+               "ten" = expression(italic("I. tenutiba"))), 
+    values = c("Lagg" = 16, "agg" = 16,  # Same shape for both Lagg and agg
+               "Ihyb" = 25, 
+               "ten" = 17))+
+   theme(legend.title = element_text(size=12, color = "black"), legend.text=element_text(size=10),
+           legend.justification=c(0,1), 
+           legend.position = "right",
+           #legend.position=c(0.03, 0.95),
+           legend.background = element_blank(),
+           legend.key = element_blank(),
+            plot.subtitle = element_text(hjust = 1)) 
+  
+print(megameta.ordination)
+# Extract legends
+greenhouse_legend <- cowplot::get_legend(Day.ordination)
+field_legend <- cowplot::get_legend(Day.ordination.field)
+
+# Remove legends from plots
+greenhouse_ordination_no_legend <- Day.ordination + theme(legend.position = "none")
+field_ordination_no_legend <- Day.ordination.field + theme(legend.position = "none")
+
+
+# Combine plots and legends
+combined_plot <- cowplot::plot_grid(
+  greenhouse_legend, field_legend,
+  ncol = 2, nrow = 2, rel_widths = c(1, 0.2), rel_heights = c(1, 0.2)
+)
+
+print(combined_plot)
+```
+
+
+#fake plot to get legend
+```{r}
+# Create fake data with consistent number of rows (20 rows)
+set.seed(123)  # For reproducibility
+fake_data <- data.frame(
+  CAP1 = rnorm(20),  # Random data for x-axis
+  CAP2 = rnorm(20),  # Random data for y-axis
+  species = rep(c("Lagg", "Ihyb", "agg", "ten"), length.out = 20),  # Repeat species so there are exactly 20 rows
+  treatment = rep(c("control", "nitrogen", "watercontrol"), length.out = 20)  # Repeat treatment so there are exactly 20 rows
+)
+
+# Plot using ggplot
+ggplot(fake_data, aes(x = CAP1, y = CAP2, color = treatment, shape = species)) + 
+  geom_point(size = 3) +  # Plot points with a size of 3
+  theme_classic() +  # Use a clean background theme
+  geom_hline(yintercept = 0, linetype = "dotted") +  # Add horizontal line at y = 0
+  geom_vline(xintercept = 0, linetype = "dotted") +  # Add vertical line at x = 0
+  scale_color_manual(
+    name = "Treatment", 
+    values = c("control" = "#8b9b31", "nitrogen" = "#b35f98", "watercontrol" = "#3a8db3"), 
+    labels = c("No water added", "High nitrogen", "Low nitrogen")
+  ) +  # Custom color scale for treatment
+  scale_shape_manual(
+    name = "Species", 
+    values = c("Lagg" = 16, "Ihyb" = 25, "ten" = 17),  # Custom shapes for species
+    labels = c("Lagg" = "I. aggregata", "Ihyb" = "Hybrids", "agg" = "Agg", "ten" = "Ten")  # Labels for species
+  ) + 
+  labs(color = "Treatment", shape = "Species") +  # Customize legend labels
+  theme(
+    legend.title = element_text(size = 12, color = "black"), 
+    legend.text = element_text(size = 10),
+    legend.position = "right",  # Place legend on the right side
+    plot.title = element_text(hjust = 0.5),  # Center the plot title
+    plot.subtitle = element_text(hjust = 1)  # Align the subtitle
+  )
+```
+
 
 # Total emissions 
 
@@ -1427,8 +1558,7 @@ plot.total.emissions.pretty=
   ylab("Total Emissions")+
   xlab("") +
   NEXP1.theme +
-  #facet_wrap(. ~species, labeller = labeller(species = c("agg" = expression(italic("I. aggregata")),
-   # "ten" = expression(italic("I. tenuituba"))))) +
+  facet_wrap(. ~species, labeller = labeller(species = c("agg" = expression(italic("I. aggregata")), "ten" = expression(italic("I. tenuituba"))))) +
   facet_grid(. ~ species, labeller=as_labeller(facet.labs)) + 
   scale_x_discrete(labels=c('Day', 'Night', 'Day','Night')) + #x axis text
   scale_color_manual(name="Nitrogen Level", 
@@ -1472,7 +1602,7 @@ kable(field.total.emmeans, digits=3) #spits out model into table
 ##############################################
 #boxplot of Total emissions for Agg and Ten day & night
 
-facet.labs <- c(Lagg="I. aggregata", Ihyb="Hybrids")
+facet.labs <- c("Lagg"="I. aggregata", "Ihyb"="Hybrids")
 meta.field$species <- factor(meta.field$species, levels = c("Lagg", "Ihyb")) #Lagg is on left facet panel, ihyb is right side
 meta.field$treatment <- factor(meta.field$treatment, levels = c("nitrogen", "watercontrol", "control")) #orders nitrogen levels in the figure legend
 
@@ -1495,7 +1625,7 @@ plot.total.emissions.field=
  
 print(plot.total.emissions.field) 
 
-ggsave(plot.total.emissions.field, file='total_emissions_field_boxplot.jpg', width=150, height=110, units= 'mm', dpi=600)
+ggsave(plot.total.emissions.field, file='total_emissions_field_boxplot.jpg', width=150, height=140, units= 'mm', dpi=600)
 
  ##Old figure code:
   

@@ -72,7 +72,7 @@ NEXP1.theme <- theme(
       #facets
                   strip.text.x = element_text(size=11),       #strip text on x-axis facet
                   strip.background = element_rect(colour="white", fill="white")) #background for the strip label
-                  strip.text = element_text(size = 13)        #This changes the size of the facet labels
+                  strip.text = element_text(size = 10)        #This changes the size of the facet labels
 
 
 field.label.colors.theme <- scale_color_manual(name="Nitrogen Level", 
@@ -198,7 +198,7 @@ allmorphtraits <- morphdata1 %>% pivot_longer(all_of(all.morph.traits), names_to
         geom_boxplot(position=position_dodge(width=0.9))+
         geom_point (position=position_dodge(width=0.9))+ #makes it so point don't overlap
         facet_wrap(vars(trait),scales = "free_y", labeller=as_labeller(c(corolla_length="Corolla Length", corolla_width= "Corolla Width", style_length="Style Length", max_anther="Max Stamen", min_anther= "Min Stamen",sepal_width="Sepal Width", inflo_height_cm="Inforecence Height (cm)")))+
-        labs(y="Length (mm)", x="Species", color="Nitrogen") +
+        labs(y="Length (mm)", x= "", color="Nitrogen") +
     NEXP1.theme+
    #scale_y_sqrt()+
     scale_x_discrete(labels=c('I.agg', 'I. ten'))+ #x axis text
@@ -208,7 +208,7 @@ allmorphtraits <- morphdata1 %>% pivot_longer(all_of(all.morph.traits), names_to
 
 
 print(allmorphtraits)
-ggsave(allmorphtraits, file="plots-nitrogen/allmorphtraits.png", width=150, height=140, units= 'mm', dpi=600)
+ggsave(allmorphtraits, file="plots-nitrogen/allmorphtraits.png", width=220, height=180, units= 'mm', dpi=600)
 
 #glht
 multcomp:::summary.glht(multcomp::glht(total.emission.model2, linfct=multcomp::mcp(S.T= 
@@ -249,7 +249,7 @@ allmorphtraits.field <- morphdata1.field %>% pivot_longer(all_of(all.morph.trait
        geom_boxplot(position=position_dodge(width=0.9))+
        geom_point (position=position_dodge(width=0.9))+ #makes it so point don't overlap
        facet_wrap(vars(trait),scales = "free_y", labeller=as_labeller(c(corolla_length="Corolla Length", corolla_width= "Corolla Width", style_length="Style Length", max_anther="Max Stamen", min_anther= "Min Stamen",sepal_width="Sepal Width", inflo_height_cm="Inforecence Height (cm)")))+
-       labs(y="Length (mm)", x="Species", color="Nitrogen") +
+       labs(y="Length (mm)", x="", color="Nitrogen") +
        NEXP1.theme+
        scale_x_discrete(labels=c('Hybrids', 'I. aggregata'))+ #x axis text
        scale_color_manual(name="Nitrogen Level", 
@@ -258,7 +258,7 @@ allmorphtraits.field <- morphdata1.field %>% pivot_longer(all_of(all.morph.trait
   
 print(allmorphtraits.field)
 
-ggsave(allmorphtraits.field, file="plots-nitrogen/NEXP1.field.allmorphtraits.png",  width=150, height=140, units= 'mm', dpi=600)
+ggsave(allmorphtraits.field, file="plots-nitrogen/NEXP1.field.allmorphtraits.png", width=220, height=180, units= 'mm', dpi=600)
 
 #difference in corolla width is due to watering plant not due to nitrogen 
 
@@ -364,6 +364,28 @@ inflo.emmeans<-inflo.model %>% dplyr::select(-data,-inflo.lm, -inflo.Anova, -inf
 kable(inflo.emmeans, digits=3) #spits out model into table
 #now divide 'estimate' high by low to get % change
 #48.66/40
+
+inflo.data <- morphdata %>% select(plantid, species, treatment, inflo_height_cm) %>% drop_na()
+
+inflo.height.plot<- ggplot(inflo.data, aes(y=inflo_height_cm, x=species, color=treatment))+geom_boxplot()+
+    scale_x_discrete(
+    labels = c(
+      "ten" = "I. tenuituba",
+      "agg" = expression(italic("I. aggregata"))
+    )
+  ) +
+  scale_color_manual(name="Nitrogen Level", 
+          labels= c( HIGH= "High nitrogen", LOW= "Low nitrogen"), 
+          values=c(HIGH="#b35f98", LOW="#3a8db3"))+
+  theme_minimal()+
+  theme( panel.grid.major.x = element_blank(),  # Remove vertical grid lines
+    panel.grid.minor = element_blank(),    # Remove minor grid lines
+    panel.grid.major.y = element_line(color = "grey80", size = 0.5),
+    legend.position = "right")+
+   labs(y="Info Height (cm)", x="", color="Nitrogen") 
+  
+print(inflo.height.plot)
+ggsave(inflo.height.plot, file="plots-nitrogen/NEXP1.greenhouse.inflo.png",  width=120, height=110, units= 'mm', dpi=600)
 ```
 
 # Greenhouse - nectar
@@ -393,16 +415,32 @@ kable(nectar.models, digits=3) #spits out model into table
     summarise(across(all_of(nectar.traits), ~mean(.x, na.rm=TRUE))) 
 
 #boxplot for averages of all traits
- 
+  # Define new facet labels
+facet_labels <- c(
+  "concentration" = "Nectar Concentration",
+  "nectar.production" = "Nectar Production"
+)
+facet.labs <- c(AGG="I. aggregata", TEN="I. tenuituba")
+
 nectar.plot <- nectardata1 %>% pivot_longer(all_of(nectar.traits), names_to = "trait") %>% #need to pivot longer for facets
     ggplot(aes(color= treatment, x=species, y=value))+geom_boxplot()+
-    facet_wrap(vars(trait),scales = "free_y")+
+     facet_wrap(vars(trait), scales = "free_y", labeller = labeller(trait = facet_labels)) +
     ylab("") +
-   scale_color_manual(values = c("skyblue", "orange"))+theme_minimal()+
+   scale_color_manual(name="Nitrogen Level", 
+          labels= c( HIGH= "High nitrogen", LOW= "Low nitrogen"), 
+          values=c(HIGH="#b35f98", LOW="#3a8db3")) +
+  scale_x_discrete(
+    labels = c(
+      "TEN" = expression(italic("I. tenuituba")),
+      "AGG" = expression(italic("I. aggregata"))
+    )
+  ) +
   theme(panel.grid.major.x = element_blank(), legend.position = "bottom")+ 
-   labs(y="", x="Species", color="Nitrogen")
+   labs(y="", x="", color="Nitrogen") +
+  NEXP1.theme
+
 print(nectar.plot)
-ggsave(nectar.plot, file='greenhouse_nectar.jpg',  width=150, height=140, units= 'mm', dpi=600)
+ggsave(nectar.plot, file='greenhouse_nectar.jpg',  width=200, height=160, units= 'mm', dpi=600)
 
 nectardata %>% ggplot(aes(x=concentration  , y=nectar.production))+geom_point()+geom_smooth()
 
@@ -434,16 +472,31 @@ kable(nectar.field.models, digits=3) #spits out model into table
     summarise(across(all_of(nectar.traits.field), ~mean(.x, na.rm=TRUE))) 
 
 #boxplot for averages of all traits
- 
+ # Define new facet labels
+facet_labels <- c(
+  "nectar_conc" = "Nectar Concentration",
+  "nectar.production" = "Nectar Production"
+)
+facet.labs <- c(Lagg="I. aggregata", Ihyb="Hybrids")
+
 nectar.field.plot <- nectardata1.field %>% pivot_longer(all_of(nectar.traits.field), names_to = "trait") %>% #need to pivot longer for facets
     ggplot(aes(color= treatment, x=site, y=value))+geom_boxplot()+
-    facet_wrap(vars(trait),scales = "free_y")+
+    facet_wrap(vars(trait), scales = "free_y", labeller = labeller(trait = facet_labels)) +
     ylab("") +
-    scale_color_manual(values = c("forestgreen","orange","skyblue"))+theme_minimal()+
+    scale_color_manual(name="Nitrogen Level", 
+          labels= c(ambient="No water added", nitrogen= "High nitrogen", watercontrol= "Low nitrogen"), 
+          values=c(ambient="#8b9b31",nitrogen="#b35f98", watercontrol="#3a8db3"))+
+  scale_x_discrete(
+    labels = c(
+      "Ihyb" = "Hybrids",
+      "Lagg" = expression(italic("I. aggregata"))
+    )
+  ) +
   theme(panel.grid.major.x = element_blank(), legend.position = "bottom")+ 
-   labs(y="", x="Species", color="Nitrogen")
+   labs(y="", x="", color="Nitrogen") +
+  NEXP1.theme
 print(nectar.field.plot)
-ggsave(nectar.field.plot, file='field_nectar.jpg',  width=150, height=140, units= 'mm', dpi=600)
+ggsave(nectar.field.plot, file='field_nectar.jpg',  width=200, height=160, units= 'mm', dpi=600)
 
 #
 nectardata.field %>% ggplot(aes(x=nectar.production  , y=nectar_conc))+geom_point()+geom_smooth()
@@ -461,12 +514,27 @@ flower.nub.lm=lm(flower_num~treatment*species, data=total.flower)
   
 Anova(flower.nub.lm, type=3)#Type 3
 
+facet.labs <- c(AGG="I. aggregata", TEN="I. tenuituba")
+
 flower.number.plot<- ggplot(total.flower, aes(y=flower_num, x=species, color=treatment))+geom_boxplot()+
-  scale_color_manual(values = c("skyblue", "orange"))+theme_minimal()+
-  theme(panel.grid.major.x = element_blank(), legend.position = "bottom")+ 
-   labs(y="Flower Number", x="Species", color="Nitrogen")
+    scale_x_discrete(
+    labels = c(
+      "ten" = "I. tenuituba",
+      "agg" = expression(italic("I. aggregata"))
+    )
+  ) +
+  scale_color_manual(name="Nitrogen Level", 
+          labels= c( HIGH= "High nitrogen", LOW= "Low nitrogen"), 
+          values=c(HIGH="#b35f98", LOW="#3a8db3"))+
+  theme_minimal()+
+  theme( panel.grid.major.x = element_blank(),  # Remove vertical grid lines
+    panel.grid.minor = element_blank(),    # Remove minor grid lines
+    panel.grid.major.y = element_line(color = "grey80", size = 0.5),
+    legend.position = "right")+
+   labs(y="Flower Number", x="", color="Nitrogen") 
+  
 print(flower.number.plot)
-ggsave(flower.number.plot, file="plots-nitrogen/NEXP1.greenhouse.flowernumber.png",  width=150, height=140, units= 'mm', dpi=600)
+ggsave(flower.number.plot, file="plots-nitrogen/NEXP1.greenhouse.flowernumber.png",  width=120, height=110, units= 'mm', dpi=600)
 
 #nitrogen only p= 0.0074
 
@@ -494,6 +562,13 @@ summary(multcomp::glht(flower.nub.lm.glht, linfct=multcomp::mcp(treatmentspecies
 #Fig.flower.number
 #ggsave(Fig.flower.number, file='plot_flower_number.jpg', width=110, height=110, units= 'mm', dpi=300)
 
+
+```
+
+```{r}
+#field flower number? or inflo height?
+
+#- diane has flower number for field via seed data 
 
 ```
 
