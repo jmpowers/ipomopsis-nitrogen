@@ -218,9 +218,15 @@ exp1.field.data <- exp1.field.data %>% left_join(select(exp1.field.verdicts, Fil
   select(-Filename) %>% rename(Filename = sample2) %>%  #replace FileName with the sample2 it holds (accounts for skips)
   droplevels()
 
+unknownterpenes <- c("tricyclo[5.2.1.02,6]dec-2-ene"= "monoterpene A",
+                     "3-ethenyl-1,2-dimethylcyclohexa-1,4-diene"= "monoterpene B",
+                     "cosmene"= "monoterpene C",
+                     "p-mentha-1,3,8-triene"="monoterpene D")
+
 # load short names
 ipochems <- read_csv("data/Ipo volatile compounds - chemsf_ipo.csv") %>% 
-  select(name, shortname, standard, verdict) %>%  filter(verdict != "")
+  select(name, shortname, standard, verdict) %>%  filter(verdict != "") %>% 
+  mutate(shortname = recode(shortname, !!!unknownterpenes))
             
 #shorten chemical names and merge compounds with multiple names
 shortnames <- ipochems %>% select(name, shortname) %>% filter(shortname!="") %>% deframe()
@@ -321,7 +327,7 @@ metadata.field %>% count(date-treatment_date) %>% kable(caption=paste("days sinc
 
 ```{r filtering}
 metadata <- metadata %>% mutate(type= ifelse(species=="AMB", "ambient","floral")) %>% rename(trap=sample) %>% as.data.frame() %>% 
-  load_metadata(date = "date", sample = "filename", group = "species", type = "type") #combine species and time (previously separate)
+  load_metadata(date = "date", sample = "filename", group = "species", type = "type") 
 #if issue with "rename" just rerun where you first made metadata
 
 longdata <- load_longdata(exp1.data, sample = "Filename", RT = "Ret.Time", 
@@ -354,11 +360,8 @@ vol.qual <- vol.qual / (as.numeric(meta$equil + meta$pumping)/3600) / meta$flrs 
 # Filtering Exp1 Field
 
 ```{r filtering_field}
-#need to get rid of NA values in metadata.field for code below to run
-#group= speciestime, should we do the same for arturo's data? need to make new column if yes
-
 metadata.field <- metadata.field %>% as.data.frame() %>% 
-  load_metadata(date = "date", sample = "filename", group = "species", type = "type") #combine species and time (previously separate)
+  load_metadata(date = "date", sample = "filename", group = "species", type = "type") 
 
 longdata.field <- load_longdata(exp1.field.data, sample = "Filename", RT = "Ret.Time", 
                           name = "Name", area = "Area", match = "SI", maxmatch=100) %>% 
@@ -408,30 +411,27 @@ setdiff(colnames(vol.qual.field), colnames(vol.qual))
 
 #field and greenhouse voc list
 voclist <- unique(c(colnames(vol.qual), colnames(vol.qual.field), "indole"))
-#TODO: add compounds with capital letters to compoound shortname list
 
-unknownterpenes <- c("tricyclo[5.2.1.02,6]dec-2-ene"= "monoterpene A","3-ethenyl-1,2-dimethylcyclohexa-1,4-diene"= "monoterpene B","cosmene"= "monoterpene C", "p-mentha-1,3,8-triene"="monoterpene D")
 #read in the large 2022 quant integration output and cut it down to NEXP chromatograms
 source("read_shimadzu.R") #loads the function that reads the shimadzu output text file
 # quantpath <- "~/MyDocs/MEGA/UCI/Schiedea/Analysis/scent/rmbl/RMBL Batches/quant_round3/"
 # bfiles <-  list.files(quantpath)
 # quant.full <- map_dfr(set_names(paste0(quantpath, bfiles), bfiles), read.shimadzu.quant, .id="batch") %>%
 quant.full <- read.shimadzu.quant("data/quant_Ipo2022part1_5.txt") %>% #reads in shimadzu text file with quant integrations 
-  #TODO: john update quant part 6
   mutate(Name = trimws(Name), Area=replace_na(Area, 0)) %>%
    distinct(Filename, Name, .keep_all=T) 
 quant.full %>% select(Dirname, Filename, Name, Area) %>%
   mutate(Dirname = fct_relabel(Dirname, str_remove, "C:/GCMSsolution/Data/Project1_190815/")) %>%
   mutate(Name = dplyr::recode(Name, !!!shortnames)) %>%
-  mutate(Name = dplyr::recode(Name, !!!unknownterpenes )) %>%  #renames retention time puzzel compounds to monoterpene A-D
-  #filter(str_detect(Filename, "^NEXP")) %>%
   select(-Dirname) %>%
   pivot_wider(names_from="Name", values_from="Area") %>%
   write_tsv("data/quant_2022_exp1_exp1field.tsv")
 vol.exp1.exp1field <- read_tsv("data/quant_2022_exp1_exp1field.tsv") 
 
 quantlist <- colnames(vol.exp1.exp1field)[-1]
-(need_quant_both <- setdiff(setdiff(voclist, names(unknownterpenes)), quantlist))
+(need_quant_both <- setdiff(voclist, quantlist)) 
+# Passed bouquet but don't have quant for these compounds
+# JP determined that these six are misidentified column contaminants, or nylon bag residue - don't include
 
 #weatherport quant
 vol <- vol.exp1.exp1field %>% #takes original file names and left joins it with verdicts 
@@ -439,7 +439,7 @@ vol <- vol.exp1.exp1field %>% #takes original file names and left joins it with 
   select(-Filename) %>% rename(Filename = sample2) %>%  #replace FileName with the sample2 it holds (accounts for skips)
   column_to_rownames("Filename")
 
-vol <- vol[rownames(vol.qual), c(intersect(voclist,colnames(vol)), unknownterpenes)] # rownames puts in same order as vol.qual; voclist filters list down to compounds only found in either greenhouse & field. Adds monoterpenes we removed back in
+vol <- vol[rownames(vol.qual), intersect(voclist,quantlist)] # rownames puts in same order as vol.qual; voclist filters list down to compounds only found in either greenhouse & field. Adds monoterpenes we removed back in
 vol <- vol / (as.numeric(meta$equil + meta$pumping)/3600) / meta$flrs #0.5 hr of equilibration plus 0.25 hr pumping, one flower
 
 #field quant
@@ -448,31 +448,26 @@ vol.field <-  vol.exp1.exp1field %>% #takes origional file names and left joins 
   select(-Filename) %>% rename(Filename = sample2) %>%  #replace FileName with the sample2 it holds (accounts for skips)
   column_to_rownames("Filename")
 
-vol.field <- vol.field[rownames(vol.qual.field), c(intersect(voclist,colnames(vol)), "monoterpene A", "monoterpene B", "monoterpene C", "monoterpene D")] 
+vol.field <- vol.field[rownames(vol.qual.field), intersect(voclist,colnames(vol))] 
 vol.field <- vol.field / (as.numeric(meta.field$equil + meta.field$pumping)/3600) / meta.field$flowers #0.5 hr of equilibration plus 0.25 hr pumping, one flower
-
-
-#compare lists
-(added_quant <- setdiff(colnames(vol), colnames(vol.qual)))#in quant (from temp experiment) but do not pass filters in this dataset. Bc indole didn't pass qual tests but we want to look at it
-#TODO: john - why shortnames not short?
-(need_quant <- setdiff(colnames(vol.qual), colnames(vol))) # filtered volatiles that need quant integration. Passed bouquet but don't have quant for these compounds
-#TODO: need quant to list above and below (excluding the compounds we renamed as monoterpene A-D)
-(need_quant <- setdiff(colnames(vol.qual.field), colnames(vol.field))) #field bouquet filters. Ignore 4 we renamed but rest need quant integration. 
-#vol <- bind_cols(vol, vol.qual[,need_quant]) #temporary, add a couple volatiles that don't have quant integrations yet (currently not on same scale!)
 ```
 
 #Convert to ng/flower/hour
 ```{r}
 #TODO: question for john - is this used later in the code? why is vol commented out at the bottom?
-
-setdiff(voclist, shortnames) #these are the ones you need to figure out compound class for - assign to one of the standards we used.and change the name/add compound shortname
+standard_shortnames <- c(Indole="indole", Linalool="linalool", alpha_Pinene="a-pinene", Hexenol="(E)-hex-3-en-1-ol", Caryophyllene="b-caryophyllene", Methyl_salicylate="methyl 2-hydroxybenzoate")
 
 #Converting to ng/hr uses standards for 2022 on the GCMS
-ipochemsf <- filter(ipochems, shortname%in%voclist)
-#reads in spreadsheet with standard slopes in from johns github
-read_csv(url("https://raw.githubusercontent.com/jmpowers/RMBL-GCMS/main/output/standards/regression_slopes.csv")) %>% filter(year == "2022b_newflowpath") 
-#TODO :john - convert standards in the spreadsheet to shortnames 
-#vol <- sweep(vol, 2, pull(ipochemsf, paste0("area_per_ng","2022")), FUN = '/')
+ipochemsf <-  ipochems %>% mutate(standard = standard_shortnames[standard]) %>% 
+  left_join(
+    #reads in spreadsheet with standard slopes in from johns github
+    read_csv(url("https://raw.githubusercontent.com/jmpowers/RMBL-GCMS/main/output/standards/regression_slopes.csv")) %>%
+      filter(year == "2022b_newflowpath")) %>% 
+  mutate(shortname = recode(shortname, !!!unknownterpenes)) %>% 
+  distinct(shortname, .keep_all = TRUE)
+
+vol <- sweep(vol, 2, left_join(tibble(shortname=colnames(vol)),ipochemsf)$area_per_ng, FUN = '/')
+vol.field <- sweep(vol.field, 2, left_join(tibble(shortname=colnames(vol.field)),ipochemsf)$area_per_ng, FUN = '/')
   #sweep goes through every column in vol (which are all your compounds)
   #for each compound it divides by the slope of the standards which = area_per_ng
 
@@ -552,17 +547,17 @@ anova(bdLagg)
 
 ```{r diverse, eval=FALSE}
 #optional - look for a set of chromatograms that have all of the volatiles needed to set up Shimadzu quantitative integrations
-best <- list()
-i <- 1
-vol.left <- bind_rows(sampletable, sampletable.field)[,need_quant_both]^(1/4) # halfway between areas and presence-absence
-while(ncol(vol.left)>0) {
-  print(dim(vol.left))
-  best[[i]] <- which.max(rowSums(vol.left))
-  vol.left <- vol.left[ , !decostand(vol.left[best[[i]],], method="pa"), drop=FALSE]
-  i <- i+1
-}
-(best.vol <- as.data.frame(t(bind_rows(sampletable, sampletable.field)[unlist(best),need_quant_both])) %>% rownames_to_column("name"))
-chemtable %>% filter(name %in% need_quant_both) %>% select(name, RT, RT.var) %>% arrange(RT)
+# best <- list()
+# i <- 1
+# vol.left <- bind_rows(sampletable, sampletable.field)[,need_quant_both]^(1/4) # halfway between areas and presence-absence
+# while(ncol(vol.left)>0) {
+#   print(dim(vol.left))
+#   best[[i]] <- which.max(rowSums(vol.left))
+#   vol.left <- vol.left[ , !decostand(vol.left[best[[i]],], method="pa"), drop=FALSE]
+#   i <- i+1
+# }
+# (best.vol <- as.data.frame(t(bind_rows(sampletable, sampletable.field)[unlist(best),need_quant_both])) %>% rownames_to_column("name"))
+# chemtable %>% filter(name %in% need_quant_both) %>% select(name, RT, RT.var) %>% arrange(RT)
 ```
 
 # Retention times

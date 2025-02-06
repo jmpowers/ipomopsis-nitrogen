@@ -1725,7 +1725,7 @@ n,name,shortname,standard,verdict,filters_passed,mean,max,match.var,match,RT.var
 1724,Azulene,,,,5,3785,434087,0.0013,0.80,0.00,11.46,0,0.000,3,0.013,0.000,0.000,0,0,OK,OK,Rare,OK,Low,OK,Inf,OK,FALSE
 1725,Behenyl chloride,,,,4,17396,1536947,0.0018,0.75,2.36,16.31,0,0.000,6,0.025,1.000,0.019,0,0,OK,Low,Rare,OK,Low,OK,Inf,OK,FALSE
 1870,"Bicyclo[7.2.0]undec-4-ene, 4,11,11-trimethyl-8-methylene-,[1R-(1R*,4Z,9S*)]-",b-caryophyllene,Caryophyllene,merge,6,39742,4890376,0.0023,0.82,0.00,14.85,0,0.000,8,0.033,0.000,0.000,0,0,OK,OK,Rare,OK,OK,OK,Inf,OK,TRUE
-1727,Benzamide,,,,4,4320,834016,0.0017,0.77,0.00,13.54,0,0.000,3,0.013,2.000,0.038,0,0,OK,Low,Rare,OK,Low,OK,Inf,OK,FALSE
+1727,Benzamide,benzamide,Methyl_salicylate,NEXP1,4,4320,834016,0.0017,0.77,0.00,13.54,0,0.000,3,0.013,2.000,0.038,0,0,OK,Low,Rare,OK,Low,OK,Inf,OK,FALSE
 1728,"Benzamide, 4-methoxy-N-butyl-N-isobutyl-",,,,1,1055,253190,0.000000,0.73,0.0001,18.68,1,0.021,1,0.004,0.000,0.000,1,0.02127659574,High,Low,Rare,OK,Low,AmRatioFail,0.9,tTestFail,FALSE
 1729,"benzamide, N-(2,6-dihydroxyphenyl)-",,,,3,2807,287744,0.001300,0.77,0.2460,18.53,0,0.000,3,0.013,0.000,0.000,0,0,High,Low,Rare,OK,Low,OK,Inf,OK,FALSE
 1730,"Benzamide, N-[2-(2-chlorophenyl)-1-(1-piperazinylcarbonyl)ethenyl]-",,,,4,5423,1301516,NA,0.74,NA,12.26,0,0.000,1,0.004,0.000,0.000,0,0,OK,Low,Rare,OK,Low,OK,Inf,OK,FALSE
