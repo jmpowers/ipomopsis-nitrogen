@@ -24,6 +24,7 @@ Speciestime & treatment grouping instead of species, time, treatment
 
 =======
 
+#library ------------
 ```{r setup, include=FALSE}
 library(reshape2)
 library(tidyverse)
@@ -38,10 +39,11 @@ knitr::opts_chunk$set(comment="", cache=T, warning=F, message=F,
 #remotes::install_github("gavinsimpson/ggvegan")
 library(ggvegan)
 library(dplyr)
+library(ggplot2)
 ```
 
 
-#setup
+#setup -------------
 ```{r read_scents}
 #setwd("~/Desktop/ipomopsis-nitrogen") #set working directory
 library(googlesheets4) #need for read_sheets 
@@ -147,13 +149,17 @@ rownames(exp1.field.all) <- exp1.field.all[,1]
 exp1.field.all[,1] <- NULL
 ```
 
-# Read metadata for Weatherport experiment
+
+# Read metadata 
+
+##Greenhouse metadata
 
 ```{r metadata, fig.height=5, fig.width=5}
 metadata <- read_csv("data/EXP 1 (N) Volatile sampling  - metadata.csv") %>% 
   filter(filename != "#N/A") %>% 
   mutate(plantid = paste(species, plant), speciestime = paste(species, time, sep=".")) %>% 
-  left_join(read_csv("data/exp1_treatments.csv") %>% mutate(plant = as.character(plant)))
+  left_join(read_csv("data/exp1_treatments.csv") %>% mutate(plant = as.character(plant)))  
+  
 rownames(metadata) <- metadata$filename
 metadata <- metadata[rownames(exp1.all),] #order metadata to match order of data (which already. corrected for skips above in exp1.all)
 
@@ -180,7 +186,7 @@ metadata %>% count(date-treatment_date) %>% kable(caption=paste("days since trea
 ```
 
 
-# Read field metadata 
+## Field metadata 
 
 ```{r metadata.field, fig.height=5, fig.width=5}
 metadata.field <- exp1_field_meta %>% #Filename already accounted for skips
@@ -233,7 +239,7 @@ opts_chunk$set(fig.height=8, fig.width=8, dpi=100, fig.path="figures/") #sets st
 #can also change height in {} at the top of the chunk
 
 #set figure theme
-NEXP1.theme.boxplot <- theme(
+NEXP1.theme <- theme(
       #axis text
                   axis.title = element_text(size=13),     #x axis title text size
                   axis.text.x = element_text(size=12, color = "black"),     #x axis labels text size
@@ -265,19 +271,19 @@ NEXP1.theme.boxplot <- theme(
 
 field.label.colors <- scale_color_manual(name="Nitrogen Level", 
           labels= c(control="No water added", nitrogen= "High nitrogen", watercontrol= "Low nitrogen"), 
-          values=c(control="#8b9b31",nitrogen="#b35f98", watercontrol="#3a8db3"))
+           values=c(control= "#457A26",nitrogen="#E69F00", watercontrol= "#0072B2"))
 
 greenhouse.label.colors <- scale_color_manual(name="Nitrogen Level", 
           labels= c( high= "High nitrogen", low= "Low nitrogen"), 
-          values=c(high="#b35f98", low="#3a8db3"))
+          values=c(high="#E69F00", low="#0072B2"))
 
 # opt 1 = "#F0E442", "#0072B2" ,"#D55E00"
 # opt 2 = "#E69F00", "#CC79A7", "#009E73"
 # opt 4 = "#0072B2", "#E69F00", "#009E73"
 # opt 5 = "#DDA0DD", "#FFA07A", "#008080"
-# opt 6 = "#E69F00", "#56B4E9", "#999999"
+ #opt 6 = "#E69F00", "#56B4E9", "#999999"
 # opt 7 = "#6C8037", "#8E3972", "#2B75A5"
-# opt 8 = "#A3C653", "#BF4080" ,"#2B75A5"
+ #opt 8 = "#A3C653", "#BF4080" ,"#2B75A5"
 # opt 10 ="#F9A620","#457A26" ,"#8CCBE2" 
 # 
 # "#9B59B6",nitrogen="#F9A620", watercontrol= "#0072B2"
@@ -286,23 +292,8 @@ greenhouse.label.colors <- scale_color_manual(name="Nitrogen Level",
 #df$treatment <- factor(df$treamtent, levels = c("High nitrogen", "Low nitrogen", "No water added"))
 
 
-test.plot=
-  ggplot(meta.field, aes( y= totalemission, x=time, color=treatment))+ #could do with average metadata instead of all data points in meta
-  geom_boxplot(position=position_dodge(width=0.9))+
-  geom_point (position=position_dodge(width=0.9))+ #makes it so point don't overlap
-  scale_y_sqrt()+
-  ylab("Total Emissions")+
-  xlab("") +
-  facet_wrap(vars(species)) +
-  facet_grid(. ~ species, labeller=labeller(species = facet.labs)) + 
-  scale_x_discrete(labels=c('Day', 'Night', 'Day','Night')) + #x axis text
-  NEXP1.theme +
-  scale_color_manual(name="Nitrogen Level", 
-          labels= c(nitrogen= "High nitrogen", watercontrol= "Low nitrogen", control="No water added"), 
-          values=c(control="#8b9b31",nitrogen="#b35f98", watercontrol="#3a8db3"))
- 
- 
-print(test.plot) 
+
+
 
 #color scheme
 #scale_color_manual(name="Nitrogen Level", 
@@ -356,7 +347,9 @@ print(test.plot)
 
 
 
-# Filtering Exp1 Greenhouse
+# Filtering Exp1 
+
+##Greenhouse filtering
 
 ```{r filtering}
 metadata <- metadata %>% mutate(type= ifelse(species=="AMB", "ambient","floral")) %>% rename(trap=sample) %>% as.data.frame() %>% 
@@ -374,7 +367,7 @@ chemtable <- make_chemtable(longdata, metadata) %>%
   filter_freq(0.2, group = TRUE) %>% 
   filter_area(min_maximum = 1e5) %>% #not used
   filter_ambient_ratio(sampletable, metadata, ratio = 4, group= TRUE) 
-
+#TODO: NA for filter_ambient_ratio (look at figure)
 chemtable$filter_final <- with(chemtable, filter_RT == "OK" & RT.var < 2 & filter_match =="OK" & 
                                  ((filter_freq.agg == "OK" & ambient_ratio_agg>4) | 
                                     (filter_freq.ten == "OK" & ambient_ratio_ten>4)))
@@ -386,11 +379,13 @@ plot_filters(chemtable, option="prop")
 vol.qual <- prune_sampletable(sampletable, chemtable, metadata)
 files_exclude <- c("NEXP1_agg6n3_N_220725_8152022_10.qgd") # flower fell off
 vol.qual <- vol.qual[!(rownames(vol.qual) %in% files_exclude) ,]
-meta <- metadata[metadata$type == "floral" & !(metadata$sample %in% files_exclude),] %>% droplevels()
+meta <- metadata[metadata$type == "floral" & !(metadata$sample %in% files_exclude),] %>% droplevels() %>% 
+            mutate(species=factor(species, levels=c("agg", "ten"))) %>% #orders level for species, agg always comes first
+            mutate(treatment=factor(treatment, levels=c("high", "low")))  #orders treatment-- high first then low N
 vol.qual <- vol.qual / (as.numeric(meta$equil + meta$pumping)/3600) / meta$flrs #0.5 hr of equilibration plus 0.25 hr pumping, one flower
 ```
 
-# Filtering Exp1 Field
+## Field filtering
 
 ```{r filtering_field}
 metadata.field <- metadata.field %>% as.data.frame() %>% 
@@ -422,11 +417,13 @@ vol.qual.field <- prune_sampletable(sampletable.field, chemtable.field, metadata
 files_exclude <- c("") 
 vol.qual.field <- vol.qual.field[!(rownames(vol.qual.field) %in% files_exclude) ,]
 meta.field <- metadata.field[metadata.field$type == "floral" & !(metadata.field$sample %in% files_exclude),-48] %>%#48 is the second sample colum (skips)
-  droplevels() %>% mutate(species=factor(species), time=factor(time))
+  droplevels() %>% mutate(species=factor(species), time=factor(time)) %>% 
+  mutate(species=factor(species, levels=c("Lagg", "Ihyb"))) %>% #orders level for species, agg always comes first
+            mutate(treatment=factor(treatment, levels=c("nitrogen", "watercontrol", "control")))  #orders treatment-- high first then low N
 vol.qual.field <- vol.qual.field / (as.numeric(meta.field$equil + meta.field$pumping)/3600) / meta.field$flowers #0.5 hr of equilibration plus 0.25 hr pumping, one flower
 ```
 
-# Compare field and weatherport filtering
+### Compare field and weatherport filtering
 
 ```{r compare_field}
 print("both datasets:")
@@ -440,6 +437,8 @@ setdiff(colnames(vol.qual.field), colnames(vol.qual))
 # Quantitative integrations greenhouse & field
 
 ```{r quant}
+##NOTE: can only run this section once bc it replaces vol and vol.field (must re-run section above before re-running this section)
+
 # spreadsheet with all quant names: https://docs.google.com/spreadsheets/d/12S3xQonUx0tXOSGY2oT4sEpxtVdIBr1BEUIiWUXnSs0/edit?gid=1698770934#gid=1698770934
 
 #field and greenhouse voc list
@@ -487,17 +486,18 @@ vol.field <- vol.field / (as.numeric(meta.field$equil + meta.field$pumping)/3600
 
 #Convert to ng/flower/hour
 ```{r}
-#TODO: question for john - is this used later in the code? why is vol commented out at the bottom?
+
 standard_shortnames <- c(Indole="indole", Linalool="linalool", alpha_Pinene="a-pinene", Hexenol="(E)-hex-3-en-1-ol", Caryophyllene="b-caryophyllene", Methyl_salicylate="methyl 2-hydroxybenzoate")
 
 #Converting to ng/hr uses standards for 2022 on the GCMS
-ipochemsf <-  ipochems %>% mutate(standard = standard_shortnames[standard]) %>% 
+ipochemsf <-  ipochems %>% mutate(standard = standard_shortnames[standard]) %>% #ipo chemicals filtered
   left_join(
     #reads in spreadsheet with standard slopes in from johns github
     read_csv(url("https://raw.githubusercontent.com/jmpowers/RMBL-GCMS/main/output/standards/regression_slopes.csv")) %>%
       filter(year == "2022b_newflowpath")) %>% 
-  mutate(shortname = recode(shortname, !!!unknownterpenes)) %>% 
+
   distinct(shortname, .keep_all = TRUE)
+
 
 vol <- sweep(vol, 2, left_join(tibble(shortname=colnames(vol)),ipochemsf)$area_per_ng, FUN = '/')
 vol.field <- sweep(vol.field, 2, left_join(tibble(shortname=colnames(vol.field)),ipochemsf)$area_per_ng, FUN = '/')
@@ -510,11 +510,13 @@ vol.field <- sweep(vol.field, 2, left_join(tibble(shortname=colnames(vol.field))
 #combine field and greenhouse
 ```{r}
 #combine greenhouse and field experiment data Ihyp -> ten, Lagg -> agg
-megameta <- bind_rows(greenhouse=meta, .id = "experiment", field=meta.field %>% mutate(treatment=as.character(dplyr::recode(treatment,`watercontrol` = "low",control="low", nitrogen="high")), time=as.character(time), species= as.character(dplyr::recode(species, Ihyb="ten", Lagg="agg")))) 
+megameta <- bind_rows(greenhouse=meta, .id = "experiment", field=meta.field %>% mutate(treatment=as.character(dplyr::recode(treatment,`watercontrol` = "low",control="low", nitrogen="high")), time=as.character(time), species= as.character(dplyr::recode(species, Ihyb="ten", Lagg="agg")))) #Ihyp = ten bc we were trying to simplify the figure (too many species), grouped ten and hyb vs aggs
 
 mega.vol <- bind_rows(vol, vol.field)
 
 ```
+
+# Other ------------
 
 #mega cap 
 ```{r}
@@ -596,7 +598,7 @@ anova(bdLagg)
 # Retention times
 The puzzel - the 4 peaks we are not sure about compound identifications
 prints out graphs
-#terpenes 1-4
+terpenes 1-4
 
 ```{r retention, fig.width=12}
 quant.RT <- quant.full %>% summarize(RT = median(Ret.Time, na.rm=T), .by=Name) %>% 
@@ -631,6 +633,7 @@ ggplot(longdata.RT.mess, aes(x=RT, color=name, fill=name)) + facet_wrap(vars(RT.
 
 mess.wide <- longdata.RT.mess %>% select(sample, RT.cluster, area) %>% pivot_wider(names_from = RT.cluster, values_from=area, values_fn=sum, values_fill=0)
 ```
+
 
 
 # Heatmap
@@ -752,9 +755,11 @@ kable(arrange(as.data.frame(cap_treat_field$CCA$v), CAP1))
 
 ```
 
-#Average volatiles
+#Start ------------
 
-# Greenhouse Average VOCs
+#Average VOCs
+
+## Greenhouse Average VOCs
 ```{r}
 #make average volatile table: 
 noaverage <- bind_cols(meta,vol)%>%   #want to make table with metadata and volatile list that is not averaged to run Anova on
@@ -764,6 +769,11 @@ noaverage <- bind_cols(meta,vol)%>%   #want to make table with metadata and vola
 averagePlant<-bind_cols(meta,vol) %>% group_by(plantid, time, treatment, species) %>% 
   summarize(across(where(is.numeric),mean))  #takes average of each sample for day and night
 
+#adds average total emissions column to averagePlant -- for total emissions boxplot
+averagePlant.total <- averagePlant %>% ungroup() %>% mutate(total= rowSums(averagePlant[,12:33]))
+
+
+
 averagetable<- averagePlant[,12:ncol(averagePlant)] #seperates table into meta data and volatile list table (not necesaary)
 averagemetadata<- averagePlant[,1:11]
 
@@ -772,9 +782,10 @@ AverageVOCcapS.T.T <- capscale(sqrt(averagetable) ~ time*species*treatment, data
 
 anova(AverageVOCcapS.T.T, by="term")
 
+
 ```
 
-# Field Average VOCs
+## Field Average VOCs
 ```{r}
 #make average volatile table: 
 noaverage.field <- bind_cols(meta.field,vol.field)%>%   #want to make table with metadata and volatile list that is not averaged to run Anova on
@@ -784,6 +795,9 @@ noaverage.field <- bind_cols(meta.field,vol.field)%>%   #want to make table with
 averagePlant.field<-bind_cols(meta.field,vol.field) %>% group_by(plantid, time, treatment, species) %>% 
   summarize(across(where(is.numeric),mean)) %>% ungroup()    
 #takes average of each sample for dayand night
+
+#adds average total emissions column to averagePlant -- for total emissions boxplot
+averagePlant.total.field <- averagePlant.field %>% ungroup() %>% mutate(total= rowSums(averagePlant.field[,14:35]))
 
 averagetable.field<- averagePlant.field[,15:ncol(averagePlant.field)] #seperates table into meta data and volatile list table (not necesaary)
 averagemetadata.field<- averagePlant.field[,1:14]
@@ -801,9 +815,9 @@ anova(Field.AverageVOCcapS.T.T, by="term")
 ```
 
 
-# Indole 
+# *Indole 
 
-# Greenhouse Indole
+## Greenhouse Indole
 ```{r}
 #make average tenuituba table
 averageTENmetadata<- averagemetadata[averagemetadata$species=="ten",]
@@ -811,7 +825,7 @@ averageTENtable<-averagetable[averagemetadata$species=="ten",]
 averageTEN <- bind_cols(averageTENmetadata, averageTENtable) %>%  #combines averaged meta data table and average volatile                                                                           list table together
   mutate(timetreatment=paste(time,treatment))           #want to combine time and treatment into the same colum bc glht                                                                   needs that
 #only ten indole boxplot
-ggplot(averageTEN, aes(color=treatment, x=time, y=indole))+geom_boxplot()+scale_y_sqrt() #box plot for TEN indole 
+#ggplot(averageTEN, aes(color=treatment, x=time, y=indole))+geom_boxplot()+scale_y_sqrt() #box plot for TEN indole 
 
 # agg and ten indole boxplot
 facet.labs <- c(agg="I. aggregata", ten="I. tenuituba")
@@ -826,18 +840,18 @@ plot.indole.aggten=
   ylab("Indole Emissions")+
   xlab("") +
   #facet_wrap(vars(species)) +
-  facet_wrap(. ~species, labeller = labeller(species = c("agg" = expression(italic("I. aggregata")), "ten" = expression(italic("I. tenuituba"))))) +
-  #facet_grid(. ~ species, labeller=labeller(species = facet.labs))+ 
+  #facet_wrap(. ~species, labeller = labeller(species = c("agg" = expression(italic("I. aggregata")), "ten" = expression(italic("I. tenuituba"))))) +
+  facet_grid(. ~ species, labeller=labeller(species = facet.labs))+ 
   scale_x_discrete(labels=c('Day', 'Night', 'Day','Night'))+ #x axis text
   #ylim(0.1, 0.56) +  # Set y-axis limits from 0.1 to 0.56  
    NEXP1.theme +
   scale_color_manual(name="Nitrogen Level", 
           labels= c( high= "High nitrogen", low= "Low nitrogen"), 
-          values=c(high="#b35f98", low="#3a8db3"))
+          values=c(high="#E69F00", low="#0072B2"))
 
 print(plot.indole.aggten) 
 
-ggsave(plot.indole.aggten, file='Indole_boxplot.jpg', width=150, height=110, units= 'mm', dpi=600)
+ggsave(plot.indole.aggten, file='plots-nitrogen/Indole_boxplot.jpg', width=150, height=110, units= 'mm', dpi=600)
 
 library(car)
 library(lmerTest)
@@ -852,7 +866,7 @@ summary(multcomp::glht(indolelmer, linfct= multcomp::mcp(S.T.T = c("aggDhigh-agg
 
 ```
 
-# Field Indole
+## Field Indole
 ```{r}
 #make average Hybrid table
 averageHYBmetadata.field<- averagemetadata.field[averagemetadata.field$species=="Ihyb",]
@@ -882,10 +896,10 @@ plot.indole.Lagghyb.field=
    NEXP1.theme +
    scale_color_manual(name="Nitrogen Level", 
           labels= c( nitrogen= "High nitrogen", watercontrol= "Low nitrogen", control="No water added"), 
-          values=c(control="#8b9b31",nitrogen="#b35f98", watercontrol="#3a8db3"))
+          values=c(control= "#457A26",nitrogen="#E69F00", watercontrol= "#0072B2"))
 
 print(plot.indole.Lagghyb.field)    
-ggsave(plot.indole.Lagghyb.field, file='Indole_field_agghyb_boxplot.jpg', width=150, height=110, units= 'mm', dpi=600)
+ggsave(plot.indole.Lagghyb.field, file='plots-nitrogen/Indole_field_agghyb_boxplot.jpg', width=150, height=110, units= 'mm', dpi=600)
 
 library(car)
 library(lmerTest)
@@ -905,35 +919,644 @@ summary(multcomp::glht(indolelmer.field, linfct= multcomp::mcp(S.T.T =c("LaggDni
 
 ```
 
-#compound changes (see below -> individual compound changes)
-
-# Greenhouse compound changes
 ```{r}
-
-#library(lme4)
-#library(lmerTest)
-#library(broom.mixed)
-#library(dplyr)
-
-
-#compoundmodels <- bind_cols(vol, meta) %>% 
-#  pivot_longer(all_of(colnames(vol)), names_to="chem", values_to="amount")%>% # move volatiles into column
-#  group_by(species, time, chem) %>%  #tells nest what to nest by species, time and chemical name
-#    nest() %>% 
-#    mutate(model=map(data, ~lmer(sqrt(amount)~ treatment + (1|plantid), data=.x)),
-#           test=map(model, ~ tidy(anova(.x)))) #anova on each compound in each subset of species and time, stores in                                                                    column test
-#compoundtests <- compoundmodels %>% dplyr::select(test) %>% 
-#  unnest(test) %>% mutate(p.adjusted= p.adjust(p.value, method = "bonferroni", n=108)) #read wiki page on false discovery
-
-#how much of a difference the treatment made
-#compoundchanges <- compoundmodels %>% mutate(coef= map(model, ~tidy(.x))) %>% 
-#  dplyr::select(coef) %>% unnest(coef) %>%
-#  summarise(nitrogeneffect= estimate[1]/(estimate[1]+estimate[2]), p.value=p.value[2])  #nitrogeneffect = change of compound (i.e. X compound increased 3.2 fold in high nitrogen treatment
-# for nitrogeneffect subtract by 1 to get the % change
+#makes greek letters 
+greekify <- function(names) {
+    names %>% 
+    str_replace("^a-","\U03B1-") %>% str_replace("-a-","-\U03B1-") %>% 
+    str_replace("^b-","\U03B2-") %>% str_replace("-b-","-\U03B2-") %>% 
+    str_replace("^g-","\U03B3-") %>% str_replace("-g-","-\U03B3-")
+}
 ```
 
 
-# Greenhouse- I. tenuituba Day Volatiles
+#*CAP species x treatment (Separate by time)
+
+##CAP greenhouse ST for day and night
+```{r}
+####### Day ############
+#create meta data with only daytime 
+averagemetadata.DAY<- averagemetadata[averagemetadata$time=="D",]
+averagetable.DAY<-averagetable[averagemetadata$time=="D",]
+
+average.day <- bind_cols(averagemetadata.DAY, averagetable.DAY) #combines averaged meta data table and average volatile                                                                           list table together
+
+#CAP - day
+day.cap <- capscale(sqrt(averagetable.DAY) ~ species*treatment, data = averagemetadata.DAY, distance = "bray")
+summary(day.cap)
+#anova of day cap
+anova(day.cap, by="term")
+
+#To get % explained (= eigenvalues) for each cap axis
+eig.day.cap <-eigenvals(day.cap)
+axis.eig.day.cap <- eig.day.cap/ sum(eig.day.cap)
+print(axis.eig.day.cap)
+
+cap.day.dataframe <- fortify(day.cap) #turns cap into data frame so you can run it in ggplot
+#autoplot(agg.day.cap) #plots cap
+
+
+##generate a plot in ggplot
+library(ggrepel)
+
+Day.ordination = ggplot(bind_cols(filter(cap.day.dataframe, score=="sites"),averagemetadata.DAY), aes(x=CAP1, y= CAP2)) + 
+  geom_point(size=2.6, aes(color = treatment, shape = species)) +
+   
+  #Compound names on CAP:
+  geom_text_repel(data=cap.day.dataframe %>% 
+                    left_join(ipochems, by=c("label"="name")) %>% #adds compound name 
+              filter(score=="species", CAP1^2 +CAP2^2>0.1^2) %>%  #gets rid of compounds clusterd in middle of cap; EDIT THIS ON FINAL FIGURE**
+              mutate(label=greekify(label)),
+              aes(x=CAP1*6, y=CAP2*6, label=label), size=3) +
+  
+  
+  # Add ellipses for group dispersion
+  stat_ellipse(aes(color = treatment, fill = treatment), alpha = 0.2, geom = "polygon") +
+  theme_classic() + 
+  geom_hline(yintercept = 0, linetype="dotted") + 
+  geom_vline(xintercept = 0, linetype="dotted") +
+  labs(color = "Treatment", fill = "Treatment") +
+  theme(plot.title = element_text(hjust = 0.5))+
+  ylab("CAP2 (4.4% explained)") + 
+  xlab("CAP1 (5.4% explained)") + 
+  scale_color_manual(name="Nitrogen Level", 
+          labels= c( high= "High nitrogen", low= "Low nitrogen"), 
+          values=c(high="#E69F00", low="#0072B2"),
+          guide = guide_legend(order = 1))+  # Treatment legend appears first
+  scale_shape_manual(
+    name = "Species",  # Capitalize "Species"
+    labels = c("agg" = expression(italic("I. aggregata")),
+               "ten" = expression(italic("I. tenuituba"))),  # Italicize names
+     values = c("agg" = 16, "ten" = 17))+  # Assign shapes explicitly 
+  #labs(subtitle="ANOVA; p=0.031",hjust = 1)+ #adds subtitle at top of figure
+  #Remove legend: 
+  theme(legend.position = "none")  # Removes the legend
+  
+  
+   #add legend:  
+  #theme(legend.title = element_text(size=12, color = "black"), 
+   #         legend.text=element_text(size=10),
+   #        legend.justification=c(0,1), 
+   #        legend.position = "right",
+   #        #legend.position=c(0.03, 0.95),
+   #        legend.background = element_blank(),
+   #        legend.key = element_blank(),
+   #         plot.subtitle = element_text(hjust = 1)) #moves subtitle to right side 
+  
+    
+print(Day.ordination)
+ggsave(Day.ordination, file='plots-nitrogen/Day_ordinationplot.jpg', width=130, height=105, units= 'mm', dpi=600)
+
+######## NIGHT #################
+
+#create meta data with only daytime 
+averagemetadata.NIGHT<- averagemetadata[averagemetadata$time=="N",]
+averagetable.NIGHT<-averagetable[averagemetadata$time=="N",]
+
+average.night <- bind_cols(averagemetadata.NIGHT, averagetable.NIGHT) #combines averaged meta data table and average volatile                                                                           list table together
+
+#CAP - day
+night.cap <- capscale(sqrt(averagetable.NIGHT) ~ species*treatment, data = averagemetadata.NIGHT, distance = "bray")
+
+#anova of day cap
+anova(night.cap, by="term")
+
+#To get % explained (= eigenvalues) for each cap axis
+eig.night.cap <-eigenvals(night.cap)
+axis.eig.night.cap <- eig.night.cap/ sum(eig.night.cap)
+print(axis.eig.night.cap)
+
+cap.night.dataframe <- fortify(night.cap) #turns cap into data frame so you can run it in ggplot
+
+
+##generate a plot in ggplot
+Night.ordination = ggplot(bind_cols(filter(cap.night.dataframe, score=="sites"),averagemetadata.NIGHT), aes(x=CAP1, y= CAP2)) + 
+  geom_point(size=2.6, aes(color = treatment, shape = species))+
+   #Compound names on CAP:
+  geom_text_repel(data=cap.day.dataframe %>% 
+                    left_join(ipochems, by=c("label"="name")) %>% #adds compound name 
+              filter(score=="species", CAP1^2 +CAP2^2>0.1^2) %>%  #gets rid of compounds clusterd in middle of cap; EDIT THIS ON FINAL FIGURE**
+              mutate(label=greekify(label)),
+              aes(x=CAP1*6, y=CAP2*6, label=label), size=3) +
+  theme_classic() + 
+  #coord_fixed(xlim=c(-1.5, 2.9), ylim=c(-1, 2.4)) +
+  geom_hline(yintercept = 0, linetype="dotted") + 
+  geom_vline(xintercept = 0, linetype="dotted") +
+  labs(color = "Treatment", fill = "Treatment") +
+ # ggtitle("I. aggregata Night Volatiles") +
+  theme(plot.title = element_text(hjust = 0.5))+
+  ylab("CAP2 (2.4% explained)") + 
+  xlab("CAP1 (3.1% explained)") + 
+  #labs(shape = "Species") +
+  scale_color_manual(name="Nitrogen Level", 
+          labels= c( high= "High nitrogen", low= "Low nitrogen"), 
+          values=c(high="#E69F00", low="#0072B2"),
+          guide = guide_legend(order = 1))+  # Treatment legend appears first
+  scale_shape_manual(
+    name = "Species",  # Capitalize "Species"
+    labels = c("agg" = expression(italic("I. aggregata")),
+               "ten" = expression(italic("I. tenuituba"))),  # Italicize names
+    values = c("agg" = 16, "ten" = 17))+  # Assign shapes explicitly 
+  #labs(subtitle="ANOVA; p=0.031",hjust = 1)+ #adds subtitle at top of figure
+    theme(legend.position = "none")  # Removes the legend
+  
+   # theme(legend.title = element_text(size=12, color = "black"), legend.text=element_text(size=10),
+  #         legend.justification=c(0,1), 
+  #         legend.position = "right",
+  #         #legend.position=c(0.03, 0.95),
+  #         legend.background = element_blank(),
+  #         legend.key = element_blank(),
+  #          plot.subtitle = element_text(hjust = 1)) #moves subtitle to right side 
+  
+    
+print(Night.ordination)
+
+ggsave(Night.ordination, file='plots-nitrogen/Night_ordinationplot.jpg', width=130, height=105, units= 'mm', dpi=600)
+
+```
+
+##CAP field ST for day and night
+```{r}
+####### Day ############
+#create meta data with only daytime 
+averagemetadata.DAY.field<- averagemetadata.field[averagemetadata.field$time=="D",]
+averagetable.DAY.field<-averagetable.field[averagemetadata.field$time=="D",]
+
+average.day.field <- bind_cols(averagemetadata.DAY.field, averagetable.DAY.field) #combines averaged meta data table and average volatile                                                                           list table together
+
+#CAP - day
+day.cap.field <- capscale(sqrt(averagetable.DAY.field) ~ species*treatment, data = averagemetadata.DAY.field, distance = "bray")
+
+#anova of day cap
+anova(day.cap.field, by="term")
+
+#To get % explained (= eigenvalues) for each cap axis
+eig.day.cap.field <-eigenvals(day.cap.field)
+axis.eig.day.cap.field <- eig.day.cap.field/ sum(eig.day.cap.field)
+print(axis.eig.day.cap.field)
+
+cap.day.dataframe.field <- fortify(day.cap.field) #turns cap into data frame so you can run it in ggplot
+#autoplot(agg.day.cap) #plots cap
+
+
+##generate a plot in ggplot
+Day.ordination.field = ggplot(bind_cols(filter(cap.day.dataframe.field, score=="sites"),averagemetadata.DAY.field), aes(x=CAP1, y= CAP2)) + 
+  geom_point(size=2.6, aes(color = treatment, shape = species)) + #move color and shape here bc geom_text no treatment
+  #Compound names on CAP:
+  geom_text_repel(data=cap.day.dataframe %>% 
+                    left_join(ipochems, by=c("label"="name")) %>% #adds compound name 
+              filter(score=="species", CAP1^2 +CAP2^2>0.1^2) %>%  #gets rid of compounds clusterd in middle of cap; EDIT THIS ON FINAL FIGURE**
+              mutate(label=greekify(label)),
+              aes(x=CAP1*6, y=CAP2*6, label=label), size=3) +
+  theme_classic() + 
+  #coord_fixed(xlim=c(-1.5, 2.9), ylim=c(-1, 2.4)) +
+  geom_hline(yintercept = 0, linetype="dotted") + 
+  geom_vline(xintercept = 0, linetype="dotted") +
+  labs(color = "Treatment", fill = "Treatment") +
+ # ggtitle("I. aggregata Daytime Volatiles") +
+  theme(plot.title = element_text(hjust = 0.5))+
+  ylab("CAP2 (2.1% explained)") + 
+  xlab("CAP1 (3.2% explained)") + 
+  #labs(shape = "Species") +
+  scale_color_manual(name="Nitrogen Level", 
+          labels= c(control="No water added", nitrogen= "High nitrogen", watercontrol= "Low nitrogen"), 
+          values=c(control= "#457A26",nitrogen="#E69F00", watercontrol= "#0072B2"),
+          guide = guide_legend(order = 1))+  # Treatment legend appears first
+  scale_shape_manual(
+    name = "Species",  # Capitalize "Species"
+    labels = c("Lagg" = expression(italic("I. aggregata")),   # Italicize names
+               "Ihyb" ="Hybrids"), 
+   values = c("Lagg" = 16, "Ihyb" = 25))+  # Assign shapes explicitly 
+  #labs(subtitle="ANOVA; p=0.031",hjust = 1)+ #adds subtitle at top of figure
+    theme(legend.position = "none")  # Removes the legend 
+  
+    
+print(Day.ordination.field)
+ggsave(Day.ordination.field, file='plots-nitrogen/Day_ordinationplot_field.jpg', width=130, height=105, units= 'mm', dpi=600)
+
+######## NIGHT #################
+
+#create meta data with only daytime 
+averagemetadata.NIGHT.field<- averagemetadata.field[averagemetadata.field$time=="N",]
+averagetable.NIGHT.field<-averagetable.field[averagemetadata.field$time=="N",]
+
+average.night.field <- bind_cols(averagemetadata.NIGHT.field, averagetable.NIGHT.field) #combines averaged meta data table and average volatile                                                                           list table together
+
+#CAP - day
+night.cap.field <- capscale(sqrt(averagetable.NIGHT.field) ~ species*treatment, data = averagemetadata.NIGHT.field, distance = "bray")
+
+#anova of day cap
+anova(night.cap.field, by="term")
+
+#To get % explained (= eigenvalues) for each cap axis
+eig.night.cap.field <-eigenvals(night.cap.field)
+axis.eig.night.cap.field <- eig.night.cap.field/ sum(eig.night.cap.field)
+print(axis.eig.night.cap.field)
+
+cap.night.dataframe.field <- fortify(night.cap.field) #turns cap into data frame so you can run it in ggplot
+
+
+##generate a plot in ggplot
+Night.ordination.field = ggplot(bind_cols(filter(cap.night.dataframe.field, score=="sites"),averagemetadata.NIGHT.field), aes(x=CAP1, y= CAP2)) + 
+  geom_point(size=2.6, aes(color = treatment, shape = species)) +
+  #Compound names on CAP:
+  geom_text_repel(data=cap.day.dataframe %>% 
+                    left_join(ipochems, by=c("label"="name")) %>% #adds compound name 
+              filter(score=="species", CAP1^2 +CAP2^2>0.1^2) %>%  #gets rid of compounds clusterd in middle of cap; EDIT THIS ON FINAL FIGURE**
+              mutate(label=greekify(label)),
+              aes(x=CAP1*6, y=CAP2*6, label=label), size=3) +
+  theme_classic() + 
+  #coord_fixed(xlim=c(-1.5, 3), ylim=c(-1.5, 3)) +
+  geom_hline(yintercept = 0, linetype="dotted") + 
+  geom_vline(xintercept = 0, linetype="dotted") +
+  labs(color = "Treatment", fill = "Treatment") +
+ # ggtitle("") +
+  theme(plot.title = element_text(hjust = 0.5))+
+  ylab("CAP2 (0.9% explained)") + 
+  xlab("CAP1 (14.6% explained)") + 
+  #labs(shape = "Species") +
+  scale_color_manual(name="Nitrogen Level", 
+          labels= c(control="No water added", nitrogen= "High nitrogen", watercontrol= "Low nitrogen"), 
+         values=c(control= "#457A26",nitrogen="#E69F00", watercontrol= "#0072B2"),
+          guide = guide_legend(order = 1))+  # Treatment legend appears first
+  scale_shape_manual(
+    name = "Species",  # Capitalize "Species"
+    labels = c("Lagg" = expression(italic("I. aggregata")),   # Italicize names
+               "Ihyb" ="Hybrids"), 
+    values = c("Lagg" = 16, "Ihyb" = 25))+  # Assign shapes explicitly 
+  #labs(subtitle="ANOVA; p=0.031",hjust = 1)+ #adds subtitle at top of figure
+    theme(legend.position = "none")  # Removes the legend
+  
+    
+print(Night.ordination.field)
+ggsave(Night.ordination.field, file='plots-nitrogen/Night_ordinationplot_field.jpg', width=130, height=105, units= 'mm', dpi=600)
+
+```
+
+#Ordination plot time*species only
+```{r}
+#GREENHOUSE 
+
+#CAP - species*time
+SxTime.cap <- capscale(sqrt(averagetable) ~ time*species, data = averagemetadata, distance = "bray")
+
+#anova of day cap
+anova(SxTime.cap, by="term")
+
+#To get % explained (= eigenvalues) for each cap axis
+eig.SxTime.cap <-eigenvals(SxTime.cap)
+axis.eig.SxTime.cap <- eig.SxTime.cap/ sum(eig.SxTime.cap)
+print(axis.eig.SxTime.cap)
+
+cap.SxTime.dataframe <- fortify(SxTime.cap) #turns cap into data frame so you can run it in ggplot
+
+
+##generate a plot in ggplot
+SxTime.ordination = ggplot(bind_cols(filter(cap.SxTime.dataframe, score=="sites"),averagemetadata), aes(x=CAP1, y= CAP2)) + 
+  geom_point(size=2.6, aes(color = time, shape = species)) +
+  #Compound names on CAP:
+  geom_text_repel(data=cap.SxTime.dataframe %>% 
+                    left_join(ipochems, by=c("label"="name")) %>% #adds compound name 
+              filter(score=="species", CAP1^2 +CAP2^2>0.08^2) %>%  #gets rid of compounds clusterd in middle of cap; EDIT THIS ON FINAL FIGURE**
+              mutate(label=greekify(label)),
+              aes(x=CAP1*6, y=CAP2*6, label=label), size=3) +
+  theme_classic() + 
+  #coord_fixed(xlim=c(-1.5, 3), ylim=c(-1.5, 3)) +
+  geom_hline(yintercept = 0, linetype="dotted") + 
+  geom_vline(xintercept = 0, linetype="dotted") +
+ # labs(color = "Time", fill = "Time") +
+ # ggtitle("") +
+  theme(plot.title = element_text(hjust = 0.5))+
+  ylab("CAP2 (2.0% explained)") + 
+  xlab("CAP1 (24.7% explained)") + 
+  #labs(shape = "Species") +
+  scale_color_manual(name="Time of Day", 
+          labels= c(D="Day", N= "Night"), 
+         values=c(N= "navy", D= "darkorange"),
+          guide = guide_legend(order = 1))+  # Treatment legend appears first
+  scale_shape_manual(
+    name = "Species",  # Capitalize "Species"
+    labels = c("agg" = expression(italic("I. aggregata")),   # Italicize names
+               "ten" =expression(italic("I. aggregata"))), 
+    values = c("agg" = 16, "ten" = 17))  # Assign shapes explicitly 
+  #labs(subtitle="ANOVA; p=0.031",hjust = 1)+ #adds subtitle at top of figure
+    #theme(legend.position = "none")  # Removes the legend
+  
+    
+print(SxTime.ordination)
+ggsave(SxTime.ordination, file='plots-nitrogen/timexspecies_ordinationplot.jpg', width=180, height=150, units= 'mm', dpi=600)
+
+#--------------------------------- field -------------------------------------------------------
+
+#FIELD
+#CAP - species*time
+SxTime.cap.field <- capscale(sqrt(averagetable.field) ~ time*species, data = averagemetadata.field, distance = "bray")
+
+#anova of day cap
+anova(SxTime.cap.field, by="term")
+
+#To get % explained (= eigenvalues) for each cap axis
+eig.SxTime.cap.field <-eigenvals(SxTime.cap.field)
+axis.eig.SxTime.cap.field <- eig.SxTime.cap.field/ sum(eig.SxTime.cap.field)
+print(axis.eig.SxTime.cap.field)
+
+cap.SxTime.dataframe.field <- fortify(SxTime.cap.field) #turns cap into data frame so you can run it in ggplot
+
+
+##generate a plot in ggplot
+SxTime.ordination.field = ggplot(bind_cols(filter(cap.SxTime.dataframe.field, score=="sites"),averagemetadata.field), aes(x=CAP1, y= CAP2)) + 
+  geom_point(size=2.6, aes(color = time, shape = species)) +
+  #Compound names on CAP:
+  geom_text_repel(cap.SxTime.dataframe.field %>% 
+                    left_join(ipochems, by=c("label"="name")) %>% #adds compound name 
+              filter(score=="species", CAP1^2 +CAP2^2>0.08^2) %>%  #gets rid of compounds clusterd in middle of cap; EDIT THIS ON FINAL FIGURE**
+              mutate(label=greekify(label)),
+              aes(x=CAP1*6, y=CAP2*6, label=label), size=3) +
+  theme_classic() + 
+  #coord_fixed(xlim=c(-1.5, 3), ylim=c(-1.5, 3)) +
+  geom_hline(yintercept = 0, linetype="dotted") + 
+  geom_vline(xintercept = 0, linetype="dotted") +
+  labs(color = "Treatment", fill = "Treatment") +
+ # ggtitle("") +
+  theme(plot.title = element_text(hjust = 0.5))+
+  ylab("CAP2 (1.5% explained)") + 
+  xlab("CAP1 (27.1% explained)") + 
+  #labs(shape = "Species") +
+  scale_color_manual(name="Time of Day", 
+          labels= c(D="Day", N= "Night"), 
+         values=c(N= "navy", D= "darkorange"),
+          guide = guide_legend(order = 1))+  # Treatment legend appears first
+  scale_shape_manual(
+    name = "Species",  # Capitalize "Species"
+    labels = c("Lagg" = expression(italic("I. aggregata")),   # Italicize names
+               "Ihyb" ="Hybrids"), 
+    values = c("Lagg" = 16, "Ihyb" = 25))  # Assign shapes explicitly 
+  #labs(subtitle="ANOVA; p=0.031",hjust = 1)+ #adds subtitle at top of figure
+    #theme(legend.position = "none")  # Removes the legend
+  
+    
+print(SxTime.ordination.field)
+ggsave(SxTime.ordination.field, file='plots-nitrogen/timexspecies_ordinationplot_field.jpg', width=180, height=150, units= 'mm', dpi=600)
+```
+
+
+#Extract legend from ordination plots
+```{r}
+
+megameta.legend <- bind_rows(greenhouse=meta, .id = "experiment", field=meta.field)
+
+#Make ggplot ordination of megameta
+(cap_treat <- vegan::capscale(sqrt(mega.vol) ~ time +experiment +species+ treatment+species*treatment+ time*species+time*treatment+ species*treatment*time, data=megameta))
+anova.cca(cap_treat, by="term")
+# Extract the site scores from the cap_treat object
+site_scores <- scores(cap_treat, display = "sites")
+
+# Combine site scores with the original data
+megameta_ordination_df <- bind_cols(as.data.frame(site_scores), megameta)
+
+
+
+megameta.plot= ggplot(megameta.legend %>% mutate(species=fct_recode(species, Lagg="agg")), aes( x=date, y = time, color = treatment, shape = species)) + 
+  theme_classic() + 
+  guides(color= guide_legend(order=1 ,override.aes = list(size=5)), shape= guide_legend(order = 2, override.aes = list(size=5)))+
+  geom_point()+
+  geom_hline(yintercept = 0, linetype="dotted") + 
+  geom_vline(xintercept = 0, linetype="dotted") +
+  labs(color = "Treatment", fill = "Treatment") +
+  theme(plot.title = element_text(hjust = 0.5))+
+  scale_color_manual(name="Nitrogen Level", 
+          labels= c(control="No water added", nitrogen= "High nitrogen", watercontrol= "Low nitrogen"), 
+          values=c(control= "#457A26",nitrogen="#E69F00", watercontrol= "#0072B2"),
+          guide = guide_legend(order = 1))+  # Treatment legend appears first
+  scale_shape_manual(
+    name = "Species",  
+    labels = c("Lagg" = expression(italic("I. aggregata")),  
+               #"agg" = expression(italic("I. aggregata")),  # Same label for both
+               "Ihyb" = "Hybrids", 
+               "ten" = expression(italic("I. tenuituba"))), 
+    values = c("Lagg" = 16,  # Same shape for both Lagg and agg
+               "Ihyb" = 25, 
+               "ten" = 17))+
+   theme(legend.title = element_text(size=18, color = "black"), legend.text=element_text(size=13),
+           legend.justification=c(0,1), 
+           legend.position = "right",
+           #legend.position=c(0.03, 0.95),
+           legend.background = element_blank(),
+           legend.key = element_blank(),
+            plot.subtitle = element_text(hjust = 1)) 
+  
+print(megameta.plot)
+# Extract legends
+combined_legend <- cowplot::get_legend(megameta.plot)
+
+#to edit final figures:
+#adobe illustrator or inkscape; export plots as .svg (instead of png or jpeg)
+
+
+# Combine plots and legends
+combined_plot <- cowplot::plot_grid(
+  combined_legend,
+  ncol = 1, nrow = 2, rel_widths = c(1, 0.2), rel_heights = c(1, 0.2)
+)
+
+print(combined_plot)
+ggsave(combined_plot, file='plots-nitrogen/Legend_plot.jpg', width=130, height=105, units= 'mm', dpi=600)
+```
+
+# *Total emissions 
+
+## Greenhouse- total emissions
+```{r}
+#Need average agg and ten for boxplot 
+#averageaggmetadata$totalemssions <-rowSums(averageaggtable) #sums rows of volatiles to get total emissions (via adding all peak areas) for each sample
+
+
+meta$totalemission <- rowSums(vol)  #attatches row sums to metadata 
+
+meta.average.tot <- meta
+
+total.emission.model <-lmer(totalemission~treatment*species*time + (1|plantid), data=meta) #models looks at total emissions as a function of treatment*species*time with plantid as a random effect
+gh.total.emission.anova <- Anova(total.emission.model, type=3) #type 3 anova on the model to get p-value
+print(gh.total.emission.anova)
+
+library(emmeans)
+#emmeans table 
+total.emmeans<-emmeans(total.emission.model,c("time", "species")) 
+
+library(knitr)    
+kable(total.emmeans, digits=3) #spits out model into table
+#now divide 'estimate' high by low to get % change
+#total emissions 23% higher at night 
+
+#######################################
+meta$S.T.T <- paste0(meta$species, meta$time, meta$treatment) #add column with species, treatment and time to metadata. Need for glht
+
+#finding p-values to compare treatment within each of the four groups
+total.emission.model2 <-lmer(totalemission~S.T.T + (1|plantid), data=meta)
+
+#to get emmeans for % change
+library(emmeans)
+
+emmeans(total.emission.model2, "S.T.T") #c("treatment", "species", "time")
+
+#divide high/low -> get percent change from high to low
+
+Anova(total.emission.model2, type=3)
+
+#library(multcomp)
+
+#general linear hypotheses
+  #subtracts means from different groups (like Agg day low - agg day high) c
+      #can specify which group like below or write linfct=mcp(model ="Tukey"))
+  # summary () gives you p-values
+
+multcomp:::summary.glht(multcomp::glht(total.emission.model2, linfct=multcomp::mcp(S.T.T= 
+                                           c("aggDlow - aggDhigh == 0",
+                                             "aggNlow-aggNhigh==0", 
+                                             "tenDlow-tenDhigh==0",
+                                             "tenNlow-tenNhigh==0"))),                                                               test=multcomp::adjusted(type="fdr"))
+
+#total emissions change at night time between high and low in agg p=0.0349
+
+
+#total emissions pretty - greenhouse 
+
+facet.labs <- c(agg="I. aggregata", ten="I. tenuituba")
+meta$species <- factor(meta$species, levels = c("agg", "ten")) #agg is on left facet panel, ten is right side
+
+plot.total.emissions.pretty=
+  ggplot(averagePlant.total, aes( y= total, x=str_to_title(time), color=treatment)) +
+  geom_boxplot(position=position_dodge(width=0.9))+
+  geom_point (position=position_dodge(width=0.9))+ #makes it so point don't overlap
+  scale_y_sqrt()+
+  ylab("Total Emissions")+
+  xlab("") +
+  NEXP1.theme +
+  facet_wrap(. ~species, labeller = labeller(species = c("agg" = expression(italic("I. aggregata")), "ten" = expression(italic("I. tenuituba"))))) +
+  facet_grid(. ~ species, labeller=as_labeller(facet.labs)) + 
+  scale_x_discrete(labels=c('Day', 'Night', 'Day','Night')) + #x axis text
+  scale_color_manual(name="Nitrogen Level", 
+          labels= c( high= "High nitrogen", low= "Low nitrogen"), 
+         values=c(high="#E69F00", low="#0072B2"))
+
+
+print(plot.total.emissions.pretty)
+ggsave(plot.total.emissions.pretty, file='plots-nitrogen/greenhouse_totalemissions.jpg', width=150, height=140, units= 'mm', dpi=600)
+```
+
+
+
+## Field- total emissions
+```{r}
+#Average Lagg for day and night
+averageLaggmetadata.field<- averagemetadata.field[averagemetadata.field$species=="Lagg",]
+averageLaggtable.field<-averagetable.field[averagemetadata.field$species=="Lagg",]
+
+#average Ihyb total emissions = row sums 
+averageHYBmetadata.field$totalemssions <-rowSums(averageHYBtable.field) #sums rows of volatiles to get total emissions (via adding all peak areas) for each sample
+
+#average Lagg total emissions = row sums 
+averageLaggmetadata.field$totalemssions <-rowSums(averageLaggtable.field)
+
+meta.field$totalemission <- rowSums(vol.field)  #attatches row sums to metadata 
+
+total.emission.model.field <-lmer(totalemission~treatment*species*time + (1|plantid), data=meta.field) #models looks at total emissions as a function of treatment*species*time with plantid as a random effect
+Anova(total.emission.model.field, type=3) #type 3 anova on the model to get p-value
+#time p= 0.00053
+
+
+#emmeans table 
+field.total.emmeans<-emmeans(total.emission.model.field, c("time","species")) 
+
+library(knitr)    
+kable(field.total.emmeans, digits=3) #spits out model into table
+#now divide 'estimate' high by low to get % change
+#total emissions 19.3% higher at night 
+
+##############################################
+#boxplot of Total emissions for Agg and Ten day & night
+
+facet.labs <- c("Lagg"="I. aggregata", "Ihyb"="Hybrids")
+meta.field$species <- factor(meta.field$species, levels = c("Lagg", "Ihyb")) #Lagg is on left facet panel, ihyb is right side
+meta.field$treatment <- factor(meta.field$treatment, levels = c("nitrogen", "watercontrol", "control")) #orders nitrogen levels in the figure legend
+
+
+plot.total.emissions.field=
+  ggplot(averagePlant.total.field, aes( y= total, x=time, color=treatment))+ #could do with average metadata instead of all data points in meta
+  geom_boxplot(position=position_dodge(width=0.9))+
+  geom_point (position=position_dodge(width=0.9))+ #makes it so point don't overlap
+  scale_y_sqrt()+
+  ylab("Total Emissions")+
+  xlab("") +
+  facet_wrap(vars(species)) +
+  facet_grid(. ~ species, labeller=labeller(species = facet.labs)) + 
+  scale_x_discrete(labels=c('Day', 'Night', 'Day','Night')) + #x axis text
+  NEXP1.theme +
+  scale_color_manual(name="Nitrogen Level", 
+          labels= c(nitrogen= "High nitrogen", watercontrol= "Low nitrogen", control="No water added"), 
+           values=c(control= "#457A26",nitrogen="#E69F00", watercontrol= "#0072B2"))
+ 
+ 
+print(plot.total.emissions.field) 
+
+ggsave(plot.total.emissions.field, file='plots-nitrogen/total_emissions_field_boxplot.jpg', width=150, height=140, units= 'mm', dpi=600)
+
+ ##Old figure code:
+  
+  # geom_boxplot(position=position_dodge(width=0.9))+
+  # geom_point (position=position_dodge(width=0.9))+ #makes it so point don't overlap
+  # scale_y_sqrt()+
+  # ylab("Total Emissions")+
+  # xlab("") +
+  # facet_wrap(vars(species)) +
+  #   facet_grid(. ~ species, labeller=labeller(species = facet.labs))+ 
+  #   theme(panel.border = element_blank(),
+  #     panel.grid.major = element_line(colour="white"),
+  #     #panel.grid.minor = element_blank(),
+  #     panel.background = element_rect(fill = "gray96",
+  #                               #colour = "lightblue",
+  #                                 linetype = "solid"),
+  #     strip.text.x = element_text(size=11),
+  #     strip.background = element_rect(colour="white", fill="white"))+
+  #   scale_color_manual(name="Nitrogen Level", 
+  #       #labels= c("High",  "Low"), #Specifies treatment names in legend
+  #       values=c("pink","orange","skyblue"))+
+  #   theme(legend.title = element_text(size=11, color = "black"),
+  #       legend.text=element_text(size=9))+
+  # scale_x_discrete(labels=c('Day', 'Night', 'Day','Night'))
+
+
+
+#######################################
+
+#glht for field total emissions 
+meta.field$S.T.T <- paste0(meta.field$species, meta.field$time, meta.field$treatment) #add column with species, treatment and time to metadata. Need for glht
+
+#finding p-values to compare treatment within each of the four groups 
+total.emission.model2.field <-lmer(totalemission~S.T.T + (1|plantid), data=meta.field)
+
+Anova(total.emission.model2.field, type=3)
+
+
+#library(multcomp)
+
+#general linear hypotheses
+  #subtracts means from different groups (like Agg day low - agg day high) c
+      #can specify which group like below or write linfct=mcp(model ="Tukey"))
+  # summary () gives you p-values
+total.emission.model2.field.glht <- summary(multcomp::glht(total.emission.model2.field, linfct=multcomp::mcp(S.T.T= c("IhybDnitrogen - IhybDcontrol == 0", "IhybDnitrogen - IhybDwatercontrol == 0", "IhybDcontrol - IhybDwatercontrol == 0", "IhybNnitrogen - IhybNcontrol == 0", "IhybNnitrogen - IhybNwatercontrol == 0", "IhybNcontrol - IhybNwatercontrol == 0","LaggDnitrogen - LaggDcontrol == 0 ", "LaggDnitrogen - LaggDwatercontrol == 0 ", "LaggDwatercontrol - LaggDcontrol == 0 ","LaggNnitrogen - LaggNcontrol == 0 ", "LaggNnitrogen - LaggNwatercontrol == 0 ", "LaggNwatercontrol - LaggNcontrol == 0 "))),
+        
+                                          # c("IhybDnitrogen - IhybDcontrol == 0", "IhybDnitrogen - IhybDwatercontrol == 0", "IhybDcontrol - IhybDwatercontrol == 0", "IhybNnitrogen - IhybNcontrol == 0", "IhybNnitrogen - IhybNwatercontrol == 0", "IhybNcontrol - IhybNwatercontrol == 0","LaggDnitrogen - LaggDcontrol == 0 ", "LaggDnitrogen - LaggDwatercontrol == 0 ", "LaggDwatercontrol - LaggDcontrol == 0 ","LaggNnitrogen - LaggNcontrol == 0 ", "LaggNnitrogen - LaggNwatercontrol == 0 ", "LaggNwatercontrol - LaggNcontrol == 0 "))),                                                              
+  test=multcomp::adjusted(type="none"))
+
+library(broom)
+kable(tidy(total.emission.model2.field.glht))
+```
+
+#Extra --------------
+
+#Time & Species CAP 
+## G.- I. tenuituba Day Volatiles
 
 ```{r}
  
@@ -947,7 +1570,7 @@ anova(TENcapday, by="term")
 
 ```
 
-#Greenhouse- I. tenuituba Night Volatiles
+##G- I. tenuituba Night Volatiles
 
 ```{r}
 TENnighttable<-averageTENtable[averageTENmetadata$time=="N",]
@@ -1004,7 +1627,7 @@ agg.Day.ordination = ggplot(bind_cols(filter(cap.dataframe, score=="sites"),aver
   
     
 print(agg.Day.ordination)
-ggsave(agg.Day.ordination, file='agg_Day_ordinationplot.jpg', width=130, height=105, units= 'mm', dpi=600)
+ggsave(agg.Day.ordination, file='plots-nitrogen/agg_Day_ordinationplot.jpg', width=130, height=105, units= 'mm', dpi=600)
 
 ###################################################
 
@@ -1141,528 +1764,6 @@ anova(Lagg.night.cap, by="term")
 #p=0.19
 ```
 
-#CAP species x treatment (Separate by time)
-
-##CAP greenhouse ST for day and night
-```{r}
-####### Day ############
-#create meta data with only daytime 
-averagemetadata.DAY<- averagemetadata[averagemetadata$time=="D",]
-averagetable.DAY<-averagetable[averagemetadata$time=="D",]
-
-average.day <- bind_cols(averagemetadata.DAY, averagetable.DAY) #combines averaged meta data table and average volatile                                                                           list table together
-
-#CAP - day
-day.cap <- capscale(sqrt(averagetable.DAY) ~ species*treatment, data = averagemetadata.DAY, distance = "bray")
-summary(day.cap)
-#anova of day cap
-anova(day.cap, by="term")
-
-#To get % explained (= eigenvalues) for each cap axis
-eig.day.cap <-eigenvals(day.cap)
-axis.eig.day.cap <- eig.day.cap/ sum(eig.day.cap)
-print(axis.eig.day.cap)
-
-cap.day.dataframe <- fortify(day.cap) #turns cap into data frame so you can run it in ggplot
-#autoplot(agg.day.cap) #plots cap
-
-
-##generate a plot in ggplot
-
-Day.ordination = ggplot(bind_cols(filter(cap.day.dataframe, score=="sites"),averagemetadata.DAY), aes(x=CAP1, y= CAP2, color = treatment, shape = species)) + 
-  geom_point(size=2.6) +
-  theme_classic() + 
-  #coord_fixed(xlim=c(-1.5, 2.9), ylim=c(-1, 2.4)) +
-  geom_hline(yintercept = 0, linetype="dotted") + 
-  geom_vline(xintercept = 0, linetype="dotted") +
-  labs(color = "Treatment", fill = "Treatment") +
- # ggtitle("I. aggregata Daytime Volatiles") +
-  theme(plot.title = element_text(hjust = 0.5))+
-  ylab("CAP2 (4.7% explained)") + 
-  xlab("CAP1 (5.4% explained)") + 
-  #labs(shape = "Species") +
-  scale_color_manual(name="Nitrogen Level", 
-          labels= c( high= "High nitrogen", low= "Low nitrogen"), 
-          values=c(high="#b35f98", low="#3a8db3"),
-          guide = guide_legend(order = 1))+  # Treatment legend appears first
-  scale_shape_manual(
-    name = "Species",  # Capitalize "Species"
-    labels = c("agg" = expression(italic("I. aggregata")),
-               "ten" = expression(italic("I. tenuituba"))),  # Italicize names
-     values = c("agg" = 16, "ten" = 17))+  # Assign shapes explicitly 
-  #labs(subtitle="ANOVA; p=0.031",hjust = 1)+ #adds subtitle at top of figure
-   theme(legend.title = element_text(size=12, color = "black"), legend.text=element_text(size=10),
-           legend.justification=c(0,1), 
-           legend.position = "right",
-           #legend.position=c(0.03, 0.95),
-           legend.background = element_blank(),
-           legend.key = element_blank(),
-            plot.subtitle = element_text(hjust = 1)) #moves subtitle to right side 
-  
-    
-print(Day.ordination)
-ggsave(Day.ordination, file='Day_ordinationplot.jpg', width=130, height=105, units= 'mm', dpi=600)
-
-######## NIGHT #################
-
-#create meta data with only daytime 
-averagemetadata.NIGHT<- averagemetadata[averagemetadata$time=="N",]
-averagetable.NIGHT<-averagetable[averagemetadata$time=="N",]
-
-average.night <- bind_cols(averagemetadata.NIGHT, averagetable.NIGHT) #combines averaged meta data table and average volatile                                                                           list table together
-
-#CAP - day
-night.cap <- capscale(sqrt(averagetable.NIGHT) ~ species*treatment, data = averagemetadata.NIGHT, distance = "bray")
-
-#anova of day cap
-anova(night.cap, by="term")
-
-#To get % explained (= eigenvalues) for each cap axis
-eig.night.cap <-eigenvals(night.cap)
-axis.eig.night.cap <- eig.night.cap/ sum(eig.night.cap)
-print(axis.eig.night.cap)
-
-cap.night.dataframe <- fortify(night.cap) #turns cap into data frame so you can run it in ggplot
-
-
-##generate a plot in ggplot
-Night.ordination = ggplot(bind_cols(filter(cap.night.dataframe, score=="sites"),averagemetadata.NIGHT), aes(x=CAP1, y= CAP2, color = treatment, shape = species)) + 
-  geom_point(size=2.6) +
-  theme_classic() + 
-  #coord_fixed(xlim=c(-1.5, 2.9), ylim=c(-1, 2.4)) +
-  geom_hline(yintercept = 0, linetype="dotted") + 
-  geom_vline(xintercept = 0, linetype="dotted") +
-  labs(color = "Treatment", fill = "Treatment") +
- # ggtitle("I. aggregata Night Volatiles") +
-  theme(plot.title = element_text(hjust = 0.5))+
-  ylab("CAP2 (2.1% explained)") + 
-  xlab("CAP1 (3.4% explained)") + 
-  #labs(shape = "Species") +
-  scale_color_manual(name="Nitrogen Level", 
-          labels= c( high= "High nitrogen", low= "Low nitrogen"), 
-          values=c(high="#b35f98", low="#3a8db3"),
-          guide = guide_legend(order = 1))+  # Treatment legend appears first
-  scale_shape_manual(
-    name = "Species",  # Capitalize "Species"
-    labels = c("agg" = expression(italic("I. aggregata")),
-               "ten" = expression(italic("I. tenuituba"))),  # Italicize names
-    values = c("agg" = 16, "ten" = 17))+  # Assign shapes explicitly 
-  #labs(subtitle="ANOVA; p=0.031",hjust = 1)+ #adds subtitle at top of figure
-   theme(legend.title = element_text(size=12, color = "black"), legend.text=element_text(size=10),
-           legend.justification=c(0,1), 
-           legend.position = "right",
-           #legend.position=c(0.03, 0.95),
-           legend.background = element_blank(),
-           legend.key = element_blank(),
-            plot.subtitle = element_text(hjust = 1)) #moves subtitle to right side 
-  
-    
-print(Night.ordination)
-ggsave(Night.ordination, file='Night_ordinationplot.jpg', width=130, height=105, units= 'mm', dpi=600)
-
-```
-
-##CAP field ST for day and night
-```{r}
-####### Day ############
-#create meta data with only daytime 
-averagemetadata.DAY.field<- averagemetadata.field[averagemetadata.field$time=="D",]
-averagetable.DAY.field<-averagetable.field[averagemetadata.field$time=="D",]
-
-average.day.field <- bind_cols(averagemetadata.DAY.field, averagetable.DAY.field) #combines averaged meta data table and average volatile                                                                           list table together
-
-#CAP - day
-day.cap.field <- capscale(sqrt(averagetable.DAY.field) ~ species*treatment, data = averagemetadata.DAY.field, distance = "bray")
-
-#anova of day cap
-anova(day.cap.field, by="term")
-
-#To get % explained (= eigenvalues) for each cap axis
-eig.day.cap.field <-eigenvals(day.cap.field)
-axis.eig.day.cap.field <- eig.day.cap.field/ sum(eig.day.cap.field)
-print(axis.eig.day.cap.field)
-
-cap.day.dataframe.field <- fortify(day.cap.field) #turns cap into data frame so you can run it in ggplot
-#autoplot(agg.day.cap) #plots cap
-
-
-##generate a plot in ggplot
-Day.ordination.field = ggplot(bind_cols(filter(cap.day.dataframe.field, score=="sites"),averagemetadata.DAY.field), aes(x=CAP1, y= CAP2, color = treatment, shape = species)) + 
-  geom_point(size=2.6) +
-  theme_classic() + 
-  #coord_fixed(xlim=c(-1.5, 2.9), ylim=c(-1, 2.4)) +
-  geom_hline(yintercept = 0, linetype="dotted") + 
-  geom_vline(xintercept = 0, linetype="dotted") +
-  labs(color = "Treatment", fill = "Treatment") +
- # ggtitle("I. aggregata Daytime Volatiles") +
-  theme(plot.title = element_text(hjust = 0.5))+
-  ylab("CAP2 (4.7% explained)") + 
-  xlab("CAP1 (5.4% explained)") + 
-  #labs(shape = "Species") +
-  scale_color_manual(name="Nitrogen Level", 
-          labels= c(control="No water added", nitrogen= "High nitrogen", watercontrol= "Low nitrogen"), 
-          values=c(control="#8b9b31",nitrogen="#b35f98", watercontrol="#3a8db3"),
-          guide = guide_legend(order = 1))+  # Treatment legend appears first
-  scale_shape_manual(
-    name = "Species",  # Capitalize "Species"
-    labels = c("Lagg" = expression(italic("I. aggregata")),   # Italicize names
-               "Ihyb" ="Hybrids"), 
-   values = c("Lagg" = 16, "Ihyb" = 25))+  # Assign shapes explicitly 
-  #labs(subtitle="ANOVA; p=0.031",hjust = 1)+ #adds subtitle at top of figure
-   theme(legend.title = element_text(size=12, color = "black"), legend.text=element_text(size=10),
-           legend.justification=c(0,1), 
-           legend.position = "right",
-           #legend.position=c(0.03, 0.95),
-           legend.background = element_blank(),
-           legend.key = element_blank(),
-            plot.subtitle = element_text(hjust = 1)) #moves subtitle to right side 
-  
-    
-print(Day.ordination.field)
-ggsave(Day.ordination.field, file='Day_ordinationplot_field.jpg', width=130, height=105, units= 'mm', dpi=600)
-
-######## NIGHT #################
-
-#create meta data with only daytime 
-averagemetadata.NIGHT.field<- averagemetadata.field[averagemetadata.field$time=="N",]
-averagetable.NIGHT.field<-averagetable.field[averagemetadata.field$time=="N",]
-
-average.night.field <- bind_cols(averagemetadata.NIGHT.field, averagetable.NIGHT.field) #combines averaged meta data table and average volatile                                                                           list table together
-
-#CAP - day
-night.cap.field <- capscale(sqrt(averagetable.NIGHT.field) ~ species*treatment, data = averagemetadata.NIGHT.field, distance = "bray")
-
-#anova of day cap
-anova(night.cap.field, by="term")
-
-#To get % explained (= eigenvalues) for each cap axis
-eig.night.cap.field <-eigenvals(night.cap.field)
-axis.eig.night.cap.field <- eig.night.cap.field/ sum(eig.night.cap.field)
-print(axis.eig.night.cap.field)
-
-cap.night.dataframe.field <- fortify(night.cap.field) #turns cap into data frame so you can run it in ggplot
-
-
-##generate a plot in ggplot
-Night.ordination.field = ggplot(bind_cols(filter(cap.night.dataframe.field, score=="sites"),averagemetadata.NIGHT.field), aes(x=CAP1, y= CAP2, color = treatment, shape = species)) + 
-  geom_point(size=2.6) +
-  theme_classic() + 
-  #coord_fixed(xlim=c(-1.5, 3), ylim=c(-1.5, 3)) +
-  geom_hline(yintercept = 0, linetype="dotted") + 
-  geom_vline(xintercept = 0, linetype="dotted") +
-  labs(color = "Treatment", fill = "Treatment") +
- # ggtitle("") +
-  theme(plot.title = element_text(hjust = 0.5))+
-  ylab("CAP2 (13.8% explained)") + 
-  xlab("CAP1 (1.2% explained)") + 
-  #labs(shape = "Species") +
-  scale_color_manual(name="Nitrogen Level", 
-          labels= c(control="No water added", nitrogen= "High nitrogen", watercontrol= "Low nitrogen"), 
-          values=c(control="#8b9b31",nitrogen="#b35f98", watercontrol="#3a8db3"),
-          guide = guide_legend(order = 1))+  # Treatment legend appears first
-  scale_shape_manual(
-    name = "Species",  # Capitalize "Species"
-    labels = c("Lagg" = expression(italic("I. aggregata")),   # Italicize names
-               "Ihyb" ="Hybrids"), 
-    values = c("Lagg" = 16, "Ihyb" = 17))+  # Assign shapes explicitly 
-  #labs(subtitle="ANOVA; p=0.031",hjust = 1)+ #adds subtitle at top of figure
-   theme(legend.title = element_text(size=12, color = "black"), legend.text=element_text(size=10),
-           legend.justification=c(0,1), 
-           legend.position = "right",
-           #legend.position=c(0.03, 0.95),
-           legend.background = element_blank(),
-           legend.key = element_blank(),
-            plot.subtitle = element_text(hjust = 1)) #moves subtitle to right side 
-  
-    
-print(Night.ordination.field)
-ggsave(Night.ordination.field, file='Night_ordinationplot_field.jpg', width=130, height=105, units= 'mm', dpi=600)
-
-```
-
-#Extract legend from ordination plots
-```{r}
-#Make ggplot ordination of megameta
-(cap_treat <- vegan::capscale(sqrt(mega.vol) ~ time +experiment +species+ treatment+species*treatment+ time*species+time*treatment+ species*treatment*time, data=megameta))
-anova.cca(cap_treat, by="term")
-# Extract the site scores from the cap_treat object
-site_scores <- scores(cap_treat, display = "sites")
-
-# Combine site scores with the original data
-megameta_ordination_df <- bind_cols(as.data.frame(site_scores), megameta)
-
-megameta.ordination= ggplot(megameta_ordination_df, aes(x=CAP1, y= CAP2, color = treatment, shape = species)) + 
-  geom_point(size=2.6) +
-  theme_classic() + 
-  geom_hline(yintercept = 0, linetype="dotted") + 
-  geom_vline(xintercept = 0, linetype="dotted") +
-  labs(color = "Treatment", fill = "Treatment") +
-  theme(plot.title = element_text(hjust = 0.5))+
-  scale_color_manual(name="Nitrogen Level", 
-          labels= c(control="No water added", nitrogen= "High nitrogen", watercontrol= "Low nitrogen"), 
-          values=c(control="#8b9b31",nitrogen="#b35f98", watercontrol="#3a8db3"),
-          guide = guide_legend(order = 1))+  # Treatment legend appears first
-  scale_shape_manual(
-    name = "Species",  
-    labels = c("Lagg" = expression(italic("I. aggregata")),  
-               "agg" = expression(italic("I. aggregata")),  # Same label for both
-               "Ihyb" = "Hybrids", 
-               "ten" = expression(italic("I. tenutiba"))), 
-    values = c("Lagg" = 16, "agg" = 16,  # Same shape for both Lagg and agg
-               "Ihyb" = 25, 
-               "ten" = 17))+
-   theme(legend.title = element_text(size=12, color = "black"), legend.text=element_text(size=10),
-           legend.justification=c(0,1), 
-           legend.position = "right",
-           #legend.position=c(0.03, 0.95),
-           legend.background = element_blank(),
-           legend.key = element_blank(),
-            plot.subtitle = element_text(hjust = 1)) 
-  
-print(megameta.ordination)
-# Extract legends
-greenhouse_legend <- cowplot::get_legend(Day.ordination)
-field_legend <- cowplot::get_legend(Day.ordination.field)
-
-# Remove legends from plots
-greenhouse_ordination_no_legend <- Day.ordination + theme(legend.position = "none")
-field_ordination_no_legend <- Day.ordination.field + theme(legend.position = "none")
-
-
-# Combine plots and legends
-combined_plot <- cowplot::plot_grid(
-  greenhouse_legend, field_legend,
-  ncol = 2, nrow = 2, rel_widths = c(1, 0.2), rel_heights = c(1, 0.2)
-)
-
-print(combined_plot)
-```
-
-
-#fake plot to get legend
-```{r}
-# Create fake data with consistent number of rows (20 rows)
-set.seed(123)  # For reproducibility
-fake_data <- data.frame(
-  CAP1 = rnorm(20),  # Random data for x-axis
-  CAP2 = rnorm(20),  # Random data for y-axis
-  species = rep(c("Lagg", "Ihyb", "agg", "ten"), length.out = 20),  # Repeat species so there are exactly 20 rows
-  treatment = rep(c("control", "nitrogen", "watercontrol"), length.out = 20)  # Repeat treatment so there are exactly 20 rows
-)
-
-# Plot using ggplot
-ggplot(fake_data, aes(x = CAP1, y = CAP2, color = treatment, shape = species)) + 
-  geom_point(size = 3) +  # Plot points with a size of 3
-  theme_classic() +  # Use a clean background theme
-  geom_hline(yintercept = 0, linetype = "dotted") +  # Add horizontal line at y = 0
-  geom_vline(xintercept = 0, linetype = "dotted") +  # Add vertical line at x = 0
-  scale_color_manual(
-    name = "Treatment", 
-    values = c("control" = "#8b9b31", "nitrogen" = "#b35f98", "watercontrol" = "#3a8db3"), 
-    labels = c("No water added", "High nitrogen", "Low nitrogen")
-  ) +  # Custom color scale for treatment
-  scale_shape_manual(
-    name = "Species", 
-    values = c("Lagg" = 16, "Ihyb" = 25, "ten" = 17),  # Custom shapes for species
-    labels = c("Lagg" = "I. aggregata", "Ihyb" = "Hybrids", "agg" = "Agg", "ten" = "Ten")  # Labels for species
-  ) + 
-  labs(color = "Treatment", shape = "Species") +  # Customize legend labels
-  theme(
-    legend.title = element_text(size = 12, color = "black"), 
-    legend.text = element_text(size = 10),
-    legend.position = "right",  # Place legend on the right side
-    plot.title = element_text(hjust = 0.5),  # Center the plot title
-    plot.subtitle = element_text(hjust = 1)  # Align the subtitle
-  )
-```
-
-
-# Total emissions 
-
-## Greenhouse- total emissions
-```{r}
-#Need average agg and ten for boxplot 
-averageaggmetadata$totalemssions <-rowSums(averageaggtable) #sums rows of volatiles to get total emissions (via adding all peak areas) for each sample
-
-meta$totalemission <- rowSums(vol)  #attatches row sums to metadata 
-
-total.emission.model <-lmer(totalemission~treatment*species*time + (1|plantid), data=meta) #models looks at total emissions as a function of treatment*species*time with plantid as a random effect
-gh.total.emission.anova <- Anova(total.emission.model, type=3) #type 3 anova on the model to get p-value
-print(gh.total.emission.anova)
-
-library(emmeans)
-#emmeans table 
-total.emmeans<-emmeans(total.emission.model,c("time", "species")) 
-
-library(knitr)    
-kable(total.emmeans, digits=3) #spits out model into table
-#now divide 'estimate' high by low to get % change
-#total emissions 23% higher at night 
-
-#######################################
-meta$S.T.T <- paste0(meta$species, meta$time, meta$treatment) #add column with species, treatment and time to metadata. Need for glht
-
-#finding p-values to compare treatment within each of the four groups
-total.emission.model2 <-lmer(totalemission~S.T.T + (1|plantid), data=meta)
-
-#to get emmeans for % change
-library(emmeans)
-
-emmeans(total.emission.model2, "S.T.T") #c("treatment", "species", "time")
-
-#divide high/low -> get percent change from high to low
-
-Anova(total.emission.model2, type=3)
-
-#library(multcomp)
-
-#general linear hypotheses
-  #subtracts means from different groups (like Agg day low - agg day high) c
-      #can specify which group like below or write linfct=mcp(model ="Tukey"))
-  # summary () gives you p-values
-
-multcomp:::summary.glht(multcomp::glht(total.emission.model2, linfct=multcomp::mcp(S.T.T= 
-                                           c("aggDlow - aggDhigh == 0",
-                                             "aggNlow-aggNhigh==0", 
-                                             "tenDlow-tenDhigh==0",
-                                             "tenNlow-tenNhigh==0"))),                                                               test=multcomp::adjusted(type="fdr"))
-
-#total emissions change at night time between high and low in agg p=0.0349
-
-
-#total emissions pretty - greenhouse 
-
-facet.labs <- c(agg="I. aggregata", ten="I. tenuituba")
-meta$species <- factor(meta$species, levels = c("agg", "ten")) #agg is on left facet panel, ten is right side
-
-plot.total.emissions.pretty=
-  ggplot(meta, aes( y= totalemission, x=str_to_title(time), color=treatment)) +
-  geom_boxplot(position=position_dodge(width=0.9))+
-  geom_point (position=position_dodge(width=0.9))+ #makes it so point don't overlap
-  scale_y_sqrt()+
-  ylab("Total Emissions")+
-  xlab("") +
-  NEXP1.theme +
-  facet_wrap(. ~species, labeller = labeller(species = c("agg" = expression(italic("I. aggregata")), "ten" = expression(italic("I. tenuituba"))))) +
-  facet_grid(. ~ species, labeller=as_labeller(facet.labs)) + 
-  scale_x_discrete(labels=c('Day', 'Night', 'Day','Night')) + #x axis text
-  scale_color_manual(name="Nitrogen Level", 
-          labels= c( high= "High nitrogen", low= "Low nitrogen"), 
-          values=c(high="#b35f98", low="#3a8db3"))
-
-
-print(plot.total.emissions.pretty)
-ggsave(plot.total.emissions.pretty, file='greenhouse_totalemissions.jpg', width=150, height=140, units= 'mm', dpi=600)
-```
-
-
-
-## Field- total emissions
-```{r}
-#Average Lagg for day and night
-averageLaggmetadata.field<- averagemetadata.field[averagemetadata.field$species=="Lagg",]
-averageLaggtable.field<-averagetable.field[averagemetadata.field$species=="Lagg",]
-
-#average Ihyb total emissions = row sums 
-averageHYBmetadata.field$totalemssions <-rowSums(averageHYBtable.field) #sums rows of volatiles to get total emissions (via adding all peak areas) for each sample
-
-#average Lagg total emissions = row sums 
-averageLaggmetadata.field$totalemssions <-rowSums(averageLaggtable.field)
-
-meta.field$totalemission <- rowSums(vol.field)  #attatches row sums to metadata 
-
-total.emission.model.field <-lmer(totalemission~treatment*species*time + (1|plantid), data=meta.field) #models looks at total emissions as a function of treatment*species*time with plantid as a random effect
-Anova(total.emission.model.field, type=3) #type 3 anova on the model to get p-value
-#time p= 0.00053
-
-
-#emmeans table 
-field.total.emmeans<-emmeans(total.emission.model.field, c("time","species")) 
-
-library(knitr)    
-kable(field.total.emmeans, digits=3) #spits out model into table
-#now divide 'estimate' high by low to get % change
-#total emissions 19.3% higher at night 
-
-##############################################
-#boxplot of Total emissions for Agg and Ten day & night
-
-facet.labs <- c("Lagg"="I. aggregata", "Ihyb"="Hybrids")
-meta.field$species <- factor(meta.field$species, levels = c("Lagg", "Ihyb")) #Lagg is on left facet panel, ihyb is right side
-meta.field$treatment <- factor(meta.field$treatment, levels = c("nitrogen", "watercontrol", "control")) #orders nitrogen levels in the figure legend
-
-
-plot.total.emissions.field=
-  ggplot(meta.field, aes( y= totalemission, x=time, color=treatment))+ #could do with average metadata instead of all data points in meta
-  geom_boxplot(position=position_dodge(width=0.9))+
-  geom_point (position=position_dodge(width=0.9))+ #makes it so point don't overlap
-  scale_y_sqrt()+
-  ylab("Total Emissions")+
-  xlab("") +
-  facet_wrap(vars(species)) +
-  facet_grid(. ~ species, labeller=labeller(species = facet.labs)) + 
-  scale_x_discrete(labels=c('Day', 'Night', 'Day','Night')) + #x axis text
-  NEXP1.theme +
-  scale_color_manual(name="Nitrogen Level", 
-          labels= c(nitrogen= "High nitrogen", watercontrol= "Low nitrogen", control="No water added"), 
-          values=c(control="#8b9b31",nitrogen="#b35f98", watercontrol="#3a8db3"))
- 
- 
-print(plot.total.emissions.field) 
-
-ggsave(plot.total.emissions.field, file='total_emissions_field_boxplot.jpg', width=150, height=140, units= 'mm', dpi=600)
-
- ##Old figure code:
-  
-  # geom_boxplot(position=position_dodge(width=0.9))+
-  # geom_point (position=position_dodge(width=0.9))+ #makes it so point don't overlap
-  # scale_y_sqrt()+
-  # ylab("Total Emissions")+
-  # xlab("") +
-  # facet_wrap(vars(species)) +
-  #   facet_grid(. ~ species, labeller=labeller(species = facet.labs))+ 
-  #   theme(panel.border = element_blank(),
-  #     panel.grid.major = element_line(colour="white"),
-  #     #panel.grid.minor = element_blank(),
-  #     panel.background = element_rect(fill = "gray96",
-  #                               #colour = "lightblue",
-  #                                 linetype = "solid"),
-  #     strip.text.x = element_text(size=11),
-  #     strip.background = element_rect(colour="white", fill="white"))+
-  #   scale_color_manual(name="Nitrogen Level", 
-  #       #labels= c("High",  "Low"), #Specifies treatment names in legend
-  #       values=c("pink","orange","skyblue"))+
-  #   theme(legend.title = element_text(size=11, color = "black"),
-  #       legend.text=element_text(size=9))+
-  # scale_x_discrete(labels=c('Day', 'Night', 'Day','Night'))
-
-
-
-#######################################
-
-#glht for field total emissions 
-meta.field$S.T.T <- paste0(meta.field$species, meta.field$time, meta.field$treatment) #add column with species, treatment and time to metadata. Need for glht
-
-#finding p-values to compare treatment within each of the four groups 
-total.emission.model2.field <-lmer(totalemission~S.T.T + (1|plantid), data=meta.field)
-
-Anova(total.emission.model2.field, type=3)
-
-
-#library(multcomp)
-
-#general linear hypotheses
-  #subtracts means from different groups (like Agg day low - agg day high) c
-      #can specify which group like below or write linfct=mcp(model ="Tukey"))
-  # summary () gives you p-values
-total.emission.model2.field.glht <- summary(multcomp::glht(total.emission.model2.field, linfct=multcomp::mcp(S.T.T= c("IhybDnitrogen - IhybDcontrol == 0", "IhybDnitrogen - IhybDwatercontrol == 0", "IhybDcontrol - IhybDwatercontrol == 0", "IhybNnitrogen - IhybNcontrol == 0", "IhybNnitrogen - IhybNwatercontrol == 0", "IhybNcontrol - IhybNwatercontrol == 0","LaggDnitrogen - LaggDcontrol == 0 ", "LaggDnitrogen - LaggDwatercontrol == 0 ", "LaggDwatercontrol - LaggDcontrol == 0 ","LaggNnitrogen - LaggNcontrol == 0 ", "LaggNnitrogen - LaggNwatercontrol == 0 ", "LaggNwatercontrol - LaggNcontrol == 0 "))),
-        
-                                          # c("IhybDnitrogen - IhybDcontrol == 0", "IhybDnitrogen - IhybDwatercontrol == 0", "IhybDcontrol - IhybDwatercontrol == 0", "IhybNnitrogen - IhybNcontrol == 0", "IhybNnitrogen - IhybNwatercontrol == 0", "IhybNcontrol - IhybNwatercontrol == 0","LaggDnitrogen - LaggDcontrol == 0 ", "LaggDnitrogen - LaggDwatercontrol == 0 ", "LaggDwatercontrol - LaggDcontrol == 0 ","LaggNnitrogen - LaggNcontrol == 0 ", "LaggNnitrogen - LaggNwatercontrol == 0 ", "LaggNwatercontrol - LaggNcontrol == 0 "))),                                                              
-  test=multcomp::adjusted(type="none"))
-
-library(broom)
-kable(tidy(total.emission.model2.field.glht))
-```
 
 # Individual compound change for treatment based on species and time
 
@@ -1698,7 +1799,7 @@ ggplot(dominantvocs.field, aes(y=fct_reorder(name, value), x=value, color=treatm
     facet_wrap(vars(species))+ #makes two pannels, agg and ten
     scale_color_manual(name="Nitrogen Level", 
           labels= c(control="No water added", nitrogen= "High nitrogen", watercontrol= "Low nitrogen"), 
-          values=c(control="#8b9b31",nitrogen="#b35f98", watercontrol="#3a8db3")) #manually change colros
+          values=c(control= "#457A26",nitrogen="#E69F00", watercontrol= "#0072B2")) #manually change colros
     theme_minimal() #removed grey from background
     
 
@@ -1767,7 +1868,7 @@ rel.amount.ordination = ggplot(bind_cols(filter(rel.amount.dataframe, score=="si
   xlab("CAP1 (% explained)") + 
   scale_color_manual(name="Nitrogen Level", 
           labels= c( high= "High nitrogen", low= "Low nitrogen"), 
-          values=c(high="#b35f98", low="#3a8db3")) +
+         values=c(high="#E69F00", low="#0072B2")) +
   labs(subtitle="ANOVA; p=0.264",hjust = 1)+ #adds subtitle at top of figure
    theme(legend.title = element_text(size=12, color = "black"), legend.text=element_text(size=10),
            legend.justification=c(0,1), 
@@ -1822,7 +1923,7 @@ rel.amount.ordination.field = ggplot(bind_cols(filter(rel.amount.dataframe.field
   xlab("CAP1 (% explained)") + 
   scale_color_manual(name="Nitrogen Level", 
           labels= c(control="No water added", nitrogen= "High nitrogen", watercontrol= "Low nitrogen"), 
-          values=c(control="#8b9b31",nitrogen="#b35f98", watercontrol="#3a8db3")) + 
+          values=c(control= "#457A26",nitrogen="#E69F00", watercontrol= "#0072B2")) + 
   labs(subtitle="ANOVA; p=0.451",hjust = 1)+ #adds subtitle at top of figure
    theme(legend.title = element_text(size=12, color = "black"), legend.text=element_text(size=10),
            legend.justification=c(0,1), 
@@ -1971,5 +2072,33 @@ ggcorrplot(cor(greenhouse.voc.morph.day), lab=TRUE, p.mat= cor_pmat(greenhouse.v
 #can do the same thing for night, just copy code
 
 
+```
+
+
+#compound changes (repeat code??)
+
+# Greenhouse compound changes
+```{r}
+
+#library(lme4)
+#library(lmerTest)
+#library(broom.mixed)
+#library(dplyr)
+
+
+#compoundmodels <- bind_cols(vol, meta) %>% 
+#  pivot_longer(all_of(colnames(vol)), names_to="chem", values_to="amount")%>% # move volatiles into column
+#  group_by(species, time, chem) %>%  #tells nest what to nest by species, time and chemical name
+#    nest() %>% 
+#    mutate(model=map(data, ~lmer(sqrt(amount)~ treatment + (1|plantid), data=.x)),
+#           test=map(model, ~ tidy(anova(.x)))) #anova on each compound in each subset of species and time, stores in                                                                    column test
+#compoundtests <- compoundmodels %>% dplyr::select(test) %>% 
+#  unnest(test) %>% mutate(p.adjusted= p.adjust(p.value, method = "bonferroni", n=108)) #read wiki page on false discovery
+
+#how much of a difference the treatment made
+#compoundchanges <- compoundmodels %>% mutate(coef= map(model, ~tidy(.x))) %>% 
+#  dplyr::select(coef) %>% unnest(coef) %>%
+#  summarise(nitrogeneffect= estimate[1]/(estimate[1]+estimate[2]), p.value=p.value[2])  #nitrogeneffect = change of compound (i.e. X compound increased 3.2 fold in high nitrogen treatment
+# for nitrogeneffect subtract by 1 to get the % change
 ```
 

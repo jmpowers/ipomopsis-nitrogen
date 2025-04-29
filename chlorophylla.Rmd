@@ -51,36 +51,6 @@ NEXP1.theme <- theme(
 
 
 
-#color scheme
-#scale_color_manual(name="Nitrogen Level", 
-#        labels= c("no water added",  "high nitrogen", "low nitrogen"), #Specifies treatment names in legend
-#        values=c("#8b9b31", "#b35f98", "#3a8db3")
-  
-#color=c("#afd4c6", "#bf7522", "#b2acc1", "#d59f7d", "#1f6589", "#3a8db3")
-
-#color=c("#8b9b31", "#c26236", "#bf8a28", "#c26778", "#b35f98" )
-
-#color=c("#363289", "#615bba", "#c26236", "#268c57", "#136332")
-
-#color= c("#6d144d", "#902233", "#a83a04","#b6895b", "#a7b288" )
-
-#color= c("#550c38", "#7c1c5c", "#546401", "#02547c","#013155")
-
-#ggplot boxplot code: 
-#plot.total.emissions.field=
-#  ggplot(meta.field, aes( y= totalemission, x=time, color=treatment))+
-#  geom_boxplot(position=position_dodge(width=0.9))+
-#  geom_point (position=position_dodge(width=0.9))+ #makes it so point don't overlap
-#  scale_y_sqrt()+
-#  ylab("Total Emissions")+
-#  xlab("") +
-#  facet_wrap(vars(species)) +
-#  facet_grid(. ~ species, labeller=labeller(species = facet.labs))+ 
-#  scale_x_discrete(labels=c('Day', 'Night', 'Day','Night'))+ #x axis text
-#  ylim(0.1, 0.56)+  # Set y-axis limits from 0.1 to 0.56
-
-
-#print(plot.total.emissions.field)  
 ```
 
 #Read in reflectence data & treatments
@@ -98,7 +68,8 @@ greenhouse.raw <- read_csv("data/Leafspec_EXP1N_JB_20220801.csv",
 
 #Read in CSVs with species, plantid and treatment
 greenhouse.treatment <- read_csv("data/exp1_treatments.csv")
-field.treatment <- read_csv("data/NEXP1_field_treatments - 2022.csv") 
+field.treatment <- read_csv("data/NEXP1_field_treatments - 2022.csv") %>% mutate(treatment = as.factor(treatment), site=as.factor(site))
+
 
 #wavelengths <- field.raw[,1] 
 
@@ -118,19 +89,23 @@ greenhouse.wavelength <- greenhouse.raw[,seq(1,ncol(greenhouse.raw), by=2)] %>% 
           left_join(greenhouse.treatment) 
 
 #boxplot  
-ggplot(greenhouse.wavelength, aes(x= species, y= chlorophylla, color=treatment)) + 
+facet.labs <- c(agg="I. aggregata", ten="I. tenuituba")
+greenhouse.wavelength$species <- factor(greenhouse.wavelength$species, levels = c("agg", "ten")) #agg is on left facet panel, ten is right side
+
+Chla <- ggplot(greenhouse.wavelength, aes(x= species, y= chlorophylla, color=treatment)) + 
         geom_boxplot(position=position_dodge(width=0.9))+
         geom_point (position=position_dodge(width=0.9))+ #Adds points & makes it so point don't overlap
         #scale_y_sqrt()+
         ylab("Chlorophyll a")+
         xlab("") +
-        scale_x_discrete(labels = c("Hybrids", "I. aggregata"))+
+        scale_x_discrete(labels = c("I. aggregata", "I.tenuituba"))+
         ylim(0.2, 0.56)+  # Set y-axis limits from 0.1 to 0.56
     NEXP1.theme + 
     scale_color_manual(name="Nitrogen Level", 
-        labels= c("High nitrogen", "Low nitrogen"), #Specifies treatment names in legend
-        values=c( "#b35f98", "#3a8db3"))
-
+          labels= c( high= "High nitrogen", low= "Low nitrogen"), 
+          values=c(high="#E69F00", low="#0072B2"))
+print(Chla)
+ggsave(Chla, file='plots-nitrogen/greenhouse_Chlorophylla.jpg', width=150, height=140, units= 'mm', dpi=600)
 
 #Model reflectance (wavelength) with chlorophyll a as a function of species x treatment with plant id as a random effect
 greenhouse.model <- lmer(data=greenhouse.wavelength, chlorophylla ~ species*treatment + (1|plantid)) #lmer fits the model to the data, anova tests whether the coefficients at bottom of lmer are different than zero
@@ -157,6 +132,9 @@ field.wavelength <- field.raw[,seq(1,ncol(field.raw), by=2)] %>% t() %>% as.data
         drop_na(site, treatment) #TODO: track down mistery plants that have NA: NA561, NA300,NA531 - figure out what treatment and site they belong to
 
 #boxplot  
+facet.labs <- c("Lagg"="I. aggregata", "Ihyb"="Hybrids")
+field.wavelength$species <- factor(field.wavelength$species, levels = c("Lagg", "Ihyb")) #Lagg is on left facet panel, ihyb is right side
+field.wavelength$treatment <- factor(field.wavelength$treatment, levels = c("nitrogen", "watercontrol", "control")) #orders nitrogen levels in the figure legend
 
 ggplot(field.wavelength, aes(x= site, y= chlorophylla, color=treatment)) + 
         geom_boxplot(position=position_dodge(width=0.9))+
@@ -167,9 +145,9 @@ ggplot(field.wavelength, aes(x= site, y= chlorophylla, color=treatment)) +
         scale_x_discrete(labels = c("Hybrids", "I. aggregata"))+
         ylim(0.1, 0.56)+  # Set y-axis limits from 0.1 to 0.56
     NEXP1.theme + 
-    scale_color_manual(name="Nitrogen Level", 
-        labels= c("No water added",  "High nitrogen", "Low nitrogen"), #Specifies treatment names in legend
-        values=c("#8b9b31", "#b35f98", "#3a8db3"))
+   scale_color_manual(name="Nitrogen Level", 
+          labels= c(control="No water added", nitrogen= "High nitrogen", watercontrol= "Low nitrogen"), 
+           values=c(control= "#457A26",nitrogen="#E69F00", watercontrol= "#0072B2"))
 
 #Model reflectance (wavelength) with chlorophyll a as a function of species x treatment with plant id as a random effect
 field.model <- lm(data=field.wavelength, chlorophylla ~ site*treatment) #lm and no random effect of leaf because only 1 leaf measurement
